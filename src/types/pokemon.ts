@@ -194,3 +194,25 @@ export const TYPE_COLORS: Record<PokemonType, string> = {
   steel: "#B7B7CE",
   fairy: "#D685AD",
 }
+
+// Darker text colors for light mode contrast (WCAG AA compliant)
+export const TYPE_TEXT_COLORS: Record<PokemonType, string> = {
+  normal: "#6D6C54",
+  fire: "#B85F1C",
+  water: "#3A6BC7",
+  electric: "#9A7D00",
+  grass: "#4A8A2C",
+  ice: "#4A8A8A",
+  fighting: "#C22E28",
+  poison: "#A33EA1",
+  ground: "#9A7830",
+  flying: "#6A5AB0",
+  psychic: "#C13A68",
+  bug: "#6A7A10",
+  rock: "#7A6A20",
+  ghost: "#735797",
+  dragon: "#6F35FC",
+  dark: "#705746",
+  steel: "#6A6A8A",
+  fairy: "#A8558A",
+}

@@ -2,13 +2,14 @@
 
 import { use, useMemo } from "react"
 import Link from "next/link"
+import { useTheme } from "next-themes"
 import { ArrowLeft, Heart } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { usePokemonWithSpecies, usePokemonMoves, useEvolutionChain } from "@/hooks/use-pokemon"
 import { useFavorites } from "@/hooks/use-favorites"
 import { calculateTypeEffectiveness } from "@/lib/pokeapi"
-import { TYPE_COLORS } from "@/types/pokemon"
+import { TYPE_COLORS, TYPE_TEXT_COLORS } from "@/types/pokemon"
 import type { PokemonType, PokemonStat, PokemonMove, EvolutionChainLink, PokemonSpecies, Pokemon } from "@/types/pokemon"
 
 interface PageProps {
@@ -164,7 +165,9 @@ function TypeBadge({
   multiplier?: number
   size?: "default" | "sm"
 }) {
-  const color = TYPE_COLORS[type]
+  const { resolvedTheme } = useTheme()
+  const bgColor = TYPE_COLORS[type]
+  const textColor = resolvedTheme === "dark" ? TYPE_COLORS[type] : TYPE_TEXT_COLORS[type]
   const multiplierLabel = multiplier !== undefined
     ? multiplier === 0
       ? "×0"
@@ -179,7 +182,7 @@ function TypeBadge({
         "inline-flex items-center gap-1 uppercase tracking-wider rounded",
         size === "default" ? "text-xs px-2 py-0.5" : "text-[10px] px-1.5 py-0.5"
       )}
-      style={{ backgroundColor: `${color}20`, color }}
+      style={{ backgroundColor: `${bgColor}20`, color: textColor }}
     >
       {type}
       {multiplierLabel && (
