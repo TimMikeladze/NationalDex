@@ -1,0 +1,751 @@
+"use client"
+
+import { use, useMemo, useState } from "react"
+import Link from "next/link"
+import { ArrowLeft, Heart } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
+import { cn } from "@/lib/utils"
+import { usePokemonWithSpecies, usePokemonMoves, useEvolutionChain } from "@/hooks/use-pokemon"
+import { useFavorites } from "@/hooks/use-favorites"
+import { calculateTypeEffectiveness, getMoveDetail, getAbilityDetail } from "@/lib/pokeapi"
+import { TYPE_COLORS } from "@/types/pokemon"
+import type { PokemonType, PokemonStat, PokemonMove, EvolutionChainLink, PokemonSpecies, Pokemon, MoveDetail, AbilityDetail } from "@/types/pokemon"
+
+interface PageProps {
+  params: Promise<{ id: string }>
+}
+
+export default function PokemonPage({ params }: PageProps) {
+  const { id } = use(params)
+  const { pokemon, species, isLoading } = usePokemonWithSpecies(id)
+  const { isFavorite, toggleFavorite } = useFavorites()
+  const { data: moves, isLoading: movesLoading } = usePokemonMoves(id)
+  const { data: evolutionChain, isLoading: evolutionLoading } = useEvolutionChain(
+    species?.evolutionChainUrl ?? null
+  )
+
+  // Dialog state
+  const [selectedMove, setSelectedMove] = useState<MoveDetail | null>(null)
+  const [selectedAbility, setSelectedAbility] = useState<AbilityDetail | null>(null)
+  const [dialogLoading, setDialogLoading] = useState(false)
+
+  const typeEffectiveness = useMemo(() => {
+    if (!pokemon) return null
+    return calculateTypeEffectiveness(pokemon.types)
+  }, [pokemon])
+
+  const handleMoveClick = async (moveName: string) => {
+    setDialogLoading(true)
+    try {
+      const detail = await getMoveDetail(moveName)
+      setSelectedMove(detail)
+    } catch (error) {
+      console.error("Failed to fetch move details:", error)
+    } finally {
+      setDialogLoading(false)
+    }
+  }
+
+  const handleAbilityClick = async (abilityName: string) => {
+    setDialogLoading(true)
+    try {
+      const detail = await getAbilityDetail(abilityName)
+      setSelectedAbility(detail)
+    } catch (error) {
+      console.error("Failed to fetch ability details:", error)
+    } finally {
+      setDialogLoading(false)
+    }
+  }
+
+  if (isLoading || !pokemon) {
+    return <PokemonPageSkeleton />
+  }
+
+  const statTotal = pokemon.stats.reduce((sum, s) => sum + s.value, 0)
+
+  return (
+    <div className="min-h-screen p-4 md:p-6">
+      <header className="mb-6 flex items-center justify-between border-b pb-4">
+        <Link
+          href="/"
+          className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="size-3" />
+          back
+        </Link>
+        <button
+          type="button"
+          onClick={() => toggleFavorite(pokemon.id)}
+          className="text-xs text-muted-foreground hover:text-foreground"
+        >
+          <Heart
+            className={cn(
+              "size-4",
+              isFavorite(pokemon.id) && "fill-current"
+            )}
+          />
+        </button>
+      </header>
+
+      <div className="max-w-2xl mx-auto space-y-6">
+        {/* Core Header */}
+        <section className="text-center space-y-3">
+          <span className="text-xs text-muted-foreground tabular-nums">
+            #{pokemon.id.toString().padStart(3, "0")}
+          </span>
+          <img
+            src={pokemon.sprite}
+            alt={pokemon.name}
+            className="size-32 mx-auto pixelated"
+          />
+          <h1 className="text-xl font-medium">{pokemon.name}</h1>
+          {species && (
+            <p className="text-xs text-muted-foreground">{species.genus}</p>
+          )}
+          <div className="flex justify-center gap-2">
+            {pokemon.types.map((type) => (
+              <TypeBadge key={type} type={type} />
+            ))}
+          </div>
+        </section>
+
+        {/* Type Effectiveness */}
+        {typeEffectiveness && (
+          <section className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>weaknesses</Label>
+              <div className="flex flex-wrap gap-1">
+                {typeEffectiveness.weaknesses.map(({ type, multiplier }) => (
+                  <TypeBadge key={type} type={type} multiplier={multiplier} size="sm" />
+                ))}
+                {typeEffectiveness.weaknesses.length === 0 && (
+                  <span className="text-xs text-muted-foreground">None</span>
+                )}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>resistances</Label>
+              <div className="flex flex-wrap gap-1">
+                {typeEffectiveness.resistances.map(({ type, multiplier }) => (
+                  <TypeBadge key={type} type={type} multiplier={multiplier} size="sm" />
+                ))}
+                {typeEffectiveness.immunities.map((type) => (
+                  <TypeBadge key={type} type={type} multiplier={0} size="sm" />
+                ))}
+                {typeEffectiveness.resistances.length === 0 && typeEffectiveness.immunities.length === 0 && (
+                  <span className="text-xs text-muted-foreground">None</span>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Stats */}
+        <section className="space-y-3">
+          <Label>base stats</Label>
+          <div className="space-y-2">
+            {pokemon.stats.map((stat) => (
+              <StatRow key={stat.name} stat={stat} />
+            ))}
+          </div>
+          <div className="flex justify-between text-xs pt-1 border-t">
+            <span className="text-muted-foreground">Total</span>
+            <span className="tabular-nums font-medium">{statTotal}</span>
+          </div>
+        </section>
+
+        {/* Evolution */}
+        <EvolutionSection
+          chain={evolutionChain}
+          isLoading={evolutionLoading}
+          currentId={pokemon.id}
+        />
+
+        {/* Details */}
+        <DetailsSection
+          pokemon={pokemon}
+          species={species}
+          onAbilityClick={handleAbilityClick}
+        />
+
+        {/* Moves */}
+        <MovesSection
+          moves={moves}
+          isLoading={movesLoading}
+          onMoveClick={handleMoveClick}
+        />
+      </div>
+
+      {/* Move Dialog */}
+      <MoveDialog
+        move={selectedMove}
+        open={selectedMove !== null}
+        onOpenChange={(open) => !open && setSelectedMove(null)}
+        loading={dialogLoading}
+      />
+
+      {/* Ability Dialog */}
+      <AbilityDialog
+        ability={selectedAbility}
+        open={selectedAbility !== null}
+        onOpenChange={(open) => !open && setSelectedAbility(null)}
+        loading={dialogLoading}
+      />
+    </div>
+  )
+}
+
+// ============================================================================
+// Components
+// ============================================================================
+
+function Label({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="text-[10px] text-muted-foreground uppercase tracking-wider block">
+      {children}
+    </span>
+  )
+}
+
+function TypeBadge({
+  type,
+  multiplier,
+  size = "default"
+}: {
+  type: PokemonType
+  multiplier?: number
+  size?: "default" | "sm"
+}) {
+  const color = TYPE_COLORS[type]
+  const multiplierLabel = multiplier !== undefined
+    ? multiplier === 0
+      ? "×0"
+      : multiplier >= 1
+        ? `×${multiplier}`
+        : `×${multiplier}`
+    : null
+
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 uppercase tracking-wider rounded",
+        size === "default" ? "text-xs px-2 py-0.5" : "text-[10px] px-1.5 py-0.5"
+      )}
+      style={{ backgroundColor: `${color}20`, color }}
+    >
+      {type}
+      {multiplierLabel && (
+        <span className="opacity-75">{multiplierLabel}</span>
+      )}
+    </span>
+  )
+}
+
+function StatRow({ stat }: { stat: PokemonStat }) {
+  const percentage = Math.min((stat.value / 255) * 100, 100)
+
+  return (
+    <div className="flex items-center gap-3 text-xs">
+      <span className="w-16 text-muted-foreground truncate">{stat.name}</span>
+      <span className="w-8 text-right tabular-nums">{stat.value}</span>
+      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all"
+          style={{
+            width: `${percentage}%`,
+            backgroundColor: percentage > 75 ? "#22c55e" : percentage > 50 ? "#eab308" : "#ef4444",
+          }}
+        />
+      </div>
+    </div>
+  )
+}
+
+// ============================================================================
+// Moves Section
+// ============================================================================
+
+function MovesSection({
+  moves,
+  isLoading,
+  onMoveClick
+}: {
+  moves?: PokemonMove[]
+  isLoading: boolean
+  onMoveClick: (moveName: string) => void
+}) {
+  if (isLoading) {
+    return (
+      <section className="space-y-4">
+        <Label>moves</Label>
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="space-y-2">
+            <Skeleton className="h-4 w-20" />
+            {Array.from({ length: 4 }).map((_, j) => (
+              <Skeleton key={j} className="h-6 w-full" />
+            ))}
+          </div>
+        ))}
+      </section>
+    )
+  }
+
+  if (!moves || moves.length === 0) {
+    return (
+      <section className="space-y-3">
+        <Label>moves</Label>
+        <p className="text-sm text-muted-foreground">No moves found.</p>
+      </section>
+    )
+  }
+
+  const levelUpMoves = moves
+    .filter((m) => m.learnMethod === "level-up")
+    .sort((a, b) => a.levelLearnedAt - b.levelLearnedAt)
+
+  const tmMoves = moves
+    .filter((m) => m.learnMethod === "machine")
+    .sort((a, b) => a.name.localeCompare(b.name))
+
+  const eggMoves = moves
+    .filter((m) => m.learnMethod === "egg")
+    .sort((a, b) => a.name.localeCompare(b.name))
+
+  return (
+    <section className="space-y-4">
+      <Label>moves</Label>
+      <div className="space-y-6">
+        {levelUpMoves.length > 0 && (
+          <MoveGroup title="Level Up" moves={levelUpMoves} showLevel onMoveClick={onMoveClick} />
+        )}
+        {tmMoves.length > 0 && (
+          <MoveGroup title="TM / HM" moves={tmMoves} onMoveClick={onMoveClick} />
+        )}
+        {eggMoves.length > 0 && (
+          <MoveGroup title="Egg Moves" moves={eggMoves} onMoveClick={onMoveClick} />
+        )}
+      </div>
+    </section>
+  )
+}
+
+function MoveGroup({
+  title,
+  moves,
+  showLevel = false,
+  onMoveClick
+}: {
+  title: string
+  moves: PokemonMove[]
+  showLevel?: boolean
+  onMoveClick: (moveName: string) => void
+}) {
+  return (
+    <div className="space-y-2">
+      <Label>{title}</Label>
+      <div className="space-y-1">
+        {moves.map((move, idx) => (
+          <button
+            type="button"
+            key={`${move.name}-${idx}`}
+            onClick={() => onMoveClick(move.name)}
+            className="flex items-center gap-2 text-xs py-1 border-b border-muted last:border-0 w-full text-left hover:bg-muted/50 transition-colors cursor-pointer"
+          >
+            {showLevel && (
+              <span className="w-8 text-muted-foreground tabular-nums">
+                {move.levelLearnedAt > 0 ? `Lv.${move.levelLearnedAt}` : "—"}
+              </span>
+            )}
+            <span className="flex-1 font-medium">{move.name}</span>
+            <TypeBadge type={move.type} size="sm" />
+            <span className="w-12 text-right tabular-nums text-muted-foreground">
+              {move.power ? `${move.power} pwr` : move.damageClass}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ============================================================================
+// Evolution Section
+// ============================================================================
+
+function EvolutionSection({
+  chain,
+  isLoading,
+  currentId,
+}: {
+  chain?: EvolutionChainLink
+  isLoading: boolean
+  currentId: number
+}) {
+  if (isLoading) {
+    return (
+      <section className="space-y-3">
+        <Label>evolution</Label>
+        <div className="flex justify-center gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="size-20" />
+          ))}
+        </div>
+      </section>
+    )
+  }
+
+  if (!chain) {
+    return (
+      <section className="space-y-3">
+        <Label>evolution</Label>
+        <p className="text-sm text-muted-foreground">No evolution data found.</p>
+      </section>
+    )
+  }
+
+  return (
+    <section className="space-y-3">
+      <Label>evolution</Label>
+      <EvolutionChainDisplay chain={chain} currentId={currentId} />
+    </section>
+  )
+}
+
+function EvolutionChainDisplay({
+  chain,
+  currentId
+}: {
+  chain: EvolutionChainLink
+  currentId: number
+}) {
+  const flatChain = flattenEvolutionChain(chain)
+
+  if (flatChain.length === 1) {
+    return (
+      <p className="text-sm text-muted-foreground">This Pokémon does not evolve.</p>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        {flatChain.map((pokemon, index) => (
+          <div key={pokemon.id} className="flex items-center gap-2">
+            <Link
+              href={`/pokemon/${pokemon.id}`}
+              className={cn(
+                "flex flex-col items-center gap-1 p-2 rounded hover:bg-muted transition-colors",
+                pokemon.id === currentId && "bg-muted ring-1 ring-primary"
+              )}
+            >
+              <img
+                src={pokemon.sprite}
+                alt={pokemon.name}
+                className="size-16 pixelated"
+              />
+              <span className="text-xs">{pokemon.name}</span>
+              <span className="text-[10px] text-muted-foreground">
+                #{pokemon.id.toString().padStart(3, "0")}
+              </span>
+            </Link>
+            {index < flatChain.length - 1 && (
+              <div className="text-muted-foreground text-xs">
+                <span>→</span>
+                {flatChain[index + 1]?.evolutionDetails[0] && (
+                  <div className="text-[10px] text-center max-w-16">
+                    {formatEvolutionMethod(flatChain[index + 1].evolutionDetails[0])}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function flattenEvolutionChain(chain: EvolutionChainLink): EvolutionChainLink[] {
+  const result: EvolutionChainLink[] = [chain]
+  for (const evolution of chain.evolvesTo) {
+    result.push(...flattenEvolutionChain(evolution))
+  }
+  return result
+}
+
+function formatEvolutionMethod(detail: EvolutionChainLink["evolutionDetails"][0]): string {
+  if (detail.minLevel) return `Lv.${detail.minLevel}`
+  if (detail.item) return detail.item
+  if (detail.minHappiness) return "Friendship"
+  if (detail.knownMove) return detail.knownMove
+  if (detail.timeOfDay) return detail.timeOfDay
+  if (detail.heldItem) return `Hold ${detail.heldItem}`
+  return detail.trigger
+}
+
+// ============================================================================
+// Details Section
+// ============================================================================
+
+function DetailsSection({
+  pokemon,
+  species,
+  onAbilityClick
+}: {
+  pokemon: Pokemon
+  species?: PokemonSpecies
+  onAbilityClick: (abilityName: string) => void
+}) {
+  const genderDisplay = species
+    ? species.genderRate === -1
+      ? "Genderless"
+      : `${(8 - species.genderRate) * 12.5}% ♂ / ${species.genderRate * 12.5}% ♀`
+    : "—"
+
+  const catchRatePercent = species
+    ? ((species.captureRate / 255) * 100).toFixed(1)
+    : "—"
+
+  const hatchSteps = species
+    ? (species.hatchCounter * 257).toLocaleString()
+    : "—"
+
+  return (
+    <section className="space-y-6">
+      {/* Breeding */}
+      <div className="space-y-2">
+        <Label>breeding</Label>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+          <DetailRow label="Egg Groups" value={species?.eggGroups.join(", ") ?? "—"} />
+          <DetailRow label="Gender" value={genderDisplay} />
+          <DetailRow label="Hatch Time" value={species ? `~${hatchSteps} steps` : "—"} />
+        </div>
+      </div>
+
+      {/* Training */}
+      <div className="space-y-2">
+        <Label>training</Label>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+          <DetailRow
+            label="Catch Rate"
+            value={species ? `${species.captureRate} (${catchRatePercent}%)` : "—"}
+          />
+          <DetailRow label="Growth Rate" value={species?.growthRate ?? "—"} />
+          <DetailRow
+            label="EV Yield"
+            value={species?.evYield.map(e => `${e.value} ${e.stat}`).join(", ") || "—"}
+          />
+          <DetailRow
+            label="Base Happiness"
+            value={species?.baseHappiness?.toString() ?? "—"}
+          />
+        </div>
+      </div>
+
+      {/* About */}
+      <div className="space-y-2">
+        <Label>about</Label>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+          <DetailRow
+            label="Height"
+            value={`${(pokemon.height / 10).toFixed(1)}m`}
+          />
+          <DetailRow
+            label="Weight"
+            value={`${(pokemon.weight / 10).toFixed(1)}kg`}
+          />
+          <DetailRow label="Generation" value={species?.generation ?? "—"} />
+        </div>
+      </div>
+
+      {/* Abilities */}
+      <div className="space-y-2">
+        <Label>abilities</Label>
+        <div className="flex flex-wrap gap-2">
+          {pokemon.abilities.map((ability) => (
+            <button
+              type="button"
+              key={ability.name}
+              onClick={() => onAbilityClick(ability.name)}
+              className={cn(
+                "text-xs px-2 py-1 border rounded hover:bg-muted/50 transition-colors cursor-pointer",
+                ability.isHidden && "text-muted-foreground border-dashed"
+              )}
+            >
+              {ability.name}
+              {ability.isHidden && " (hidden)"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Description */}
+      {species?.description && (
+        <div className="space-y-2">
+          <Label>description</Label>
+          <p className="text-sm leading-relaxed">{species.description}</p>
+        </div>
+      )}
+    </section>
+  )
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <>
+      <span className="text-muted-foreground">{label}</span>
+      <span className="tabular-nums">{value}</span>
+    </>
+  )
+}
+
+// ============================================================================
+// Skeleton
+// ============================================================================
+
+function PokemonPageSkeleton() {
+  return (
+    <div className="min-h-screen p-4 md:p-6">
+      <header className="mb-6 flex items-center justify-between border-b pb-4">
+        <Skeleton className="h-4 w-12" />
+        <Skeleton className="h-4 w-4" />
+      </header>
+      <div className="max-w-2xl mx-auto space-y-6">
+        <section className="text-center space-y-3">
+          <Skeleton className="h-3 w-12 mx-auto" />
+          <Skeleton className="size-32 mx-auto" />
+          <Skeleton className="h-6 w-32 mx-auto" />
+          <Skeleton className="h-3 w-24 mx-auto" />
+          <div className="flex justify-center gap-2">
+            <Skeleton className="h-5 w-16" />
+            <Skeleton className="h-5 w-16" />
+          </div>
+        </section>
+        <section className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-3 w-16" />
+            <div className="flex flex-wrap gap-1">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-5 w-14" />
+              ))}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-3 w-16" />
+            <div className="flex flex-wrap gap-1">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-5 w-14" />
+              ))}
+            </div>
+          </div>
+        </section>
+        <section className="space-y-3">
+          <Skeleton className="h-3 w-16" />
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-4 w-full" />
+          ))}
+        </section>
+        <Skeleton className="h-10 w-full" />
+      </div>
+    </div>
+  )
+}
+
+// ============================================================================
+// Dialogs
+// ============================================================================
+
+function MoveDialog({
+  move,
+  open,
+  onOpenChange,
+  loading
+}: {
+  move: MoveDetail | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  loading: boolean
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        {loading ? (
+          <div className="space-y-4">
+            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-3/4" />
+          </div>
+        ) : move ? (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                {move.name}
+                <TypeBadge type={move.type} size="sm" />
+              </DialogTitle>
+              <DialogDescription>{move.description}</DialogDescription>
+            </DialogHeader>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+              <DetailRow label="Category" value={move.damageClass} />
+              <DetailRow label="Power" value={move.power?.toString() ?? "—"} />
+              <DetailRow label="Accuracy" value={move.accuracy ? `${move.accuracy}%` : "—"} />
+              <DetailRow label="PP" value={move.pp.toString()} />
+              <DetailRow label="Priority" value={move.priority.toString()} />
+              <DetailRow label="Target" value={move.target} />
+              <DetailRow label="Generation" value={move.generation} />
+              {move.effectChance && (
+                <DetailRow label="Effect Chance" value={`${move.effectChance}%`} />
+              )}
+            </div>
+          </>
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function AbilityDialog({
+  ability,
+  open,
+  onOpenChange,
+  loading
+}: {
+  ability: AbilityDetail | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  loading: boolean
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        {loading ? (
+          <div className="space-y-4">
+            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-3/4" />
+          </div>
+        ) : ability ? (
+          <>
+            <DialogHeader>
+              <DialogTitle>{ability.name}</DialogTitle>
+              <DialogDescription>{ability.shortDescription}</DialogDescription>
+            </DialogHeader>
+            {ability.description && ability.description !== ability.shortDescription && (
+              <p className="text-sm leading-relaxed">{ability.description}</p>
+            )}
+            <div className="text-xs text-muted-foreground">
+              Introduced in {ability.generation}
+            </div>
+          </>
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  )
+}
