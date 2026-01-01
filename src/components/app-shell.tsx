@@ -2,13 +2,13 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Grid3X3, Heart, Settings, Search, Swords } from "lucide-react"
+import { Grid3X3, Heart, Settings, Search, Swords, Users } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useNav } from "./navigation/nav-provider"
 
 const navItems = [
   { href: "/", icon: Grid3X3, label: "dex" },
-  { href: "/moves", icon: Swords, label: "moves" },
+  { href: "/teams", icon: Users, label: "teams" },
   { href: "#search", icon: Search, label: "search", action: true },
   { href: "/favorites", icon: Heart, label: "favs" },
   { href: "/settings", icon: Settings, label: "config" },

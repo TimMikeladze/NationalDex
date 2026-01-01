@@ -517,3 +517,38 @@ export const ALL_TYPES: PokemonType[] = [
 ]
 
 export const DAMAGE_CLASSES = ["physical", "special", "status"] as const
+
+// Get Pokemon list for a specific generation range
+export async function getPokemonByGenerationRange(
+  startId: number,
+  endId: number
+): Promise<{ id: number; name: string; sprite: string }[]> {
+  const pokemon: { id: number; name: string; sprite: string }[] = []
+
+  for (let id = startId; id <= endId; id++) {
+    pokemon.push({
+      id,
+      name: formatName(await getPokemonNameById(id)),
+      sprite: getSpriteUrl(id),
+    })
+  }
+
+  return pokemon
+}
+
+// Simple cache for Pokemon names to avoid redundant API calls
+const pokemonNameCache = new Map<number, string>()
+
+async function getPokemonNameById(id: number): Promise<string> {
+  if (pokemonNameCache.has(id)) {
+    return pokemonNameCache.get(id)!
+  }
+
+  try {
+    const data = await client.getPokemonByName(id)
+    pokemonNameCache.set(id, data.name)
+    return data.name
+  } catch {
+    return `pokemon-${id}`
+  }
+}
