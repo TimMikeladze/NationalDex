@@ -42,13 +42,7 @@ export default function TeamsPage() {
 
   return (
     <div className="p-4 md:p-6">
-      <header className="mb-6 border-b pb-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-medium">teams</h1>
-          <p className="text-xs text-muted-foreground">
-            {isLoaded ? `${teams.length} team${teams.length !== 1 ? "s" : ""}` : "loading..."}
-          </p>
-        </div>
+      <div className="mb-6 flex items-center justify-end">
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
             <Button size="sm" variant="outline">
@@ -107,7 +101,7 @@ export default function TeamsPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </header>
+      </div>
 
       {!isLoaded ? (
         <div className="space-y-3">

@@ -3,7 +3,7 @@
 import { use, useMemo } from "react"
 import Link from "next/link"
 import { useTheme } from "next-themes"
-import { ArrowLeft, Heart } from "lucide-react"
+import { Heart } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { usePokemonWithSpecies, usePokemonMoves, useEvolutionChain } from "@/hooks/use-pokemon"
@@ -38,38 +38,31 @@ export default function PokemonPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen p-4 md:p-6">
-      <header className="mb-6 flex items-center justify-between border-b pb-4">
-        <Link
-          href="/"
-          className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="size-3" />
-          back
-        </Link>
-        <button
-          type="button"
-          onClick={() => toggleFavorite(pokemon.id)}
-          className="text-xs text-muted-foreground hover:text-foreground"
-        >
-          <Heart
-            className={cn(
-              "size-4",
-              isFavorite(pokemon.id) && "fill-current"
-            )}
-          />
-        </button>
-      </header>
-
-      <div className="max-w-2xl mx-auto space-y-6">
+      <div className="max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto space-y-6">
         {/* Core Header */}
         <section className="text-center space-y-3">
-          <span className="text-xs text-muted-foreground tabular-nums">
-            #{pokemon.id.toString().padStart(3, "0")}
-          </span>
+          <div className="flex justify-between items-start">
+            <div />
+            <span className="text-xs text-muted-foreground tabular-nums">
+              #{pokemon.id.toString().padStart(3, "0")}
+            </span>
+            <button
+              type="button"
+              onClick={() => toggleFavorite(pokemon.id)}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <Heart
+                className={cn(
+                  "size-4",
+                  isFavorite(pokemon.id) && "fill-current"
+                )}
+              />
+            </button>
+          </div>
           <img
             src={pokemon.sprite}
             alt={pokemon.name}
-            className="size-32 mx-auto pixelated"
+            className="size-32 md:size-40 lg:size-48 mx-auto pixelated"
           />
           <h1 className="text-xl font-medium">{pokemon.name}</h1>
           {species && (
@@ -390,7 +383,7 @@ function EvolutionChainDisplay({
               <img
                 src={pokemon.sprite}
                 alt={pokemon.name}
-                className="size-16 pixelated"
+                className="size-16 md:size-20 lg:size-24 pixelated"
               />
               <span className="text-xs">{pokemon.name}</span>
               <span className="text-[10px] text-muted-foreground">
@@ -555,14 +548,14 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 function PokemonPageSkeleton() {
   return (
     <div className="min-h-screen p-4 md:p-6">
-      <header className="mb-6 flex items-center justify-between border-b pb-4">
-        <Skeleton className="h-4 w-12" />
-        <Skeleton className="h-4 w-4" />
-      </header>
-      <div className="max-w-2xl mx-auto space-y-6">
+      <div className="max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto space-y-6">
         <section className="text-center space-y-3">
-          <Skeleton className="h-3 w-12 mx-auto" />
-          <Skeleton className="size-32 mx-auto" />
+          <div className="flex justify-between items-start">
+            <div />
+            <Skeleton className="h-3 w-12" />
+            <Skeleton className="h-4 w-4" />
+          </div>
+          <Skeleton className="size-32 md:size-40 lg:size-48 mx-auto" />
           <Skeleton className="h-6 w-32 mx-auto" />
           <Skeleton className="h-3 w-24 mx-auto" />
           <div className="flex justify-center gap-2">

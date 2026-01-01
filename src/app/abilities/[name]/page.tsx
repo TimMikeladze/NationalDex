@@ -2,7 +2,7 @@
 
 import { use, useState, useMemo } from "react"
 import Link from "next/link"
-import { ArrowLeft, Search, X } from "lucide-react"
+import { Search, X } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { useFullAbilityDetail } from "@/hooks/use-pokemon"
@@ -45,15 +45,6 @@ export default function AbilityDetailPage({ params }: PageProps) {
   if (error || !ability) {
     return (
       <div className="min-h-screen p-4 md:p-6">
-        <header className="mb-6 flex items-center justify-between border-b pb-4">
-          <Link
-            href="/"
-            className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="size-3" />
-            back
-          </Link>
-        </header>
         <div className="max-w-2xl mx-auto text-center py-12">
           <p className="text-muted-foreground">Ability not found</p>
         </div>
@@ -63,16 +54,6 @@ export default function AbilityDetailPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen p-4 md:p-6">
-      <header className="mb-6 flex items-center justify-between border-b pb-4">
-        <Link
-          href="/"
-          className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="size-3" />
-          back
-        </Link>
-      </header>
-
       <div className="max-w-2xl mx-auto space-y-6">
         {/* Header */}
         <section className="space-y-3">
@@ -333,9 +314,6 @@ function PokemonSection({ pokemon, abilityName }: { pokemon: AbilityPokemon[]; a
 function AbilityDetailSkeleton() {
   return (
     <div className="min-h-screen p-4 md:p-6">
-      <header className="mb-6 flex items-center justify-between border-b pb-4">
-        <Skeleton className="h-4 w-16" />
-      </header>
       <div className="max-w-2xl mx-auto space-y-6">
         <section className="space-y-3">
           <Skeleton className="h-7 w-40" />

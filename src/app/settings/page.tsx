@@ -10,10 +10,6 @@ export default function SettingsPage() {
 
   return (
     <div className="p-4 md:p-6">
-      <header className="mb-6 border-b pb-4">
-        <h1 className="text-lg font-medium">settings</h1>
-      </header>
-
       <div className="max-w-md space-y-8">
         <section className="space-y-3">
           <label className="text-[10px] text-muted-foreground uppercase tracking-wider block">

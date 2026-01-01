@@ -26,14 +26,7 @@ function HomeContent() {
 
   return (
     <div className="p-4 md:p-6">
-      <header className="mb-6 border-b pb-4">
-        <h1 className="text-lg font-medium">natdex</h1>
-        <p className="text-xs text-muted-foreground">
-          {count ? `${count} entries` : "loading..."}
-        </p>
-      </header>
-
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 md:gap-3 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
         {isLoading
           ? Array.from({ length: 20 }).map((_, i) => (
               <PokemonCardSkeleton key={i} />
@@ -72,11 +65,7 @@ export default function HomePage() {
 function HomePageSkeleton() {
   return (
     <div className="p-4 md:p-6">
-      <header className="mb-6 border-b pb-4">
-        <h1 className="text-lg font-medium">natdex</h1>
-        <p className="text-xs text-muted-foreground">loading...</p>
-      </header>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 md:gap-3 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
         {Array.from({ length: 20 }).map((_, i) => (
           <PokemonCardSkeleton key={i} />
         ))}

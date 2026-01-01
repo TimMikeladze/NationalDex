@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Plus, X, Search } from "lucide-react"
+import { Plus, X, Search } from "lucide-react"
 import { useTeams } from "@/hooks/use-teams"
 import { GENERATION_INFO } from "@/types/team"
 import type { TeamMember } from "@/types/team"
@@ -107,14 +107,7 @@ export default function TeamDetailPage() {
 
   return (
     <div className="p-4 md:p-6">
-      <header className="mb-6 border-b pb-4">
-        <Link
-          href="/teams"
-          className="inline-flex items-center text-xs text-muted-foreground hover:text-foreground mb-2"
-        >
-          <ArrowLeft className="size-3 mr-1" />
-          back to teams
-        </Link>
+      <div className="mb-6">
         {isEditingName ? (
           <div className="flex gap-2 items-center">
             <Input
@@ -144,7 +137,7 @@ export default function TeamDetailPage() {
         <p className="text-xs text-muted-foreground">
           {genInfo.name} ({genInfo.label}) • {team.members.length}/6 pokemon
         </p>
-      </header>
+      </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {team.members.map((member) => (

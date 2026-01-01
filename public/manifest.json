@@ -1,6 +1,6 @@
 {
-  "name": "natdex",
-  "short_name": "natdex",
+  "name": "betterdex",
+  "short_name": "betterdex",
   "description": "minimal pokédex",
   "start_url": "/",
   "display": "standalone",

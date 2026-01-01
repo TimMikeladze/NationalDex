@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
-import { ArrowLeft, Search, X, Filter } from "lucide-react"
+import { Search, X, Filter } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { useMoveList } from "@/hooks/use-pokemon"
@@ -130,20 +130,8 @@ export default function MovesPage() {
 
   return (
     <div className="min-h-screen p-4 md:p-6">
-      <header className="mb-6 flex items-center justify-between border-b pb-4">
-        <Link
-          href="/"
-          className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="size-3" />
-          back
-        </Link>
-        <h1 className="text-sm font-medium">Moves</h1>
-        <div className="w-12" />
-      </header>
-
       {/* Search & Filter Controls */}
-      <div className="max-w-4xl mx-auto mb-6 space-y-4">
+      <div className="max-w-4xl lg:max-w-5xl xl:max-w-6xl mx-auto mb-6 space-y-4">
         <div className="flex gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
@@ -291,7 +279,7 @@ export default function MovesPage() {
       </div>
 
       {/* Results Count */}
-      <div className="max-w-4xl mx-auto mb-4">
+      <div className="max-w-4xl lg:max-w-5xl xl:max-w-6xl mx-auto mb-4">
         <p className="text-xs text-muted-foreground">
           {isLoading ? (
             "Loading moves..."
@@ -307,7 +295,7 @@ export default function MovesPage() {
       </div>
 
       {/* Moves List */}
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-4xl lg:max-w-5xl xl:max-w-6xl mx-auto">
         {isLoading ? (
           <MovesListSkeleton />
         ) : (

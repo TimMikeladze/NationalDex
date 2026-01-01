@@ -24,7 +24,7 @@ export function PokemonCard({ name, id }: PokemonCardProps) {
 
   return (
     <Card className="group relative p-0 hover:bg-muted/50 transition-colors">
-      <Link href={`/pokemon/${pokemon.id}`} className="block p-3">
+      <Link href={`/pokemon/${pokemon.id}`} className="block p-3 md:p-4">
         <div className="flex items-start justify-between">
           <span className="text-xs text-muted-foreground tabular-nums">
             #{id.toString().padStart(3, "0")}
@@ -47,11 +47,11 @@ export function PokemonCard({ name, id }: PokemonCardProps) {
           </button>
         </div>
 
-        <div className="flex flex-col items-center py-2">
+        <div className="flex flex-col items-center py-2 md:py-3">
           <img
             src={pokemon.sprite}
             alt={pokemon.name}
-            className="size-16 pixelated"
+            className="size-16 md:size-20 lg:size-24 pixelated"
             loading="lazy"
           />
         </div>
@@ -79,12 +79,12 @@ function TypeTag({ type }: { type: PokemonType }) {
 
 export function PokemonCardSkeleton() {
   return (
-    <Card className="p-3">
+    <Card className="p-3 md:p-4">
       <div className="flex items-start justify-between">
         <Skeleton className="h-3 w-8" />
       </div>
-      <div className="flex flex-col items-center py-2">
-        <Skeleton className="size-16" />
+      <div className="flex flex-col items-center py-2 md:py-3">
+        <Skeleton className="size-16 md:size-20 lg:size-24" />
       </div>
       <div className="space-y-1">
         <Skeleton className="h-4 w-20" />
