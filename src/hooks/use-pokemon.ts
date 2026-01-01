@@ -12,6 +12,8 @@ import {
   getMoveListItem,
   getFullMoveDetail,
   getFullAbilityDetail,
+  getAllTypesWithRelations,
+  getFullTypeDetail,
 } from "@/lib/pokeapi"
 import type {
   Pokemon,
@@ -21,6 +23,8 @@ import type {
   MoveListItem,
   FullMoveDetail,
   FullAbilityDetail,
+  TypeDetail,
+  FullTypeDetail,
 } from "@/types/pokemon"
 
 const PAGE_SIZE = 20
@@ -133,6 +137,27 @@ export function useFullAbilityDetail(name: string | null) {
     queryFn: () => getFullAbilityDetail(name!),
     enabled: name !== null,
     staleTime: 1000 * 60 * 60, // 1 hour
+  })
+}
+
+// ============================================================================
+// Type Detail (for dedicated pages)
+// ============================================================================
+
+export function useAllTypes() {
+  return useQuery<TypeDetail[]>({
+    queryKey: ["all-types"],
+    queryFn: () => getAllTypesWithRelations(),
+    staleTime: 1000 * 60 * 60 * 24, // 24 hours - types don't change
+  })
+}
+
+export function useFullTypeDetail(name: string | null) {
+  return useQuery<FullTypeDetail>({
+    queryKey: ["type-detail", name],
+    queryFn: () => getFullTypeDetail(name!),
+    enabled: name !== null,
+    staleTime: 1000 * 60 * 60 * 24, // 24 hours
   })
 }
 

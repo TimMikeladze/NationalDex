@@ -18,6 +18,10 @@ import type {
   MovePokemon,
   FullAbilityDetail,
   AbilityPokemon,
+  TypeDetail,
+  TypeDamageRelations,
+  TypePokemon,
+  FullTypeDetail,
 } from "@/types/pokemon"
 
 const client = new Pokedex({
@@ -551,4 +555,69 @@ async function getPokemonNameById(id: number): Promise<string> {
   } catch {
     return `pokemon-${id}`
   }
+}
+
+// ============================================================================
+// Type Detail (for dedicated pages)
+// ============================================================================
+
+export async function getTypeDetail(name: string): Promise<TypeDetail> {
+  const data = await client.getTypeByName(name.toLowerCase())
+
+  const damageRelations: TypeDamageRelations = {
+    doubleDamageTo: data.damage_relations.double_damage_to.map((t) => t.name as PokemonType),
+    halfDamageTo: data.damage_relations.half_damage_to.map((t) => t.name as PokemonType),
+    noDamageTo: data.damage_relations.no_damage_to.map((t) => t.name as PokemonType),
+    doubleDamageFrom: data.damage_relations.double_damage_from.map((t) => t.name as PokemonType),
+    halfDamageFrom: data.damage_relations.half_damage_from.map((t) => t.name as PokemonType),
+    noDamageFrom: data.damage_relations.no_damage_from.map((t) => t.name as PokemonType),
+  }
+
+  return {
+    id: data.id,
+    name: data.name as PokemonType,
+    damageRelations,
+    generation: formatName(data.generation.name),
+  }
+}
+
+export async function getFullTypeDetail(name: string): Promise<FullTypeDetail> {
+  const data = await client.getTypeByName(name.toLowerCase())
+
+  const damageRelations: TypeDamageRelations = {
+    doubleDamageTo: data.damage_relations.double_damage_to.map((t) => t.name as PokemonType),
+    halfDamageTo: data.damage_relations.half_damage_to.map((t) => t.name as PokemonType),
+    noDamageTo: data.damage_relations.no_damage_to.map((t) => t.name as PokemonType),
+    doubleDamageFrom: data.damage_relations.double_damage_from.map((t) => t.name as PokemonType),
+    halfDamageFrom: data.damage_relations.half_damage_from.map((t) => t.name as PokemonType),
+    noDamageFrom: data.damage_relations.no_damage_from.map((t) => t.name as PokemonType),
+  }
+
+  // Get Pokemon of this type (filter to main series Pokemon, id <= 1025)
+  const pokemon: TypePokemon[] = data.pokemon
+    .map((p) => {
+      const id = getPokemonIdFromUrl(p.pokemon.url)
+      return {
+        id,
+        name: formatName(p.pokemon.name),
+        sprite: getSpriteUrl(id),
+        slot: p.slot as 1 | 2,
+      }
+    })
+    .filter((p) => p.id <= 1025) // Only main series Pokemon
+    .sort((a, b) => a.id - b.id)
+
+  return {
+    id: data.id,
+    name: data.name as PokemonType,
+    damageRelations,
+    generation: formatName(data.generation.name),
+    pokemon,
+  }
+}
+
+// Get basic type info for all 18 types (for index page)
+export async function getAllTypesWithRelations(): Promise<TypeDetail[]> {
+  const typePromises = ALL_TYPES.map((type) => getTypeDetail(type))
+  return Promise.all(typePromises)
 }

@@ -174,6 +174,34 @@ export interface FullAbilityDetail extends AbilityDetail {
   pokemon: AbilityPokemon[]
 }
 
+// Type detail types
+export interface TypeDamageRelations {
+  doubleDamageTo: PokemonType[]
+  halfDamageTo: PokemonType[]
+  noDamageTo: PokemonType[]
+  doubleDamageFrom: PokemonType[]
+  halfDamageFrom: PokemonType[]
+  noDamageFrom: PokemonType[]
+}
+
+export interface TypePokemon {
+  id: number
+  name: string
+  sprite: string
+  slot: 1 | 2 // Primary or secondary type
+}
+
+export interface TypeDetail {
+  id: number
+  name: PokemonType
+  damageRelations: TypeDamageRelations
+  generation: string
+}
+
+export interface FullTypeDetail extends TypeDetail {
+  pokemon: TypePokemon[]
+}
+
 export const TYPE_COLORS: Record<PokemonType, string> = {
   normal: "#A8A77A",
   fire: "#EE8130",

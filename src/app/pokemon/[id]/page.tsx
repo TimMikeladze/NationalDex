@@ -2,15 +2,15 @@
 
 import { use, useMemo } from "react"
 import Link from "next/link"
-import { useTheme } from "next-themes"
 import { Heart } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { usePokemonWithSpecies, usePokemonMoves, useEvolutionChain } from "@/hooks/use-pokemon"
 import { useFavorites } from "@/hooks/use-favorites"
 import { calculateTypeEffectiveness } from "@/lib/pokeapi"
-import { TYPE_COLORS, TYPE_TEXT_COLORS } from "@/types/pokemon"
-import type { PokemonType, PokemonStat, PokemonMove, EvolutionChainLink, PokemonSpecies, Pokemon } from "@/types/pokemon"
+import { TypeBadge } from "@/components/pokemon/type-badge"
+import { StatBar } from "@/components/pokemon/stat-bar"
+import type { PokemonType, PokemonMove, EvolutionChainLink, PokemonSpecies, Pokemon } from "@/types/pokemon"
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -70,7 +70,7 @@ export default function PokemonPage({ params }: PageProps) {
           )}
           <div className="flex justify-center gap-2">
             {pokemon.types.map((type) => (
-              <TypeBadge key={type} type={type} />
+              <TypeBadge key={type} type={type} size="default" linkable />
             ))}
           </div>
         </section>
@@ -82,7 +82,7 @@ export default function PokemonPage({ params }: PageProps) {
               <Label>weaknesses</Label>
               <div className="flex flex-wrap gap-1">
                 {typeEffectiveness.weaknesses.map(({ type, multiplier }) => (
-                  <TypeBadge key={type} type={type} multiplier={multiplier} size="sm" />
+                  <TypeBadge key={type} type={type} multiplier={multiplier} size="sm" linkable />
                 ))}
                 {typeEffectiveness.weaknesses.length === 0 && (
                   <span className="text-xs text-muted-foreground">None</span>
@@ -93,10 +93,10 @@ export default function PokemonPage({ params }: PageProps) {
               <Label>resistances</Label>
               <div className="flex flex-wrap gap-1">
                 {typeEffectiveness.resistances.map(({ type, multiplier }) => (
-                  <TypeBadge key={type} type={type} multiplier={multiplier} size="sm" />
+                  <TypeBadge key={type} type={type} multiplier={multiplier} size="sm" linkable />
                 ))}
                 {typeEffectiveness.immunities.map((type) => (
-                  <TypeBadge key={type} type={type} multiplier={0} size="sm" />
+                  <TypeBadge key={type} type={type} multiplier={0} size="sm" linkable />
                 ))}
                 {typeEffectiveness.resistances.length === 0 && typeEffectiveness.immunities.length === 0 && (
                   <span className="text-xs text-muted-foreground">None</span>
@@ -111,7 +111,7 @@ export default function PokemonPage({ params }: PageProps) {
           <Label>base stats</Label>
           <div className="space-y-2">
             {pokemon.stats.map((stat) => (
-              <StatRow key={stat.name} stat={stat} />
+              <StatBar key={stat.name} stat={stat} />
             ))}
           </div>
           <div className="flex justify-between text-xs pt-1 border-t">
@@ -146,62 +146,6 @@ function Label({ children }: { children: React.ReactNode }) {
     <span className="text-[10px] text-muted-foreground uppercase tracking-wider block">
       {children}
     </span>
-  )
-}
-
-function TypeBadge({
-  type,
-  multiplier,
-  size = "default"
-}: {
-  type: PokemonType
-  multiplier?: number
-  size?: "default" | "sm"
-}) {
-  const { resolvedTheme } = useTheme()
-  const bgColor = TYPE_COLORS[type]
-  const textColor = resolvedTheme === "dark" ? TYPE_COLORS[type] : TYPE_TEXT_COLORS[type]
-  const multiplierLabel = multiplier !== undefined
-    ? multiplier === 0
-      ? "×0"
-      : multiplier >= 1
-        ? `×${multiplier}`
-        : `×${multiplier}`
-    : null
-
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1 uppercase tracking-wider rounded",
-        size === "default" ? "text-xs px-2 py-0.5" : "text-[10px] px-1.5 py-0.5"
-      )}
-      style={{ backgroundColor: `${bgColor}20`, color: textColor }}
-    >
-      {type}
-      {multiplierLabel && (
-        <span className="opacity-75">{multiplierLabel}</span>
-      )}
-    </span>
-  )
-}
-
-function StatRow({ stat }: { stat: PokemonStat }) {
-  const percentage = Math.min((stat.value / 255) * 100, 100)
-
-  return (
-    <div className="flex items-center gap-3 text-xs">
-      <span className="w-16 text-muted-foreground truncate">{stat.name}</span>
-      <span className="w-8 text-right tabular-nums">{stat.value}</span>
-      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-        <div
-          className="h-full rounded-full transition-all"
-          style={{
-            width: `${percentage}%`,
-            backgroundColor: percentage > 75 ? "#22c55e" : percentage > 50 ? "#eab308" : "#ef4444",
-          }}
-        />
-      </div>
-    </div>
   )
 }
 
@@ -298,7 +242,7 @@ function MoveGroup({
                 </span>
               )}
               <span className="flex-1 font-medium">{move.name}</span>
-              <TypeBadge type={move.type} size="sm" />
+              <TypeBadge type={move.type} size="sm" linkable />
               <span className="w-12 text-right tabular-nums text-muted-foreground">
                 {move.power ? `${move.power} pwr` : move.damageClass}
               </span>

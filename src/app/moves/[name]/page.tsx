@@ -6,8 +6,8 @@ import { Search, X } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { useFullMoveDetail } from "@/hooks/use-pokemon"
-import { TYPE_COLORS } from "@/types/pokemon"
-import type { PokemonType, MovePokemon } from "@/types/pokemon"
+import { TypeBadge } from "@/components/pokemon/type-badge"
+import type { MovePokemon } from "@/types/pokemon"
 
 // Pokemon ID ranges by generation
 const GEN_RANGES = [
@@ -53,8 +53,6 @@ export default function MoveDetailPage({ params }: PageProps) {
     )
   }
 
-  const color = TYPE_COLORS[move.type]
-
   return (
     <div className="min-h-screen p-4 md:p-6">
       <div className="max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto space-y-6">
@@ -62,7 +60,7 @@ export default function MoveDetailPage({ params }: PageProps) {
         <section className="space-y-3">
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-medium">{move.name}</h1>
-            <TypeBadge type={move.type} />
+            <TypeBadge type={move.type} size="default" />
           </div>
           <p className="text-sm text-muted-foreground leading-relaxed">{move.description}</p>
         </section>
@@ -110,18 +108,6 @@ function Label({ children }: { children: React.ReactNode }) {
   return (
     <span className="text-[10px] text-muted-foreground uppercase tracking-wider block">
       {children}
-    </span>
-  )
-}
-
-function TypeBadge({ type }: { type: PokemonType }) {
-  const color = TYPE_COLORS[type]
-  return (
-    <span
-      className="text-xs px-2 py-0.5 uppercase tracking-wider rounded"
-      style={{ backgroundColor: `${color}20`, color }}
-    >
-      {type}
     </span>
   )
 }
