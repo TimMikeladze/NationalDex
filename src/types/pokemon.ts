@@ -244,3 +244,83 @@ export const TYPE_TEXT_COLORS: Record<PokemonType, string> = {
   steel: "#6A6A8A",
   fairy: "#A8558A",
 }
+
+// ============================================================================
+// Item Types
+// ============================================================================
+
+export type ItemPocket =
+  | "misc"
+  | "medicine"
+  | "pokeballs"
+  | "machines"
+  | "berries"
+  | "mail"
+  | "battle"
+  | "key"
+
+export interface ItemListItem {
+  id: number
+  name: string
+  sprite: string | null
+  category: string
+  pocket: ItemPocket
+  cost: number
+}
+
+export interface ItemListResponse {
+  count: number
+  next: string | null
+  previous: string | null
+  results: { name: string; url: string }[]
+}
+
+export interface ItemFlingEffect {
+  name: string
+  description: string
+}
+
+export interface ItemHeldByPokemon {
+  id: number
+  name: string
+  sprite: string
+  rarity: number
+}
+
+export interface FullItemDetail {
+  id: number
+  name: string
+  sprite: string | null
+  category: string
+  pocket: ItemPocket
+  cost: number
+  flingPower: number | null
+  flingEffect: ItemFlingEffect | null
+  description: string
+  shortDescription: string
+  attributes: string[]
+  heldByPokemon: ItemHeldByPokemon[]
+  gameIndices: { game: string; generation: string }[]
+}
+
+export const ITEM_POCKET_COLORS: Record<ItemPocket, string> = {
+  misc: "#9CA3AF",
+  medicine: "#EC4899",
+  pokeballs: "#EF4444",
+  machines: "#8B5CF6",
+  berries: "#22C55E",
+  mail: "#F59E0B",
+  battle: "#3B82F6",
+  key: "#F97316",
+}
+
+export const ITEM_POCKET_LABELS: Record<ItemPocket, string> = {
+  misc: "Misc",
+  medicine: "Medicine",
+  pokeballs: "Poké Balls",
+  machines: "TMs & HMs",
+  berries: "Berries",
+  mail: "Mail",
+  battle: "Battle Items",
+  key: "Key Items",
+}

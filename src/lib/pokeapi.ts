@@ -22,6 +22,11 @@ import type {
   TypeDamageRelations,
   TypePokemon,
   FullTypeDetail,
+  ItemListResponse,
+  ItemListItem,
+  ItemPocket,
+  FullItemDetail,
+  ItemHeldByPokemon,
 } from "@/types/pokemon"
 
 const client = new Pokedex({
@@ -168,50 +173,51 @@ export async function getEvolutionChain(
   return parseEvolutionChain(data.chain)
 }
 
-async function parseEvolutionChain(chain: {
-  species: { name: string; url: string }
-  evolves_to: Array<{
+async function parseEvolutionChain(
+  chain: {
     species: { name: string; url: string }
-    evolution_details: Array<{
-      trigger: { name: string }
-      min_level: number | null
-      item: { name: string } | null
-      held_item: { name: string } | null
-      time_of_day: string
-      min_happiness: number | null
-      known_move: { name: string } | null
-      location: { name: string } | null
+    evolves_to: Array<{
+      species: { name: string; url: string }
+      evolution_details: Array<{
+        trigger: { name: string }
+        min_level: number | null
+        item: { name: string } | null
+        held_item: { name: string } | null
+        time_of_day: string
+        min_happiness: number | null
+        known_move: { name: string } | null
+        location: { name: string } | null
+      }>
+      evolves_to: typeof chain.evolves_to
     }>
-    evolves_to: typeof chain.evolves_to
-  }>
-}): Promise<EvolutionChainLink> {
+  },
+  evolutionDetailsToThis: EvolutionDetail[] = []
+): Promise<EvolutionChainLink> {
   const speciesId = getPokemonIdFromSpeciesUrl(chain.species.url)
 
-  const evolvesToPromises = chain.evolves_to.map((e) => parseEvolutionChain(e))
+  // Parse each evolution target, passing its evolution_details to set on the target
+  const evolvesToPromises = chain.evolves_to.map((e) => {
+    const detailsToTarget: EvolutionDetail[] = e.evolution_details.map((d) => ({
+      trigger: formatName(d.trigger.name),
+      minLevel: d.min_level,
+      item: d.item ? formatName(d.item.name) : null,
+      heldItem: d.held_item ? formatName(d.held_item.name) : null,
+      timeOfDay: d.time_of_day || null,
+      minHappiness: d.min_happiness,
+      knownMove: d.known_move ? formatName(d.known_move.name) : null,
+      location: d.location ? formatName(d.location.name) : null,
+      otherRequirement: null,
+    }))
+    return parseEvolutionChain(e, detailsToTarget)
+  })
   const evolvesTo = await Promise.all(evolvesToPromises)
-
-  const evolutionDetails: EvolutionDetail[] = chain.evolves_to.length > 0
-    ? chain.evolves_to.flatMap((e) =>
-        e.evolution_details.map((d) => ({
-          trigger: formatName(d.trigger.name),
-          minLevel: d.min_level,
-          item: d.item ? formatName(d.item.name) : null,
-          heldItem: d.held_item ? formatName(d.held_item.name) : null,
-          timeOfDay: d.time_of_day || null,
-          minHappiness: d.min_happiness,
-          knownMove: d.known_move ? formatName(d.known_move.name) : null,
-          location: d.location ? formatName(d.location.name) : null,
-          otherRequirement: null,
-        }))
-      )
-    : []
 
   return {
     id: speciesId,
     name: formatName(chain.species.name),
     sprite: getSpriteUrl(speciesId),
     evolvesTo,
-    evolutionDetails,
+    evolutionDetails: evolutionDetailsToThis,
   }
 }
 
@@ -621,3 +627,154 @@ export async function getAllTypesWithRelations(): Promise<TypeDetail[]> {
   const typePromises = ALL_TYPES.map((type) => getTypeDetail(type))
   return Promise.all(typePromises)
 }
+
+// ============================================================================
+// Item List & Detail (for dedicated pages)
+// ============================================================================
+
+// Map PokeAPI pocket names to our ItemPocket type
+function mapPocketName(pocketName: string): ItemPocket {
+  const mapping: Record<string, ItemPocket> = {
+    misc: "misc",
+    medicine: "medicine",
+    "poke-balls": "pokeballs",
+    machines: "machines",
+    berries: "berries",
+    mail: "mail",
+    battle: "battle",
+    "key-items": "key",
+  }
+  return mapping[pocketName] ?? "misc"
+}
+
+export async function getItemList(
+  offset = 0,
+  limit = 20
+): Promise<ItemListResponse> {
+  const response = await client.getItemsList({ offset, limit })
+  return {
+    count: response.count,
+    next: response.next,
+    previous: response.previous,
+    results: response.results,
+  }
+}
+
+export async function getItemListItem(name: string): Promise<ItemListItem | null> {
+  try {
+    const data = await client.getItemByName(name)
+    return {
+      id: data.id,
+      name: formatName(data.name),
+      sprite: data.sprites.default,
+      category: formatName(data.category.name),
+      pocket: mapPocketName(data.category.pocket.name),
+      cost: data.cost,
+    }
+  } catch {
+    return null
+  }
+}
+
+export async function getFullItemDetail(nameOrId: string | number): Promise<FullItemDetail> {
+  const apiName = typeof nameOrId === "string"
+    ? nameOrId.toLowerCase().replace(/\s+/g, "-")
+    : nameOrId
+
+  const data = await client.getItemByName(apiName)
+
+  const englishEffect = data.effect_entries.find(
+    (e) => e.language.name === "en"
+  )
+  const englishFlavor = data.flavor_text_entries.find(
+    (e) => e.language.name === "en"
+  )
+
+  // Get fling effect if present
+  let flingEffect: FullItemDetail["flingEffect"] = null
+  if (data.fling_effect) {
+    try {
+      // Extract fling effect name from URL and fetch by name
+      const flingEffectName = data.fling_effect.name
+      const flingData = await client.getItemFlingEffectByName(flingEffectName)
+      const englishFlingEffect = flingData.effect_entries.find(
+        (e) => e.language.name === "en"
+      )
+      flingEffect = {
+        name: formatName(flingData.name),
+        description: englishFlingEffect?.effect ?? "",
+      }
+    } catch {
+      // Fling effect not found, leave as null
+    }
+  }
+
+  // Get Pokemon that hold this item
+  const heldByPokemon: ItemHeldByPokemon[] = data.held_by_pokemon.map((p) => {
+    const id = getPokemonIdFromUrl(p.pokemon.url)
+    // Get rarity from the most recent version
+    const latestVersion = p.version_details[p.version_details.length - 1]
+    return {
+      id,
+      name: formatName(p.pokemon.name),
+      sprite: getSpriteUrl(id),
+      rarity: latestVersion?.rarity ?? 0,
+    }
+  })
+
+  // Get game indices for availability info
+  const gameIndices = data.game_indices.map((g) => ({
+    game: formatName(g.generation.name),
+    generation: formatName(g.generation.name),
+  }))
+
+  return {
+    id: data.id,
+    name: formatName(data.name),
+    sprite: data.sprites.default,
+    category: formatName(data.category.name),
+    pocket: mapPocketName(data.category.pocket.name),
+    cost: data.cost,
+    flingPower: data.fling_power,
+    flingEffect,
+    description: englishEffect?.effect?.replace(/\f|\n/g, " ") ?? "",
+    shortDescription: englishFlavor?.text?.replace(/\f|\n/g, " ") ?? "",
+    attributes: data.attributes.map((a) => formatName(a.name)),
+    heldByPokemon,
+    gameIndices,
+  }
+}
+
+// Get all item categories for filtering
+export async function getItemCategories(): Promise<{ id: string; name: string; pocket: ItemPocket }[]> {
+  const response = await client.getItemCategoriesList({ limit: 100 })
+
+  const categories = await Promise.all(
+    response.results.map(async (cat) => {
+      try {
+        const data = await client.getItemCategoryByName(cat.name)
+        return {
+          id: cat.name,
+          name: formatName(cat.name),
+          pocket: mapPocketName(data.pocket.name),
+        }
+      } catch {
+        return null
+      }
+    })
+  )
+
+  return categories.filter((c): c is NonNullable<typeof c> => c !== null)
+}
+
+// All item pockets for filtering
+export const ALL_ITEM_POCKETS: ItemPocket[] = [
+  "medicine",
+  "pokeballs",
+  "machines",
+  "berries",
+  "battle",
+  "key",
+  "mail",
+  "misc",
+]

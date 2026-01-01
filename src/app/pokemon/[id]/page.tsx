@@ -304,59 +304,73 @@ function EvolutionChainDisplay({
   chain: EvolutionChainLink
   currentId: number
 }) {
-  const flatChain = flattenEvolutionChain(chain)
-
-  if (flatChain.length === 1) {
+  if (chain.evolvesTo.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">This Pokémon does not evolve.</p>
     )
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-center gap-2">
-        {flatChain.map((pokemon, index) => (
-          <div key={pokemon.id} className="flex items-center gap-2">
-            <Link
-              href={`/pokemon/${pokemon.id}`}
-              className={cn(
-                "flex flex-col items-center gap-1 p-2 rounded hover:bg-muted transition-colors",
-                pokemon.id === currentId && "bg-muted ring-1 ring-primary"
-              )}
-            >
-              <img
-                src={pokemon.sprite}
-                alt={pokemon.name}
-                className="size-16 md:size-20 lg:size-24 pixelated"
-              />
-              <span className="text-xs">{pokemon.name}</span>
-              <span className="text-[10px] text-muted-foreground">
-                #{pokemon.id.toString().padStart(3, "0")}
-              </span>
-            </Link>
-            {index < flatChain.length - 1 && (
-              <div className="text-muted-foreground text-xs">
-                <span>→</span>
-                {flatChain[index + 1]?.evolutionDetails[0] && (
-                  <div className="text-[10px] text-center max-w-16">
-                    {formatEvolutionMethod(flatChain[index + 1].evolutionDetails[0])}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+    <div className="flex flex-wrap items-center justify-center gap-2">
+      <EvolutionNode pokemon={chain} currentId={currentId} isFirst />
     </div>
   )
 }
 
-function flattenEvolutionChain(chain: EvolutionChainLink): EvolutionChainLink[] {
-  const result: EvolutionChainLink[] = [chain]
-  for (const evolution of chain.evolvesTo) {
-    result.push(...flattenEvolutionChain(evolution))
-  }
-  return result
+function EvolutionNode({
+  pokemon,
+  currentId,
+  isFirst = false,
+}: {
+  pokemon: EvolutionChainLink
+  currentId: number
+  isFirst?: boolean
+}) {
+  const hasBranching = pokemon.evolvesTo.length > 1
+
+  return (
+    <div className="flex items-center gap-2">
+      {/* Show evolution method arrow if this isn't the base form */}
+      {!isFirst && pokemon.evolutionDetails.length > 0 && (
+        <div className="text-muted-foreground text-xs flex flex-col items-center">
+          <span>→</span>
+          <div className="text-[10px] text-center max-w-20">
+            {pokemon.evolutionDetails.map((detail, i) => (
+              <div key={i}>{formatEvolutionMethod(detail)}</div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Pokemon card */}
+      <Link
+        href={`/pokemon/${pokemon.id}`}
+        className={cn(
+          "flex flex-col items-center gap-1 p-2 rounded hover:bg-muted transition-colors",
+          pokemon.id === currentId && "bg-muted ring-1 ring-primary"
+        )}
+      >
+        <img
+          src={pokemon.sprite}
+          alt={pokemon.name}
+          className="size-16 md:size-20 lg:size-24 pixelated"
+        />
+        <span className="text-xs">{pokemon.name}</span>
+        <span className="text-[10px] text-muted-foreground">
+          #{pokemon.id.toString().padStart(3, "0")}
+        </span>
+      </Link>
+
+      {/* Evolutions */}
+      {pokemon.evolvesTo.length > 0 && (
+        <div className={cn("flex", hasBranching ? "flex-col gap-2" : "items-center")}>
+          {pokemon.evolvesTo.map((evo) => (
+            <EvolutionNode key={evo.id} pokemon={evo} currentId={currentId} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 function formatEvolutionMethod(detail: EvolutionChainLink["evolutionDetails"][0]): string {
