@@ -2,7 +2,7 @@
 
 import { use, useMemo } from "react"
 import Link from "next/link"
-import { Heart, GitCompareArrows } from "lucide-react"
+import { Heart, GitCompareArrows, ChevronLeft, ChevronRight } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { usePokemonWithSpecies, usePokemonMoves, useEvolutionChain } from "@/hooks/use-pokemon"
@@ -12,6 +12,8 @@ import { calculateTypeEffectiveness } from "@/lib/pokeapi"
 import { TypeBadge } from "@/components/pokemon/type-badge"
 import { StatBar } from "@/components/pokemon/stat-bar"
 import type { PokemonType, PokemonMove, EvolutionChainLink, PokemonSpecies, Pokemon } from "@/types/pokemon"
+
+const MAX_POKEMON_ID = 1025
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -43,38 +45,61 @@ export default function PokemonPage({ params }: PageProps) {
       <div className="max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto space-y-6">
         {/* Core Header */}
         <section className="text-center space-y-3">
-          <div className="flex justify-between items-start">
-            <div />
+          {/* Navigation and ID row */}
+          <div className="flex justify-between items-center">
+            {pokemon.id > 1 ? (
+              <Link
+                href={`/pokemon/${pokemon.id - 1}`}
+                className="p-1 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                title="Previous Pokemon"
+              >
+                <ChevronLeft className="size-5" />
+              </Link>
+            ) : (
+              <div className="size-7" />
+            )}
             <span className="text-xs text-muted-foreground tabular-nums">
               #{pokemon.id.toString().padStart(3, "0")}
             </span>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => toggleComparison(pokemon.id)}
-                disabled={!canAddMore && !isInComparison(pokemon.id)}
+            {pokemon.id < MAX_POKEMON_ID ? (
+              <Link
+                href={`/pokemon/${pokemon.id + 1}`}
+                className="p-1 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                title="Next Pokemon"
+              >
+                <ChevronRight className="size-5" />
+              </Link>
+            ) : (
+              <div className="size-7" />
+            )}
+          </div>
+          {/* Actions row */}
+          <div className="flex justify-center items-center gap-2">
+            <button
+              type="button"
+              onClick={() => toggleComparison(pokemon.id)}
+              disabled={!canAddMore && !isInComparison(pokemon.id)}
+              className={cn(
+                "transition-colors",
+                isInComparison(pokemon.id) ? "text-blue-500" : "text-muted-foreground hover:text-foreground",
+                !canAddMore && !isInComparison(pokemon.id) && "opacity-50 cursor-not-allowed"
+              )}
+              title={isInComparison(pokemon.id) ? "Remove from comparison" : "Add to comparison"}
+            >
+              <GitCompareArrows className="size-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => toggleFavorite(pokemon.id)}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <Heart
                 className={cn(
-                  "transition-colors",
-                  isInComparison(pokemon.id) ? "text-blue-500" : "text-muted-foreground hover:text-foreground",
-                  !canAddMore && !isInComparison(pokemon.id) && "opacity-50 cursor-not-allowed"
+                  "size-4",
+                  isFavorite(pokemon.id) && "fill-current"
                 )}
-                title={isInComparison(pokemon.id) ? "Remove from comparison" : "Add to comparison"}
-              >
-                <GitCompareArrows className="size-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => toggleFavorite(pokemon.id)}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <Heart
-                  className={cn(
-                    "size-4",
-                    isFavorite(pokemon.id) && "fill-current"
-                  )}
-                />
-              </button>
-            </div>
+              />
+            </button>
           </div>
           <img
             src={pokemon.sprite}
@@ -525,9 +550,13 @@ function PokemonPageSkeleton() {
     <div className="min-h-screen p-4 md:p-6">
       <div className="max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto space-y-6">
         <section className="text-center space-y-3">
-          <div className="flex justify-between items-start">
-            <div />
+          <div className="flex justify-between items-center">
+            <Skeleton className="size-7" />
             <Skeleton className="h-3 w-12" />
+            <Skeleton className="size-7" />
+          </div>
+          <div className="flex justify-center gap-2">
+            <Skeleton className="h-4 w-4" />
             <Skeleton className="h-4 w-4" />
           </div>
           <Skeleton className="size-32 md:size-40 lg:size-48 mx-auto" />
