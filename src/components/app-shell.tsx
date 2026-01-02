@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Grid3X3, Heart, MoreHorizontal, Search, Users, Settings, MapPin, Package, Info, GitCompareArrows } from "lucide-react"
+import { Grid3X3, Heart, MoreHorizontal, Search, Users, Settings, MapPin, Package, Info, GitCompareArrows, CircleHelp } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useNav } from "./navigation/nav-provider"
 import {
@@ -21,6 +21,7 @@ const navItems = [
 ]
 
 const moreMenuItems = [
+  { href: "/whos-that-pokemon", icon: CircleHelp, label: "Who's That Pokemon?" },
   { href: "/comparison", icon: GitCompareArrows, label: "Comparison" },
   { href: "/settings", icon: Settings, label: "Settings" },
   { href: "/locations", icon: MapPin, label: "Locations" },
