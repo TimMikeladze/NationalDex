@@ -81,7 +81,7 @@ export function AppShell({ children }: AppShellProps) {
         </nav>
       </header>
 
-      <main className="flex-1 pb-nav lg:pb-0 lg:pt-14">
+      <main className="flex-1 pt-safe pb-nav lg:pb-0 lg:pt-14">
         {children}
       </main>
 
