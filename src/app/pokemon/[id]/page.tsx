@@ -2,11 +2,12 @@
 
 import { use, useMemo } from "react"
 import Link from "next/link"
-import { Heart } from "lucide-react"
+import { Heart, GitCompareArrows } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { usePokemonWithSpecies, usePokemonMoves, useEvolutionChain } from "@/hooks/use-pokemon"
 import { useFavorites } from "@/hooks/use-favorites"
+import { useComparison } from "@/hooks/use-comparison"
 import { calculateTypeEffectiveness } from "@/lib/pokeapi"
 import { TypeBadge } from "@/components/pokemon/type-badge"
 import { StatBar } from "@/components/pokemon/stat-bar"
@@ -20,6 +21,7 @@ export default function PokemonPage({ params }: PageProps) {
   const { id } = use(params)
   const { pokemon, species, isLoading } = usePokemonWithSpecies(id)
   const { isFavorite, toggleFavorite } = useFavorites()
+  const { isInComparison, toggleComparison, canAddMore } = useComparison()
   const { data: moves, isLoading: movesLoading } = usePokemonMoves(id)
   const { data: evolutionChain, isLoading: evolutionLoading } = useEvolutionChain(
     species?.evolutionChainUrl ?? null
@@ -46,18 +48,33 @@ export default function PokemonPage({ params }: PageProps) {
             <span className="text-xs text-muted-foreground tabular-nums">
               #{pokemon.id.toString().padStart(3, "0")}
             </span>
-            <button
-              type="button"
-              onClick={() => toggleFavorite(pokemon.id)}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <Heart
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => toggleComparison(pokemon.id)}
+                disabled={!canAddMore && !isInComparison(pokemon.id)}
                 className={cn(
-                  "size-4",
-                  isFavorite(pokemon.id) && "fill-current"
+                  "transition-colors",
+                  isInComparison(pokemon.id) ? "text-blue-500" : "text-muted-foreground hover:text-foreground",
+                  !canAddMore && !isInComparison(pokemon.id) && "opacity-50 cursor-not-allowed"
                 )}
-              />
-            </button>
+                title={isInComparison(pokemon.id) ? "Remove from comparison" : "Add to comparison"}
+              >
+                <GitCompareArrows className="size-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => toggleFavorite(pokemon.id)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <Heart
+                  className={cn(
+                    "size-4",
+                    isFavorite(pokemon.id) && "fill-current"
+                  )}
+                />
+              </button>
+            </div>
           </div>
           <img
             src={pokemon.sprite}
