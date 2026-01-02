@@ -2,12 +2,13 @@
 
 import { useMemo } from "react"
 import Link from "next/link"
-import { Heart } from "lucide-react"
+import { Heart, GitCompareArrows } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { usePokemon } from "@/hooks/use-pokemon"
 import { useFavorites } from "@/hooks/use-favorites"
+import { useComparison } from "@/hooks/use-comparison"
 import { calculateTypeEffectiveness } from "@/lib/pokeapi"
 import { TypeBadge } from "./type-badge"
 import { StatsGrid } from "./stat-bar"
@@ -119,6 +120,7 @@ function PokemonCardContent({
   className?: string
 }) {
   const { isFavorite, toggleFavorite } = useFavorites()
+  const { isInComparison, toggleComparison, canAddMore } = useComparison()
 
   const typeEffectiveness = useMemo(() => {
     if (variant !== "detail") return null
@@ -129,6 +131,12 @@ function PokemonCardContent({
     e.preventDefault()
     e.stopPropagation()
     toggleFavorite(pokemon.id)
+  }
+
+  const handleCompareClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    toggleComparison(pokemon.id)
   }
 
   if (variant === "compact") {
@@ -148,6 +156,9 @@ function PokemonCardContent({
         showFavorite={showFavorite}
         isFavorite={isFavorite(pokemon.id)}
         onFavoriteClick={handleFavoriteClick}
+        isInComparison={isInComparison(pokemon.id)}
+        onCompareClick={handleCompareClick}
+        canAddMore={canAddMore}
         className={className}
       />
     )
@@ -160,6 +171,9 @@ function PokemonCardContent({
       showFavorite={showFavorite}
       isFavorite={isFavorite(pokemon.id)}
       onFavoriteClick={handleFavoriteClick}
+      isInComparison={isInComparison(pokemon.id)}
+      onCompareClick={handleCompareClick}
+      canAddMore={canAddMore}
       className={className}
     />
   )
@@ -209,12 +223,18 @@ function DefaultCard({
   showFavorite,
   isFavorite,
   onFavoriteClick,
+  isInComparison,
+  onCompareClick,
+  canAddMore,
   className,
 }: {
   pokemon: Pokemon
   showFavorite: boolean
   isFavorite: boolean
   onFavoriteClick: (e: React.MouseEvent) => void
+  isInComparison: boolean
+  onCompareClick: (e: React.MouseEvent) => void
+  canAddMore: boolean
   className?: string
 }) {
   return (
@@ -224,20 +244,39 @@ function DefaultCard({
           <span className="text-xs text-muted-foreground tabular-nums">
             #{pokemon.id.toString().padStart(3, "0")}
           </span>
-          {showFavorite && (
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
               type="button"
-              className="opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={onFavoriteClick}
+              onClick={onCompareClick}
+              disabled={!canAddMore && !isInComparison}
+              className={cn(
+                "transition-colors",
+                isInComparison ? "text-blue-500" : "text-muted-foreground hover:text-foreground",
+                !canAddMore && !isInComparison && "opacity-50 cursor-not-allowed"
+              )}
+              title={isInComparison ? "Remove from comparison" : "Add to comparison"}
             >
-              <Heart
+              <GitCompareArrows
                 className={cn(
                   "size-3.5",
-                  isFavorite && "fill-current"
+                  isInComparison && "fill-current"
                 )}
               />
             </button>
-          )}
+            {showFavorite && (
+              <button
+                type="button"
+                onClick={onFavoriteClick}
+              >
+                <Heart
+                  className={cn(
+                    "size-3.5",
+                    isFavorite && "fill-current"
+                  )}
+                />
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="flex flex-col items-center py-2 md:py-3">
@@ -272,6 +311,9 @@ function DetailCard({
   showFavorite,
   isFavorite,
   onFavoriteClick,
+  isInComparison,
+  onCompareClick,
+  canAddMore,
   className,
 }: {
   pokemon: Pokemon
@@ -279,6 +321,9 @@ function DetailCard({
   showFavorite: boolean
   isFavorite: boolean
   onFavoriteClick: (e: React.MouseEvent) => void
+  isInComparison: boolean
+  onCompareClick: (e: React.MouseEvent) => void
+  canAddMore: boolean
   className?: string
 }) {
   return (
@@ -288,20 +333,40 @@ function DetailCard({
         <span className="text-xs text-muted-foreground tabular-nums">
           #{pokemon.id.toString().padStart(3, "0")}
         </span>
-        {showFavorite && (
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={onFavoriteClick}
-            className="text-muted-foreground hover:text-foreground transition-colors"
+            onClick={onCompareClick}
+            disabled={!canAddMore && !isInComparison}
+            className={cn(
+              "transition-colors",
+              isInComparison ? "text-blue-500" : "text-muted-foreground hover:text-foreground",
+              !canAddMore && !isInComparison && "opacity-50 cursor-not-allowed"
+            )}
+            title={isInComparison ? "Remove from comparison" : "Add to comparison"}
           >
-            <Heart
+            <GitCompareArrows
               className={cn(
                 "size-4",
-                isFavorite && "fill-current"
+                isInComparison && "fill-current"
               )}
             />
           </button>
-        )}
+          {showFavorite && (
+            <button
+              type="button"
+              onClick={onFavoriteClick}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Heart
+                className={cn(
+                  "size-4",
+                  isFavorite && "fill-current"
+                )}
+              />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Pokemon Image & Name */}
