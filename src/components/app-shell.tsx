@@ -11,6 +11,12 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 const navItems = [
   { href: "/", icon: Grid3X3, label: "dex" },
@@ -130,23 +136,37 @@ export function AppShell({ children }: AppShellProps) {
         </Link>
         <nav className="flex items-center gap-1">
           {navItems.map((item) => renderNavItem(item, "desktop"))}
-          {/* More menu items shown directly on desktop */}
-          {moreMenuItems.map((item) => {
-            const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-muted transition-colors",
-                  isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <item.icon className="size-4" strokeWidth={1.5} />
-                <span className="text-xs">{item.label.toLowerCase()}</span>
-              </Link>
-            )
-          })}
+          {/* Desktop More Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-muted transition-colors",
+                isMoreActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <MoreHorizontal className="size-4" strokeWidth={1.5} />
+              <span className="text-xs">more</span>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {moreMenuItems.map((item) => {
+                const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)
+                return (
+                  <DropdownMenuItem key={item.href} asChild>
+                    <Link
+                      href={item.href}
+                      className={cn(
+                        "flex items-center gap-2 cursor-pointer",
+                        isActive && "bg-muted"
+                      )}
+                    >
+                      <item.icon className="size-4" strokeWidth={1.5} />
+                      <span>{item.label}</span>
+                    </Link>
+                  </DropdownMenuItem>
+                )
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </nav>
       </header>
 
