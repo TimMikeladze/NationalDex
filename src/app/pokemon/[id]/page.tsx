@@ -1,6 +1,6 @@
 "use client"
 
-import { use, useMemo } from "react"
+import { use, useMemo, useRef, useState, useEffect } from "react"
 import Link from "next/link"
 import { Heart, GitCompareArrows, ChevronLeft, ChevronRight } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -35,6 +35,31 @@ export default function PokemonPage({ params }: PageProps) {
     return calculateTypeEffectiveness(pokemon.types)
   }, [pokemon])
 
+  const headerRef = useRef<HTMLElement>(null)
+  const [showStickyBar, setShowStickyBar] = useState(false)
+
+  useEffect(() => {
+    const headerElement = headerRef.current
+    if (!headerElement) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        // Show sticky bar when header is not intersecting (scrolled past)
+        setShowStickyBar(!entry.isIntersecting)
+      },
+      {
+        threshold: 0,
+        rootMargin: "-80px 0px 0px 0px", // Account for desktop header
+      }
+    )
+
+    observer.observe(headerElement)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [])
+
   if (isLoading || !pokemon) {
     return <PokemonPageSkeleton />
   }
@@ -43,9 +68,20 @@ export default function PokemonPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen p-4 md:p-6">
+      {/* Sticky Mini App Bar */}
+      <StickyMiniBar
+        show={showStickyBar}
+        pokemon={pokemon}
+        isFavorite={isFavorite(pokemon.id)}
+        isInComparison={isInComparison(pokemon.id)}
+        canAddMore={canAddMore}
+        onToggleFavorite={() => toggleFavorite(pokemon.id)}
+        onToggleComparison={() => toggleComparison(pokemon.id)}
+      />
+
       <div className="max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto space-y-6">
         {/* Core Header */}
-        <section className="text-center space-y-3">
+        <section ref={headerRef} className="text-center space-y-3">
           {/* Navigation and ID row */}
           <div className="flex justify-between items-center">
             {pokemon.id > 1 ? (
@@ -195,6 +231,97 @@ function Label({ children }: { children: React.ReactNode }) {
     <span className="text-[10px] text-muted-foreground uppercase tracking-wider block">
       {children}
     </span>
+  )
+}
+
+// ============================================================================
+// Sticky Mini App Bar
+// ============================================================================
+
+interface StickyMiniBarProps {
+  show: boolean
+  pokemon: Pokemon
+  isFavorite: boolean
+  isInComparison: boolean
+  canAddMore: boolean
+  onToggleFavorite: () => void
+  onToggleComparison: () => void
+}
+
+function StickyMiniBar({
+  show,
+  pokemon,
+  isFavorite,
+  isInComparison,
+  canAddMore,
+  onToggleFavorite,
+  onToggleComparison,
+}: StickyMiniBarProps) {
+  return (
+    <div
+      className={cn(
+        "fixed left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-b transition-all duration-200",
+        "top-0 pt-safe lg:top-14",
+        show
+          ? "translate-y-0 opacity-100"
+          : "-translate-y-full opacity-0 pointer-events-none"
+      )}
+    >
+      <div className="max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto px-4 py-2">
+        <div className="flex items-center justify-between">
+          {/* Left: Pokemon info */}
+          <div className="flex items-center gap-3">
+            <img
+              src={pokemon.sprite}
+              alt={pokemon.name}
+              className="size-10 pixelated"
+            />
+            <div className="flex flex-col">
+              <span className="text-sm font-medium leading-tight">{pokemon.name}</span>
+              <span className="text-xs text-muted-foreground tabular-nums">
+                #{pokemon.id.toString().padStart(3, "0")}
+              </span>
+            </div>
+          </div>
+
+          {/* Right: Actions */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onToggleComparison}
+              disabled={!canAddMore && !isInComparison}
+              className={cn(
+                "p-2 rounded-md transition-colors",
+                isInComparison ? "text-blue-500" : "text-muted-foreground hover:text-foreground hover:bg-muted",
+                !canAddMore && !isInComparison && "opacity-50 cursor-not-allowed"
+              )}
+              title={isInComparison ? "Remove from comparison" : "Add to comparison"}
+            >
+              <GitCompareArrows className="size-4" />
+            </button>
+            <button
+              type="button"
+              onClick={onToggleFavorite}
+              className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              title={isFavorite ? "Remove from favorites" : "Add to favorites"}
+            >
+              <Heart
+                className={cn(
+                  "size-4",
+                  isFavorite && "fill-current text-red-500"
+                )}
+              />
+            </button>
+            <AddToListDialog
+              itemType="pokemon"
+              itemId={pokemon.id.toString()}
+              itemName={pokemon.name}
+              itemSprite={pokemon.sprite}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 
