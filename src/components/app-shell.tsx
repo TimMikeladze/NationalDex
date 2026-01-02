@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation"
 import { Grid3X3, Heart, MoreHorizontal, Search, Users, Settings, MapPin, Package, Info, GitCompareArrows, CircleHelp, ListPlus } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useNav } from "./navigation/nav-provider"
+import { useIsPWA } from "@/hooks/use-pwa"
 import {
   Sheet,
   SheetContent,
@@ -44,6 +45,7 @@ interface AppShellProps {
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname()
   const { toggleSearch, moreOpen, setMoreOpen } = useNav()
+  const isPWA = useIsPWA()
   const isPopStateNav = useRef(false)
 
   // Track back/forward navigation via popstate
@@ -193,7 +195,7 @@ export function AppShell({ children }: AppShellProps) {
         </div>
       </header>
 
-      <main className="flex-1 max-lg:pt-safe pb-nav lg:pb-0 lg:pt-14">
+      <main className={cn("flex-1 pb-nav lg:pb-0 lg:pt-14", isPWA && "max-lg:pt-safe")}>
         <div className="max-w-7xl mx-auto">
           {children}
         </div>
