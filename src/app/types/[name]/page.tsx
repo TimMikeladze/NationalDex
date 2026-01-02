@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { useFullTypeDetail } from "@/hooks/use-pokemon"
 import { TYPE_COLORS } from "@/types/pokemon"
+import { AddToListDialog } from "@/components/add-to-list-dialog"
 import type { PokemonType, TypePokemon } from "@/types/pokemon"
 
 // Pokemon ID ranges by generation
@@ -67,6 +68,11 @@ export default function TypeDetailPage({ params }: PageProps) {
             >
               {type.name}
             </span>
+            <AddToListDialog
+              itemType="type"
+              itemId={name}
+              itemName={type.name}
+            />
           </div>
           <p className="text-sm text-muted-foreground">
             Introduced in {type.generation}

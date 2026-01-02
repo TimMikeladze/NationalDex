@@ -11,6 +11,7 @@ import { useComparison } from "@/hooks/use-comparison"
 import { calculateTypeEffectiveness } from "@/lib/pokeapi"
 import { TypeBadge } from "@/components/pokemon/type-badge"
 import { StatBar } from "@/components/pokemon/stat-bar"
+import { AddToListDialog } from "@/components/add-to-list-dialog"
 import type { PokemonType, PokemonMove, EvolutionChainLink, PokemonSpecies, Pokemon } from "@/types/pokemon"
 
 const MAX_POKEMON_ID = 1025
@@ -100,6 +101,12 @@ export default function PokemonPage({ params }: PageProps) {
                 )}
               />
             </button>
+            <AddToListDialog
+              itemType="pokemon"
+              itemId={pokemon.id.toString()}
+              itemName={pokemon.name}
+              itemSprite={pokemon.sprite}
+            />
           </div>
           <img
             src={pokemon.sprite}

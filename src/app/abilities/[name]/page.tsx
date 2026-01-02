@@ -6,6 +6,7 @@ import { Search, X } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { useFullAbilityDetail } from "@/hooks/use-pokemon"
+import { AddToListDialog } from "@/components/add-to-list-dialog"
 import type { AbilityPokemon } from "@/types/pokemon"
 
 // Pokemon ID ranges by generation
@@ -57,7 +58,14 @@ export default function AbilityDetailPage({ params }: PageProps) {
       <div className="max-w-2xl mx-auto space-y-6">
         {/* Header */}
         <section className="space-y-3">
-          <h1 className="text-xl font-medium">{ability.name}</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-xl font-medium">{ability.name}</h1>
+            <AddToListDialog
+              itemType="ability"
+              itemId={name}
+              itemName={ability.name}
+            />
+          </div>
           <p className="text-sm leading-relaxed">{ability.shortDescription}</p>
         </section>
 

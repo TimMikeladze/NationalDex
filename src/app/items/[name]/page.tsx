@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { useFullItemDetail } from "@/hooks/use-pokemon"
 import { ITEM_POCKET_COLORS, ITEM_POCKET_LABELS } from "@/types/pokemon"
+import { AddToListDialog } from "@/components/add-to-list-dialog"
 import type { ItemHeldByPokemon } from "@/types/pokemon"
 
 // Pokemon ID ranges by generation
@@ -74,7 +75,15 @@ export default function ItemDetailPage({ params }: PageProps) {
               </div>
             )}
             <div>
-              <h1 className="text-xl font-medium">{item.name}</h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-xl font-medium">{item.name}</h1>
+                <AddToListDialog
+                  itemType="item"
+                  itemId={name}
+                  itemName={item.name}
+                  itemSprite={item.sprite}
+                />
+              </div>
               <div className="flex items-center gap-2 mt-1">
                 <span
                   className="text-[10px] px-2 py-0.5 uppercase tracking-wider rounded"

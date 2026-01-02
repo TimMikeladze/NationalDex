@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { useFullMoveDetail } from "@/hooks/use-pokemon"
 import { TypeBadge } from "@/components/pokemon/type-badge"
+import { AddToListDialog } from "@/components/add-to-list-dialog"
 import type { MovePokemon } from "@/types/pokemon"
 
 // Pokemon ID ranges by generation
@@ -61,6 +62,11 @@ export default function MoveDetailPage({ params }: PageProps) {
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-medium">{move.name}</h1>
             <TypeBadge type={move.type} size="default" />
+            <AddToListDialog
+              itemType="move"
+              itemId={name}
+              itemName={move.name}
+            />
           </div>
           <p className="text-sm text-muted-foreground leading-relaxed">{move.description}</p>
         </section>
