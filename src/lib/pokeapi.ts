@@ -778,3 +778,57 @@ export const ALL_ITEM_POCKETS: ItemPocket[] = [
   "mail",
   "misc",
 ]
+
+// ============================================================================
+// Bulk Fetch Functions (for search index)
+// ============================================================================
+
+export async function getAllPokemonNames(): Promise<
+  { name: string; id: number; sprite: string }[]
+> {
+  const response = await client.getPokemonsList({ limit: 1025, offset: 0 })
+  return response.results.map((p) => {
+    const id = getPokemonIdFromUrl(p.url)
+    return {
+      name: formatName(p.name),
+      id,
+      sprite: getSpriteUrl(id),
+    }
+  })
+}
+
+export async function getAllMoveNames(): Promise<{ name: string; id: number }[]> {
+  const response = await client.getMovesList({ limit: 1000, offset: 0 })
+  return response.results.map((m) => {
+    const id = Number.parseInt(m.url.match(/\/move\/(\d+)\//)?.[1] ?? "0", 10)
+    return {
+      name: formatName(m.name),
+      id,
+    }
+  })
+}
+
+export async function getAllAbilityNames(): Promise<{ name: string; id: number }[]> {
+  const response = await client.getAbilitiesList({ limit: 400, offset: 0 })
+  return response.results.map((a) => {
+    const id = Number.parseInt(a.url.match(/\/ability\/(\d+)\//)?.[1] ?? "0", 10)
+    return {
+      name: formatName(a.name),
+      id,
+    }
+  })
+}
+
+export async function getAllItemNames(): Promise<
+  { name: string; id: number; sprite: string | null }[]
+> {
+  const response = await client.getItemsList({ limit: 2200, offset: 0 })
+  return response.results.map((i) => {
+    const id = Number.parseInt(i.url.match(/\/item\/(\d+)\//)?.[1] ?? "0", 10)
+    return {
+      name: formatName(i.name),
+      id,
+      sprite: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/${i.name}.png`,
+    }
+  })
+}
