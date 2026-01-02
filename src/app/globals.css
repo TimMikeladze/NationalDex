@@ -173,6 +173,22 @@
   padding-bottom: calc(3rem + env(safe-area-inset-bottom, 0px));
 }
 
+/* PWA standalone mode - uses CSS media query for immediate application without JS */
+@media (display-mode: standalone) {
+  .pwa-pt-safe {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 0.5rem);
+  }
+}
+
+/* iOS Safari standalone fallback using supports */
+@supports (-webkit-touch-callout: none) {
+  @media (display-mode: standalone) {
+    .pwa-pt-safe {
+      padding-top: calc(env(safe-area-inset-top, 0px) + 0.5rem);
+    }
+  }
+}
+
 /* Fix mobile fixed positioning issues during scroll */
 .fixed-bottom-stable {
   transform: translate3d(0, 0, 0);
