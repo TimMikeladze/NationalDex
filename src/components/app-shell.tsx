@@ -121,7 +121,7 @@ export function AppShell({ children }: AppShellProps) {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Desktop Header */}
-      <header className="hidden lg:flex fixed top-0 left-0 right-0 z-50 h-14 items-center justify-between border-b bg-background px-6">
+      <header className="hidden lg:flex fixed top-0 left-0 right-0 z-50 h-14 items-center justify-between border-b bg-background px-6 fixed-bottom-stable">
         <Link href="/" className="text-lg font-medium">
           nationaldex
         </Link>
@@ -152,7 +152,7 @@ export function AppShell({ children }: AppShellProps) {
       </main>
 
       {/* Mobile/Tablet Bottom Nav - hidden on desktop */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background pb-safe lg:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background pb-safe lg:hidden fixed-bottom-stable">
         <div className="flex h-12 items-center justify-around max-w-lg mx-auto">
           {navItems.map((item) => renderNavItem(item, "mobile"))}
         </div>
