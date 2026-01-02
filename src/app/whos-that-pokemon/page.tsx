@@ -32,6 +32,7 @@ export default function WhosThatPokemonPage() {
   const [guess, setGuess] = useState("")
   const [revealed, setRevealed] = useState(false)
   const [isCorrect, setIsCorrect] = useState(false)
+  const [honorSystem, setHonorSystem] = useState(false) // Revealed without guessing
   const [score, setScore] = useState(0)
   const [streak, setStreak] = useState(0)
   const [bestStreak, setBestStreak] = useState(0)
@@ -75,11 +76,30 @@ export default function WhosThatPokemonPage() {
     setStreak(0)
   }, [])
 
+  const handleRevealAnswer = useCallback(() => {
+    setRevealed(true)
+    setHonorSystem(true)
+  }, [])
+
+  const handleHonorCorrect = useCallback(() => {
+    setIsCorrect(true)
+    setHonorSystem(false)
+    setScore((s) => s + 1)
+    setStreak((s) => s + 1)
+  }, [])
+
+  const handleHonorIncorrect = useCallback(() => {
+    setIsCorrect(false)
+    setHonorSystem(false)
+    setStreak(0)
+  }, [])
+
   const handleNext = useCallback(() => {
     setPokemonId(getRandomPokemonId())
     setGuess("")
     setRevealed(false)
     setIsCorrect(false)
+    setHonorSystem(false)
     // Focus input after state update
     setTimeout(() => inputRef.current?.focus(), 100)
   }, [])
@@ -130,7 +150,7 @@ export default function WhosThatPokemonPage() {
                 !revealed && "brightness-0"
               )}
             />
-            {revealed && (
+            {revealed && !honorSystem && (
               <div
                 className={cn(
                   "absolute -bottom-2 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-sm font-medium",
@@ -140,6 +160,11 @@ export default function WhosThatPokemonPage() {
                 )}
               >
                 {isCorrect ? "Correct!" : "Better luck next time!"}
+              </div>
+            )}
+            {honorSystem && (
+              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-sm font-medium bg-blue-500/20 text-blue-600 dark:text-blue-400">
+                Did you get it?
               </div>
             )}
           </div>
@@ -166,7 +191,7 @@ export default function WhosThatPokemonPage() {
             <Input
               ref={inputRef}
               type="text"
-              placeholder="Enter Pokemon name..."
+              placeholder="Enter Pokemon name (optional)..."
               value={guess}
               onChange={(e) => setGuess(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -178,12 +203,23 @@ export default function WhosThatPokemonPage() {
                 <Check className="size-4 mr-2" />
                 Guess
               </Button>
-              <Button onClick={handleGiveUp} variant="outline" className="flex-1">
-                <X className="size-4 mr-2" />
-                Give Up
+              <Button onClick={handleRevealAnswer} variant="secondary" className="flex-1">
+                <SkipForward className="size-4 mr-2" />
+                Reveal
               </Button>
             </div>
           </>
+        ) : honorSystem ? (
+          <div className="flex gap-2">
+            <Button onClick={handleHonorCorrect} className="flex-1 bg-green-600 hover:bg-green-700">
+              <Check className="size-4 mr-2" />
+              I Got It!
+            </Button>
+            <Button onClick={handleHonorIncorrect} variant="destructive" className="flex-1">
+              <X className="size-4 mr-2" />
+              I Didn&apos;t Get It
+            </Button>
+          </div>
         ) : (
           <Button onClick={handleNext} className="w-full" size="lg">
             <SkipForward className="size-4 mr-2" />
@@ -195,7 +231,7 @@ export default function WhosThatPokemonPage() {
       {/* Instructions */}
       <div className="mt-8 text-center text-sm text-muted-foreground">
         <p>Guess the Pokemon from its silhouette!</p>
-        <p>Press Enter to submit your guess or move to the next Pokemon.</p>
+        <p>Type your guess or use Reveal for honor system mode.</p>
       </div>
     </div>
   )
