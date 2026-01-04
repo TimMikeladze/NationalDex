@@ -5,7 +5,6 @@ import { Search, X } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TypeBadge } from "@/components/pokemon/type-badge"
 import { ALL_TYPES, getAllPokemonNames, getAllMoveNames, getAllAbilityNames } from "@/lib/pokeapi"
 import type { PokemonType } from "@/types/pokemon"
@@ -68,20 +67,22 @@ export function DexFilter({ onFilterChange, filter }: DexFilterProps) {
 
   return (
     <div className="space-y-3">
-      {/* Category Tabs */}
-      <Tabs value={filter.category} onValueChange={(v) => handleCategoryChange(v as DexCategory)}>
-        <TabsList className="w-full">
-          <TabsTrigger value="pokemon" className="flex-1">
-            {CATEGORY_LABELS.pokemon}
-          </TabsTrigger>
-          <TabsTrigger value="moves" className="flex-1">
-            {CATEGORY_LABELS.moves}
-          </TabsTrigger>
-          <TabsTrigger value="abilities" className="flex-1">
-            {CATEGORY_LABELS.abilities}
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+      {/* Category Chips */}
+      <div className="flex gap-2">
+        {(["pokemon", "moves", "abilities"] as const).map((cat) => (
+          <button
+            key={cat}
+            onClick={() => handleCategoryChange(cat)}
+            className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+              filter.category === cat
+                ? "bg-foreground text-background"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+          >
+            {CATEGORY_LABELS[cat]}
+          </button>
+        ))}
+      </div>
 
       {/* Search Input */}
       <div className="relative">
