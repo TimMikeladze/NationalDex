@@ -3,14 +3,21 @@
 import { useEffect, Suspense, useState } from "react"
 import { useInView } from "react-intersection-observer"
 import Link from "next/link"
-import { Swords, Sparkles } from "lucide-react"
 import { PokemonCard, PokemonCardSkeleton } from "@/components/pokemon/pokemon-card"
-import { DexFilter, useFilteredPokemon, useFilteredMoves, useFilteredAbilities, type DexFilterState } from "@/components/pokemon/dex-filter"
+import { DexFilter, useFilteredPokemon, useFilteredMoves, useFilteredAbilities, useFilteredItems, type DexFilterState } from "@/components/pokemon/dex-filter"
 import { usePokemonList, getPokemonIdFromUrl } from "@/hooks/use-pokemon"
 
+const ITEMS_PER_PAGE = 50
+
 function HomeContent() {
-  const { ref, inView } = useInView()
+  const { ref: pokemonRef, inView: pokemonInView } = useInView()
+  const { ref: movesRef, inView: movesInView } = useInView()
+  const { ref: abilitiesRef, inView: abilitiesInView } = useInView()
+  const { ref: itemsRef, inView: itemsInView } = useInView()
   const [filter, setFilter] = useState<DexFilterState>({ search: "", types: [], category: "pokemon" })
+  const [movesDisplayCount, setMovesDisplayCount] = useState(ITEMS_PER_PAGE)
+  const [abilitiesDisplayCount, setAbilitiesDisplayCount] = useState(ITEMS_PER_PAGE)
+  const [itemsDisplayCount, setItemsDisplayCount] = useState(ITEMS_PER_PAGE)
 
   const {
     data,
@@ -23,12 +30,42 @@ function HomeContent() {
   const { filteredPokemon, hasActiveFilters: hasPokemonFilters } = useFilteredPokemon(filter)
   const { filteredMoves, isLoading: isMovesLoading } = useFilteredMoves(filter)
   const { filteredAbilities, isLoading: isAbilitiesLoading } = useFilteredAbilities(filter)
+  const { filteredItems, isLoading: isItemsLoading } = useFilteredItems(filter)
 
+  // Pokemon infinite scroll
   useEffect(() => {
-    if (inView && hasNextPage && !isFetchingNextPage && !hasPokemonFilters && filter.category === "pokemon") {
+    if (pokemonInView && hasNextPage && !isFetchingNextPage && !hasPokemonFilters && filter.category === "pokemon") {
       fetchNextPage()
     }
-  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage, hasPokemonFilters, filter.category])
+  }, [pokemonInView, hasNextPage, isFetchingNextPage, fetchNextPage, hasPokemonFilters, filter.category])
+
+  // Moves infinite scroll
+  useEffect(() => {
+    if (movesInView && filteredMoves && movesDisplayCount < filteredMoves.length) {
+      setMovesDisplayCount((prev) => Math.min(prev + ITEMS_PER_PAGE, filteredMoves.length))
+    }
+  }, [movesInView, filteredMoves, movesDisplayCount])
+
+  // Abilities infinite scroll
+  useEffect(() => {
+    if (abilitiesInView && filteredAbilities && abilitiesDisplayCount < filteredAbilities.length) {
+      setAbilitiesDisplayCount((prev) => Math.min(prev + ITEMS_PER_PAGE, filteredAbilities.length))
+    }
+  }, [abilitiesInView, filteredAbilities, abilitiesDisplayCount])
+
+  // Items infinite scroll
+  useEffect(() => {
+    if (itemsInView && filteredItems && itemsDisplayCount < filteredItems.length) {
+      setItemsDisplayCount((prev) => Math.min(prev + ITEMS_PER_PAGE, filteredItems.length))
+    }
+  }, [itemsInView, filteredItems, itemsDisplayCount])
+
+  // Reset display counts when filter changes
+  useEffect(() => {
+    setMovesDisplayCount(ITEMS_PER_PAGE)
+    setAbilitiesDisplayCount(ITEMS_PER_PAGE)
+    setItemsDisplayCount(ITEMS_PER_PAGE)
+  }, [filter.search, filter.category])
 
   const allPokemon = data?.pages.flatMap((page) => page.results) ?? []
 
@@ -76,7 +113,7 @@ function HomeContent() {
 
           {/* Infinite Scroll Trigger */}
           {hasNextPage && !hasPokemonFilters && (
-            <div ref={ref} className="flex justify-center py-6">
+            <div ref={pokemonRef} className="flex justify-center py-6">
               {isFetchingNextPage && (
                 <span className="text-xs text-muted-foreground">loading...</span>
               )}
@@ -89,28 +126,43 @@ function HomeContent() {
       {filter.category === "moves" && (
         <>
           {isMovesLoading ? (
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            <div className="space-y-1">
               {Array.from({ length: 20 }).map((_, i) => (
-                <div key={i} className="h-12 animate-pulse rounded-lg bg-muted" />
+                <div key={i} className="h-8 animate-pulse rounded bg-muted" />
               ))}
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-                {filteredMoves?.slice(0, 100).map((move) => (
-                  <Link
-                    key={move.id}
-                    href={`/moves/${move.name.toLowerCase().replace(/\s+/g, "-")}`}
-                    className="flex items-center gap-3 rounded-lg border bg-card p-3 transition-colors hover:bg-accent"
-                  >
-                    <Swords className="size-4 text-muted-foreground" />
-                    <span className="font-medium">{move.name}</span>
-                  </Link>
-                ))}
+              <div className="rounded-lg border bg-card">
+                <div className="grid grid-cols-[60px_1fr] text-xs font-medium text-muted-foreground border-b px-3 py-2 sm:grid-cols-[60px_1fr_100px]">
+                  <span>#</span>
+                  <span>Name</span>
+                  <span className="hidden sm:block text-right">ID</span>
+                </div>
+                <div className="divide-y">
+                  {filteredMoves?.slice(0, movesDisplayCount).map((move, index) => (
+                    <Link
+                      key={move.id}
+                      href={`/moves/${move.name.toLowerCase().replace(/\s+/g, "-")}`}
+                      className="grid grid-cols-[60px_1fr] items-center px-3 py-2 text-sm transition-colors hover:bg-accent sm:grid-cols-[60px_1fr_100px]"
+                    >
+                      <span className="text-muted-foreground tabular-nums">{index + 1}</span>
+                      <span className="font-medium truncate">{move.name}</span>
+                      <span className="hidden sm:block text-right text-muted-foreground tabular-nums">{move.id}</span>
+                    </Link>
+                  ))}
+                </div>
               </div>
-              {filteredMoves && filteredMoves.length > 100 && (
-                <div className="mt-4 text-center text-sm text-muted-foreground">
-                  Showing 100 of {filteredMoves.length} moves
+              {filteredMoves && movesDisplayCount < filteredMoves.length && (
+                <div ref={movesRef} className="flex justify-center py-4">
+                  <span className="text-xs text-muted-foreground">
+                    Showing {movesDisplayCount} of {filteredMoves.length} moves
+                  </span>
+                </div>
+              )}
+              {filteredMoves && movesDisplayCount >= filteredMoves.length && filteredMoves.length > 0 && (
+                <div className="py-4 text-center text-xs text-muted-foreground">
+                  {filteredMoves.length} moves total
                 </div>
               )}
             </>
@@ -122,28 +174,91 @@ function HomeContent() {
       {filter.category === "abilities" && (
         <>
           {isAbilitiesLoading ? (
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            <div className="space-y-1">
               {Array.from({ length: 20 }).map((_, i) => (
-                <div key={i} className="h-12 animate-pulse rounded-lg bg-muted" />
+                <div key={i} className="h-8 animate-pulse rounded bg-muted" />
               ))}
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-                {filteredAbilities?.slice(0, 100).map((ability) => (
-                  <Link
-                    key={ability.id}
-                    href={`/abilities/${ability.name.toLowerCase().replace(/\s+/g, "-")}`}
-                    className="flex items-center gap-3 rounded-lg border bg-card p-3 transition-colors hover:bg-accent"
-                  >
-                    <Sparkles className="size-4 text-muted-foreground" />
-                    <span className="font-medium">{ability.name}</span>
-                  </Link>
-                ))}
+              <div className="rounded-lg border bg-card">
+                <div className="grid grid-cols-[60px_1fr] text-xs font-medium text-muted-foreground border-b px-3 py-2 sm:grid-cols-[60px_1fr_100px]">
+                  <span>#</span>
+                  <span>Name</span>
+                  <span className="hidden sm:block text-right">ID</span>
+                </div>
+                <div className="divide-y">
+                  {filteredAbilities?.slice(0, abilitiesDisplayCount).map((ability, index) => (
+                    <Link
+                      key={ability.id}
+                      href={`/abilities/${ability.name.toLowerCase().replace(/\s+/g, "-")}`}
+                      className="grid grid-cols-[60px_1fr] items-center px-3 py-2 text-sm transition-colors hover:bg-accent sm:grid-cols-[60px_1fr_100px]"
+                    >
+                      <span className="text-muted-foreground tabular-nums">{index + 1}</span>
+                      <span className="font-medium truncate">{ability.name}</span>
+                      <span className="hidden sm:block text-right text-muted-foreground tabular-nums">{ability.id}</span>
+                    </Link>
+                  ))}
+                </div>
               </div>
-              {filteredAbilities && filteredAbilities.length > 100 && (
-                <div className="mt-4 text-center text-sm text-muted-foreground">
-                  Showing 100 of {filteredAbilities.length} abilities
+              {filteredAbilities && abilitiesDisplayCount < filteredAbilities.length && (
+                <div ref={abilitiesRef} className="flex justify-center py-4">
+                  <span className="text-xs text-muted-foreground">
+                    Showing {abilitiesDisplayCount} of {filteredAbilities.length} abilities
+                  </span>
+                </div>
+              )}
+              {filteredAbilities && abilitiesDisplayCount >= filteredAbilities.length && filteredAbilities.length > 0 && (
+                <div className="py-4 text-center text-xs text-muted-foreground">
+                  {filteredAbilities.length} abilities total
+                </div>
+              )}
+            </>
+          )}
+        </>
+      )}
+
+      {/* Items List */}
+      {filter.category === "items" && (
+        <>
+          {isItemsLoading ? (
+            <div className="space-y-1">
+              {Array.from({ length: 20 }).map((_, i) => (
+                <div key={i} className="h-8 animate-pulse rounded bg-muted" />
+              ))}
+            </div>
+          ) : (
+            <>
+              <div className="rounded-lg border bg-card">
+                <div className="grid grid-cols-[60px_1fr] text-xs font-medium text-muted-foreground border-b px-3 py-2 sm:grid-cols-[60px_1fr_100px]">
+                  <span>#</span>
+                  <span>Name</span>
+                  <span className="hidden sm:block text-right">ID</span>
+                </div>
+                <div className="divide-y">
+                  {filteredItems?.slice(0, itemsDisplayCount).map((item, index) => (
+                    <Link
+                      key={item.id}
+                      href={`/items/${item.name.toLowerCase().replace(/\s+/g, "-")}`}
+                      className="grid grid-cols-[60px_1fr] items-center px-3 py-2 text-sm transition-colors hover:bg-accent sm:grid-cols-[60px_1fr_100px]"
+                    >
+                      <span className="text-muted-foreground tabular-nums">{index + 1}</span>
+                      <span className="font-medium truncate">{item.name}</span>
+                      <span className="hidden sm:block text-right text-muted-foreground tabular-nums">{item.id}</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+              {filteredItems && itemsDisplayCount < filteredItems.length && (
+                <div ref={itemsRef} className="flex justify-center py-4">
+                  <span className="text-xs text-muted-foreground">
+                    Showing {itemsDisplayCount} of {filteredItems.length} items
+                  </span>
+                </div>
+              )}
+              {filteredItems && itemsDisplayCount >= filteredItems.length && filteredItems.length > 0 && (
+                <div className="py-4 text-center text-xs text-muted-foreground">
+                  {filteredItems.length} items total
                 </div>
               )}
             </>

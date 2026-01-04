@@ -6,10 +6,10 @@ import { useQuery } from "@tanstack/react-query"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { TypeBadge } from "@/components/pokemon/type-badge"
-import { ALL_TYPES, getAllPokemonNames, getAllMoveNames, getAllAbilityNames } from "@/lib/pokeapi"
+import { ALL_TYPES, getAllPokemonNames, getAllMoveNames, getAllAbilityNames, getAllItemNames } from "@/lib/pokeapi"
 import type { PokemonType } from "@/types/pokemon"
 
-export type DexCategory = "pokemon" | "moves" | "abilities"
+export type DexCategory = "pokemon" | "moves" | "abilities" | "items"
 
 export interface DexFilterState {
   search: string
@@ -26,12 +26,14 @@ const CATEGORY_LABELS: Record<DexCategory, string> = {
   pokemon: "Pokémon",
   moves: "Moves",
   abilities: "Abilities",
+  items: "Items",
 }
 
 const CATEGORY_PLACEHOLDERS: Record<DexCategory, string> = {
   pokemon: "Search Pokémon...",
   moves: "Search Moves...",
   abilities: "Search Abilities...",
+  items: "Search Items...",
 }
 
 export function DexFilter({ onFilterChange, filter }: DexFilterProps) {
@@ -68,8 +70,8 @@ export function DexFilter({ onFilterChange, filter }: DexFilterProps) {
   return (
     <div className="space-y-3">
       {/* Category Chips */}
-      <div className="flex gap-2">
-        {(["pokemon", "moves", "abilities"] as const).map((cat) => (
+      <div className="flex flex-wrap gap-2">
+        {(["pokemon", "moves", "abilities", "items"] as const).map((cat) => (
           <button
             key={cat}
             onClick={() => handleCategoryChange(cat)}
@@ -241,5 +243,38 @@ export function useFilteredAbilities(filter: DexFilterState) {
     isLoading,
     hasActiveFilters,
     totalCount: allAbilities?.length ?? 0,
+  }
+}
+
+// Hook to get filtered Items based on filter state
+export function useFilteredItems(filter: DexFilterState) {
+  const { data: allItems, isLoading } = useQuery({
+    queryKey: ["all-item-names"],
+    queryFn: getAllItemNames,
+    staleTime: 1000 * 60 * 60 * 24, // 24 hours
+  })
+
+  const hasActiveFilters = filter.search.length > 0
+
+  const filteredItems = useMemo(() => {
+    if (!allItems) return allItems
+
+    if (!hasActiveFilters) return allItems
+
+    const searchLower = filter.search.toLowerCase()
+
+    return allItems.filter((item) => {
+      if (searchLower && !item.name.toLowerCase().includes(searchLower)) {
+        return false
+      }
+      return true
+    })
+  }, [allItems, filter.search, hasActiveFilters])
+
+  return {
+    filteredItems,
+    isLoading,
+    hasActiveFilters,
+    totalCount: allItems?.length ?? 0,
   }
 }
