@@ -193,7 +193,7 @@ export function AppShell({ children }: AppShellProps) {
         </div>
       </header>
 
-      <main className="flex-1 pb-nav lg:pb-0 lg:pt-14 max-lg:pwa-pt-safe">
+      <main className="flex-1 pb-nav lg:pb-0 lg:pt-14 pwa-pt-safe">
         <div className="max-w-7xl mx-auto">
           {children}
         </div>
