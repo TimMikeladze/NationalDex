@@ -6,12 +6,15 @@ import { useQuery } from "@tanstack/react-query"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { TypeBadge } from "@/components/pokemon/type-badge"
-import { ALL_TYPES, getAllPokemonNames } from "@/lib/pokeapi"
+import { ALL_TYPES, getAllPokemonNames, getAllMoveNames, getAllAbilityNames, getAllItemNames } from "@/lib/pokeapi"
 import type { PokemonType } from "@/types/pokemon"
+
+export type DexCategory = "pokemon" | "moves" | "abilities" | "items"
 
 export interface DexFilterState {
   search: string
   types: PokemonType[]
+  category: DexCategory
 }
 
 interface DexFilterProps {
@@ -19,10 +22,31 @@ interface DexFilterProps {
   filter: DexFilterState
 }
 
+const CATEGORY_LABELS: Record<DexCategory, string> = {
+  pokemon: "Pokémon",
+  moves: "Moves",
+  abilities: "Abilities",
+  items: "Items",
+}
+
+const CATEGORY_PLACEHOLDERS: Record<DexCategory, string> = {
+  pokemon: "Search Pokémon...",
+  moves: "Search Moves...",
+  abilities: "Search Abilities...",
+  items: "Search Items...",
+}
+
 export function DexFilter({ onFilterChange, filter }: DexFilterProps) {
   const handleSearchChange = useCallback(
     (value: string) => {
       onFilterChange({ ...filter, search: value })
+    },
+    [filter, onFilterChange]
+  )
+
+  const handleCategoryChange = useCallback(
+    (category: DexCategory) => {
+      onFilterChange({ ...filter, category, search: "", types: [] })
     },
     [filter, onFilterChange]
   )
@@ -38,19 +62,36 @@ export function DexFilter({ onFilterChange, filter }: DexFilterProps) {
   )
 
   const handleClearFilters = useCallback(() => {
-    onFilterChange({ search: "", types: [] })
-  }, [onFilterChange])
+    onFilterChange({ ...filter, search: "", types: [] })
+  }, [filter, onFilterChange])
 
   const hasActiveFilters = filter.search.length > 0 || filter.types.length > 0
 
   return (
     <div className="space-y-3">
+      {/* Category Chips */}
+      <div className="flex flex-wrap gap-2">
+        {(["pokemon", "moves", "abilities", "items"] as const).map((cat) => (
+          <button
+            key={cat}
+            onClick={() => handleCategoryChange(cat)}
+            className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+              filter.category === cat
+                ? "bg-foreground text-background"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+          >
+            {CATEGORY_LABELS[cat]}
+          </button>
+        ))}
+      </div>
+
       {/* Search Input */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           type="text"
-          placeholder="Search Pokemon..."
+          placeholder={CATEGORY_PLACEHOLDERS[filter.category]}
           value={filter.search}
           onChange={(e) => handleSearchChange(e.target.value)}
           className="pl-9 pr-9"
@@ -65,22 +106,24 @@ export function DexFilter({ onFilterChange, filter }: DexFilterProps) {
         )}
       </div>
 
-      {/* Type Filters */}
-      <div className="flex flex-wrap gap-1.5">
-        {ALL_TYPES.map((type) => (
-          <button
-            key={type}
-            onClick={() => handleTypeToggle(type)}
-            className={`transition-opacity ${
-              filter.types.length > 0 && !filter.types.includes(type)
-                ? "opacity-40 hover:opacity-70"
-                : "opacity-100"
-            }`}
-          >
-            <TypeBadge type={type} size="sm" />
-          </button>
-        ))}
-      </div>
+      {/* Type Filters - only show for Pokemon */}
+      {filter.category === "pokemon" && (
+        <div className="flex flex-wrap gap-1.5">
+          {ALL_TYPES.map((type) => (
+            <button
+              key={type}
+              onClick={() => handleTypeToggle(type)}
+              className={`transition-opacity ${
+                filter.types.length > 0 && !filter.types.includes(type)
+                  ? "opacity-40 hover:opacity-70"
+                  : "opacity-100"
+              }`}
+            >
+              <TypeBadge type={type} size="sm" />
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Clear Filters */}
       {hasActiveFilters && (
@@ -134,5 +177,104 @@ export function useFilteredPokemon(filter: DexFilterState) {
     isLoading,
     hasActiveFilters,
     totalCount: allPokemon?.length ?? 0,
+  }
+}
+
+// Hook to get filtered Moves based on filter state
+export function useFilteredMoves(filter: DexFilterState) {
+  const { data: allMoves, isLoading } = useQuery({
+    queryKey: ["all-move-names"],
+    queryFn: getAllMoveNames,
+    staleTime: 1000 * 60 * 60 * 24, // 24 hours
+  })
+
+  const hasActiveFilters = filter.search.length > 0
+
+  const filteredMoves = useMemo(() => {
+    if (!allMoves) return allMoves
+
+    if (!hasActiveFilters) return allMoves
+
+    const searchLower = filter.search.toLowerCase()
+
+    return allMoves.filter((move) => {
+      if (searchLower && !move.name.toLowerCase().includes(searchLower)) {
+        return false
+      }
+      return true
+    })
+  }, [allMoves, filter.search, hasActiveFilters])
+
+  return {
+    filteredMoves,
+    isLoading,
+    hasActiveFilters,
+    totalCount: allMoves?.length ?? 0,
+  }
+}
+
+// Hook to get filtered Abilities based on filter state
+export function useFilteredAbilities(filter: DexFilterState) {
+  const { data: allAbilities, isLoading } = useQuery({
+    queryKey: ["all-ability-names"],
+    queryFn: getAllAbilityNames,
+    staleTime: 1000 * 60 * 60 * 24, // 24 hours
+  })
+
+  const hasActiveFilters = filter.search.length > 0
+
+  const filteredAbilities = useMemo(() => {
+    if (!allAbilities) return allAbilities
+
+    if (!hasActiveFilters) return allAbilities
+
+    const searchLower = filter.search.toLowerCase()
+
+    return allAbilities.filter((ability) => {
+      if (searchLower && !ability.name.toLowerCase().includes(searchLower)) {
+        return false
+      }
+      return true
+    })
+  }, [allAbilities, filter.search, hasActiveFilters])
+
+  return {
+    filteredAbilities,
+    isLoading,
+    hasActiveFilters,
+    totalCount: allAbilities?.length ?? 0,
+  }
+}
+
+// Hook to get filtered Items based on filter state
+export function useFilteredItems(filter: DexFilterState) {
+  const { data: allItems, isLoading } = useQuery({
+    queryKey: ["all-item-names"],
+    queryFn: getAllItemNames,
+    staleTime: 1000 * 60 * 60 * 24, // 24 hours
+  })
+
+  const hasActiveFilters = filter.search.length > 0
+
+  const filteredItems = useMemo(() => {
+    if (!allItems) return allItems
+
+    if (!hasActiveFilters) return allItems
+
+    const searchLower = filter.search.toLowerCase()
+
+    return allItems.filter((item) => {
+      if (searchLower && !item.name.toLowerCase().includes(searchLower)) {
+        return false
+      }
+      return true
+    })
+  }, [allItems, filter.search, hasActiveFilters])
+
+  return {
+    filteredItems,
+    isLoading,
+    hasActiveFilters,
+    totalCount: allItems?.length ?? 0,
   }
 }
