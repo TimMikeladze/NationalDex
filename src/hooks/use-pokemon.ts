@@ -18,7 +18,9 @@ import {
   getItemListItem,
   getFullItemDetail,
   getItemCategories,
+  getAvailableVersionGroups,
 } from "@/lib/pokeapi"
+import type { VersionGroup } from "@/lib/pokeapi"
 import type {
   Pokemon,
   PokemonSpecies,
@@ -78,12 +80,21 @@ export function usePokemonWithSpecies(nameOrId: string | number | null) {
   }
 }
 
-export function usePokemonMoves(nameOrId: string | number | null) {
+export function usePokemonMoves(nameOrId: string | number | null, versionGroup?: string) {
   return useQuery<PokemonMove[]>({
-    queryKey: ["pokemon-moves", nameOrId],
-    queryFn: () => getPokemonMoves(nameOrId!),
+    queryKey: ["pokemon-moves", nameOrId, versionGroup],
+    queryFn: () => getPokemonMoves(nameOrId!, versionGroup),
     enabled: nameOrId !== null,
     staleTime: 1000 * 60 * 60, // 1 hour
+  })
+}
+
+export function useAvailableVersionGroups(nameOrId: string | number | null) {
+  return useQuery<VersionGroup[]>({
+    queryKey: ["available-version-groups", nameOrId],
+    queryFn: () => getAvailableVersionGroups(nameOrId!),
+    enabled: nameOrId !== null,
+    staleTime: 1000 * 60 * 60 * 24, // 24 hours - this doesn't change
   })
 }
 

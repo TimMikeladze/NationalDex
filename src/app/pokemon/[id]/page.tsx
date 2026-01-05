@@ -1,14 +1,16 @@
 "use client"
 
-import { use, useMemo } from "react"
+import { use, useMemo, useState, useEffect } from "react"
 import Link from "next/link"
-import { Heart, GitCompareArrows, ChevronLeft, ChevronRight } from "lucide-react"
+import { Heart, GitCompareArrows, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
-import { usePokemonWithSpecies, usePokemonMoves, useEvolutionChain } from "@/hooks/use-pokemon"
+import { usePokemonWithSpecies, usePokemonMoves, useEvolutionChain, useAvailableVersionGroups } from "@/hooks/use-pokemon"
 import { useFavorites } from "@/hooks/use-favorites"
 import { useComparison } from "@/hooks/use-comparison"
-import { calculateTypeEffectiveness } from "@/lib/pokeapi"
+import { useGameVersion } from "@/hooks/use-game-version"
+import { calculateTypeEffectiveness, VERSION_GROUPS } from "@/lib/pokeapi"
+import type { VersionGroup } from "@/lib/pokeapi"
 import { TypeBadge } from "@/components/pokemon/type-badge"
 import { StatBar } from "@/components/pokemon/stat-bar"
 import { AddToListDialog } from "@/components/add-to-list-dialog"
@@ -25,10 +27,18 @@ export default function PokemonPage({ params }: PageProps) {
   const { pokemon, species, isLoading } = usePokemonWithSpecies(id)
   const { isFavorite, toggleFavorite } = useFavorites()
   const { isInComparison, toggleComparison, canAddMore } = useComparison()
-  const { data: moves, isLoading: movesLoading } = usePokemonMoves(id)
+  const { gameVersion: defaultGameVersion } = useGameVersion()
+  const [selectedGame, setSelectedGame] = useState<VersionGroup>(defaultGameVersion)
+  const { data: availableVersions } = useAvailableVersionGroups(id)
+  const { data: moves, isLoading: movesLoading } = usePokemonMoves(id, selectedGame)
   const { data: evolutionChain, isLoading: evolutionLoading } = useEvolutionChain(
     species?.evolutionChainUrl ?? null
   )
+
+  // Update selected game when default changes or when navigating to a new Pokemon
+  useEffect(() => {
+    setSelectedGame(defaultGameVersion)
+  }, [defaultGameVersion, id])
 
   const typeEffectiveness = useMemo(() => {
     if (!pokemon) return null
@@ -180,7 +190,13 @@ export default function PokemonPage({ params }: PageProps) {
         <DetailsSection pokemon={pokemon} species={species} />
 
         {/* Moves */}
-        <MovesSection moves={moves} isLoading={movesLoading} />
+        <MovesSection
+          moves={moves}
+          isLoading={movesLoading}
+          selectedGame={selectedGame}
+          setSelectedGame={setSelectedGame}
+          availableVersions={availableVersions}
+        />
       </div>
     </div>
   )
@@ -205,14 +221,73 @@ function Label({ children }: { children: React.ReactNode }) {
 function MovesSection({
   moves,
   isLoading,
+  selectedGame,
+  setSelectedGame,
+  availableVersions,
 }: {
   moves?: PokemonMove[]
   isLoading: boolean
+  selectedGame: VersionGroup
+  setSelectedGame: (game: VersionGroup) => void
+  availableVersions?: VersionGroup[]
 }) {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  const selectedGameInfo = VERSION_GROUPS.find((g) => g.id === selectedGame)
+  const isAvailable = availableVersions?.includes(selectedGame) ?? true
+
+  const GameSelector = () => (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+        className="flex items-center gap-1 text-xs px-2 py-1 border rounded hover:bg-muted transition-colors"
+      >
+        <span>{selectedGameInfo?.name ?? "Select Game"}</span>
+        <ChevronDown className="size-3" />
+      </button>
+      {isDropdownOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-10"
+            onClick={() => setIsDropdownOpen(false)}
+          />
+          <div className="absolute right-0 top-full mt-1 z-20 bg-background border rounded shadow-lg max-h-64 overflow-y-auto min-w-48">
+            {VERSION_GROUPS.map((game) => {
+              const isGameAvailable = availableVersions?.includes(game.id) ?? true
+              return (
+                <button
+                  key={game.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedGame(game.id)
+                    setIsDropdownOpen(false)
+                  }}
+                  className={cn(
+                    "w-full text-left px-3 py-1.5 text-xs hover:bg-muted transition-colors flex items-center justify-between",
+                    selectedGame === game.id && "bg-muted",
+                    !isGameAvailable && "text-muted-foreground"
+                  )}
+                >
+                  <span>{game.name}</span>
+                  {!isGameAvailable && (
+                    <span className="text-[10px] text-muted-foreground">N/A</span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  )
+
   if (isLoading) {
     return (
       <section className="space-y-4">
-        <Label>moves</Label>
+        <div className="flex items-center justify-between">
+          <Label>moves</Label>
+          <GameSelector />
+        </div>
         {Array.from({ length: 3 }).map((_, i) => (
           <div key={i} className="space-y-2">
             <Skeleton className="h-4 w-20" />
@@ -225,11 +300,36 @@ function MovesSection({
     )
   }
 
+  if (!isAvailable) {
+    return (
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <Label>moves</Label>
+          <GameSelector />
+        </div>
+        <p className="text-sm text-muted-foreground">
+          This Pokemon is not available in {selectedGameInfo?.name ?? "this game"}.
+        </p>
+        {availableVersions && availableVersions.length > 0 && (
+          <p className="text-xs text-muted-foreground">
+            Available in: {availableVersions.slice(0, 3).map(v =>
+              VERSION_GROUPS.find(g => g.id === v)?.name
+            ).join(", ")}
+            {availableVersions.length > 3 && ` and ${availableVersions.length - 3} more`}
+          </p>
+        )}
+      </section>
+    )
+  }
+
   if (!moves || moves.length === 0) {
     return (
       <section className="space-y-3">
-        <Label>moves</Label>
-        <p className="text-sm text-muted-foreground">No moves found.</p>
+        <div className="flex items-center justify-between">
+          <Label>moves</Label>
+          <GameSelector />
+        </div>
+        <p className="text-sm text-muted-foreground">No moves found for this game.</p>
       </section>
     )
   }
@@ -248,7 +348,10 @@ function MovesSection({
 
   return (
     <section className="space-y-4">
-      <Label>moves</Label>
+      <div className="flex items-center justify-between">
+        <Label>moves</Label>
+        <GameSelector />
+      </div>
       <div className="space-y-6">
         {levelUpMoves.length > 0 && (
           <MoveGroup title="Level Up" moves={levelUpMoves} showLevel />

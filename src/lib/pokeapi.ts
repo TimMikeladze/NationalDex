@@ -114,15 +114,19 @@ export async function getPokemonSpecies(
 }
 
 export async function getPokemonMoves(
-  nameOrId: string | number
+  nameOrId: string | number,
+  versionGroup?: string
 ): Promise<PokemonMove[]> {
   const data = await client.getPokemonByName(nameOrId)
+  const targetVersion = versionGroup || "scarlet-violet"
 
   const movePromises = data.moves.map(async (m) => {
+    // Find version detail for the specified game, or fall back to any available version
     const versionDetail = m.version_group_details.find(
-      (v) => v.version_group.name === "scarlet-violet"
-    ) || m.version_group_details[m.version_group_details.length - 1]
+      (v) => v.version_group.name === targetVersion
+    )
 
+    // If no moves for this version, skip this move
     if (!versionDetail) return null
 
     try {
@@ -527,6 +531,52 @@ export const ALL_TYPES: PokemonType[] = [
 ]
 
 export const DAMAGE_CLASSES = ["physical", "special", "status"] as const
+
+// Version groups for game selection
+export const VERSION_GROUPS = [
+  { id: "scarlet-violet", name: "Scarlet / Violet", generation: 9 },
+  { id: "legends-arceus", name: "Legends: Arceus", generation: 8 },
+  { id: "brilliant-diamond-and-shining-pearl", name: "Brilliant Diamond / Shining Pearl", generation: 8 },
+  { id: "sword-shield", name: "Sword / Shield", generation: 8 },
+  { id: "lets-go-pikachu-lets-go-eevee", name: "Let's Go Pikachu / Eevee", generation: 7 },
+  { id: "ultra-sun-ultra-moon", name: "Ultra Sun / Ultra Moon", generation: 7 },
+  { id: "sun-moon", name: "Sun / Moon", generation: 7 },
+  { id: "omega-ruby-alpha-sapphire", name: "Omega Ruby / Alpha Sapphire", generation: 6 },
+  { id: "x-y", name: "X / Y", generation: 6 },
+  { id: "black-2-white-2", name: "Black 2 / White 2", generation: 5 },
+  { id: "black-white", name: "Black / White", generation: 5 },
+  { id: "heartgold-soulsilver", name: "HeartGold / SoulSilver", generation: 4 },
+  { id: "platinum", name: "Platinum", generation: 4 },
+  { id: "diamond-pearl", name: "Diamond / Pearl", generation: 4 },
+  { id: "firered-leafgreen", name: "FireRed / LeafGreen", generation: 3 },
+  { id: "emerald", name: "Emerald", generation: 3 },
+  { id: "ruby-sapphire", name: "Ruby / Sapphire", generation: 3 },
+  { id: "crystal", name: "Crystal", generation: 2 },
+  { id: "gold-silver", name: "Gold / Silver", generation: 2 },
+  { id: "yellow", name: "Yellow", generation: 1 },
+  { id: "red-blue", name: "Red / Blue", generation: 1 },
+] as const
+
+export type VersionGroup = typeof VERSION_GROUPS[number]["id"]
+
+// Get available version groups for a Pokemon (games where it has move data)
+export async function getAvailableVersionGroups(
+  nameOrId: string | number
+): Promise<VersionGroup[]> {
+  const data = await client.getPokemonByName(nameOrId)
+
+  const availableVersions = new Set<string>()
+  for (const move of data.moves) {
+    for (const detail of move.version_group_details) {
+      availableVersions.add(detail.version_group.name)
+    }
+  }
+
+  // Return only version groups that are in our VERSION_GROUPS list, maintaining order
+  return VERSION_GROUPS
+    .filter(vg => availableVersions.has(vg.id))
+    .map(vg => vg.id)
+}
 
 // Get Pokemon list for a specific generation range
 export async function getPokemonByGenerationRange(
