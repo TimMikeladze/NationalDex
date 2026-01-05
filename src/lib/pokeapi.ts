@@ -83,6 +83,17 @@ export async function getPokemon(nameOrId: string | number): Promise<Pokemon> {
       .map((t) => t.type.name as PokemonType),
   }))
 
+  // Compute available version groups from move data
+  const availableVersions = new Set<string>()
+  for (const move of data.moves) {
+    for (const detail of move.version_group_details) {
+      availableVersions.add(detail.version_group.name)
+    }
+  }
+  const availableVersionGroups = VERSION_GROUPS
+    .filter(vg => availableVersions.has(vg.id))
+    .map(vg => vg.id)
+
   return {
     id: data.id,
     name: formatName(data.name),
@@ -95,6 +106,7 @@ export async function getPokemon(nameOrId: string | number): Promise<Pokemon> {
     abilities,
     pastAbilities,
     pastTypes,
+    availableVersionGroups,
   }
 }
 
@@ -648,14 +660,13 @@ export function getTypesForVersion(
   return pokemon.types
 }
 
-// Get available version groups for a Pokemon (games where it has move data)
-export async function getAvailableVersionGroups(
-  nameOrId: string | number
-): Promise<VersionGroup[]> {
-  const data = await client.getPokemonByName(nameOrId)
-
+// Get available version groups for a Pokemon from raw API data
+// This avoids making an extra API call since we already have the Pokemon data
+export function getAvailableVersionGroupsFromData(
+  pokemonData: { moves: Array<{ version_group_details: Array<{ version_group: { name: string } }> }> }
+): VersionGroup[] {
   const availableVersions = new Set<string>()
-  for (const move of data.moves) {
+  for (const move of pokemonData.moves) {
     for (const detail of move.version_group_details) {
       availableVersions.add(detail.version_group.name)
     }
@@ -665,6 +676,15 @@ export async function getAvailableVersionGroups(
   return VERSION_GROUPS
     .filter(vg => availableVersions.has(vg.id))
     .map(vg => vg.id)
+}
+
+// Get available version groups for a Pokemon (games where it has move data)
+// Note: This makes an API call - prefer getAvailableVersionGroupsFromData when you already have the data
+export async function getAvailableVersionGroups(
+  nameOrId: string | number
+): Promise<VersionGroup[]> {
+  const data = await client.getPokemonByName(nameOrId)
+  return getAvailableVersionGroupsFromData(data)
 }
 
 // Get Pokemon list for a specific generation range

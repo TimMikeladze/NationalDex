@@ -64,6 +64,8 @@ export interface Pokemon {
   // Historical data
   pastAbilities: PastAbilities[]
   pastTypes: PastTypes[]
+  // Available game versions (computed from move data)
+  availableVersionGroups: string[]
 }
 
 export interface PokemonSpecies {

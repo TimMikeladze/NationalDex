@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Heart, GitCompareArrows, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
-import { usePokemonWithSpecies, usePokemonMoves, useEvolutionChain, useAvailableVersionGroups } from "@/hooks/use-pokemon"
+import { usePokemonWithSpecies, usePokemonMoves, useEvolutionChain } from "@/hooks/use-pokemon"
 import { useFavorites } from "@/hooks/use-favorites"
 import { useComparison } from "@/hooks/use-comparison"
 import { useGameVersion } from "@/hooks/use-game-version"
@@ -29,7 +29,6 @@ export default function PokemonPage({ params }: PageProps) {
   const { isInComparison, toggleComparison, canAddMore } = useComparison()
   const { gameVersion: defaultGameVersion } = useGameVersion()
   const [selectedGame, setSelectedGame] = useState<VersionGroup>(defaultGameVersion)
-  const { data: availableVersions } = useAvailableVersionGroups(id)
   const { data: moves, isLoading: movesLoading } = usePokemonMoves(id, selectedGame)
   const { data: evolutionChain, isLoading: evolutionLoading } = useEvolutionChain(
     species?.evolutionChainUrl ?? null
@@ -206,7 +205,7 @@ export default function PokemonPage({ params }: PageProps) {
           isLoading={movesLoading}
           selectedGame={selectedGame}
           setSelectedGame={setSelectedGame}
-          availableVersions={availableVersions}
+          availableVersions={pokemon.availableVersionGroups}
         />
       </div>
     </div>
@@ -240,11 +239,11 @@ function MovesSection({
   isLoading: boolean
   selectedGame: VersionGroup
   setSelectedGame: (game: VersionGroup) => void
-  availableVersions?: VersionGroup[]
+  availableVersions: string[]
 }) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const selectedGameInfo = VERSION_GROUPS.find((g) => g.id === selectedGame)
-  const isAvailable = availableVersions?.includes(selectedGame) ?? true
+  const isAvailable = availableVersions.includes(selectedGame)
 
   const GameSelector = () => (
     <div className="relative">
@@ -264,7 +263,7 @@ function MovesSection({
           />
           <div className="absolute right-0 top-full mt-1 z-20 bg-background border rounded shadow-lg max-h-64 overflow-y-auto min-w-48">
             {VERSION_GROUPS.map((game) => {
-              const isGameAvailable = availableVersions?.includes(game.id) ?? true
+              const isGameAvailable = availableVersions.includes(game.id)
               return (
                 <button
                   key={game.id}
@@ -321,7 +320,7 @@ function MovesSection({
         <p className="text-sm text-muted-foreground">
           This Pokemon is not available in {selectedGameInfo?.name ?? "this game"}.
         </p>
-        {availableVersions && availableVersions.length > 0 && (
+        {availableVersions.length > 0 && (
           <p className="text-xs text-muted-foreground">
             Available in: {availableVersions.slice(0, 3).map(v =>
               VERSION_GROUPS.find(g => g.id === v)?.name
