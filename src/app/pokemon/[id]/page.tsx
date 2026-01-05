@@ -9,12 +9,12 @@ import { usePokemonWithSpecies, usePokemonMoves, useEvolutionChain, useAvailable
 import { useFavorites } from "@/hooks/use-favorites"
 import { useComparison } from "@/hooks/use-comparison"
 import { useGameVersion } from "@/hooks/use-game-version"
-import { calculateTypeEffectiveness, VERSION_GROUPS } from "@/lib/pokeapi"
+import { calculateTypeEffectiveness, VERSION_GROUPS, getAbilitiesForVersion, getTypesForVersion } from "@/lib/pokeapi"
 import type { VersionGroup } from "@/lib/pokeapi"
 import { TypeBadge } from "@/components/pokemon/type-badge"
 import { StatBar } from "@/components/pokemon/stat-bar"
 import { AddToListDialog } from "@/components/add-to-list-dialog"
-import type { PokemonType, PokemonMove, EvolutionChainLink, PokemonSpecies, Pokemon } from "@/types/pokemon"
+import type { PokemonType, PokemonMove, EvolutionChainLink, PokemonSpecies, Pokemon, PokemonAbility } from "@/types/pokemon"
 
 const MAX_POKEMON_ID = 1025
 
@@ -40,10 +40,21 @@ export default function PokemonPage({ params }: PageProps) {
     setSelectedGame(defaultGameVersion)
   }, [defaultGameVersion, id])
 
+  // Get version-specific types and abilities
+  const versionTypes = useMemo(() => {
+    if (!pokemon) return []
+    return getTypesForVersion(pokemon, selectedGame)
+  }, [pokemon, selectedGame])
+
+  const versionAbilities = useMemo(() => {
+    if (!pokemon) return []
+    return getAbilitiesForVersion(pokemon, selectedGame)
+  }, [pokemon, selectedGame])
+
   const typeEffectiveness = useMemo(() => {
-    if (!pokemon) return null
-    return calculateTypeEffectiveness(pokemon.types)
-  }, [pokemon])
+    if (!pokemon || versionTypes.length === 0) return null
+    return calculateTypeEffectiveness(versionTypes)
+  }, [pokemon, versionTypes])
 
   if (isLoading || !pokemon) {
     return <PokemonPageSkeleton />
@@ -128,7 +139,7 @@ export default function PokemonPage({ params }: PageProps) {
             <p className="text-xs text-muted-foreground">{species.genus}</p>
           )}
           <div className="flex justify-center gap-2">
-            {pokemon.types.map((type) => (
+            {versionTypes.map((type) => (
               <TypeBadge key={type} type={type} size="default" linkable />
             ))}
           </div>
@@ -187,7 +198,7 @@ export default function PokemonPage({ params }: PageProps) {
         />
 
         {/* Details */}
-        <DetailsSection pokemon={pokemon} species={species} />
+        <DetailsSection pokemon={pokemon} species={species} abilities={versionAbilities} />
 
         {/* Moves */}
         <MovesSection
@@ -542,9 +553,11 @@ function formatEvolutionMethod(detail: EvolutionChainLink["evolutionDetails"][0]
 function DetailsSection({
   pokemon,
   species,
+  abilities,
 }: {
   pokemon: Pokemon
   species?: PokemonSpecies
+  abilities: PokemonAbility[]
 }) {
   const genderDisplay = species
     ? species.genderRate === -1
@@ -612,22 +625,26 @@ function DetailsSection({
       <div className="space-y-2">
         <Label>abilities</Label>
         <div className="flex flex-wrap gap-2">
-          {pokemon.abilities.map((ability) => {
-            const slug = ability.name.toLowerCase().replace(/\s+/g, "-")
-            return (
-              <Link
-                key={ability.name}
-                href={`/abilities/${slug}`}
-                className={cn(
-                  "text-xs px-2 py-1 border rounded hover:bg-muted/50 transition-colors cursor-pointer",
-                  ability.isHidden && "text-muted-foreground border-dashed"
-                )}
-              >
-                {ability.name}
-                {ability.isHidden && " (hidden)"}
-              </Link>
-            )
-          })}
+          {abilities.length > 0 ? (
+            abilities.map((ability) => {
+              const slug = ability.name.toLowerCase().replace(/\s+/g, "-")
+              return (
+                <Link
+                  key={ability.name}
+                  href={`/abilities/${slug}`}
+                  className={cn(
+                    "text-xs px-2 py-1 border rounded hover:bg-muted/50 transition-colors cursor-pointer",
+                    ability.isHidden && "text-muted-foreground border-dashed"
+                  )}
+                >
+                  {ability.name}
+                  {ability.isHidden && " (hidden)"}
+                </Link>
+              )
+            })
+          ) : (
+            <span className="text-xs text-muted-foreground">No abilities in this game</span>
+          )}
         </div>
       </div>
 

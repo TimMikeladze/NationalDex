@@ -27,6 +27,8 @@ import type {
   ItemPocket,
   FullItemDetail,
   ItemHeldByPokemon,
+  PastAbilities,
+  PastTypes,
 } from "@/types/pokemon"
 
 const client = new Pokedex({
@@ -64,6 +66,23 @@ export async function getPokemon(nameOrId: string | number): Promise<Pokemon> {
     isHidden: a.is_hidden,
   }))
 
+  // Parse past abilities (abilities that were different in previous generations)
+  const pastAbilities: PastAbilities[] = (data.past_abilities ?? []).map((pa) => ({
+    generation: pa.generation.name,
+    abilities: pa.abilities.map((a) => ({
+      name: formatName(a.ability.name),
+      isHidden: a.is_hidden,
+    })),
+  }))
+
+  // Parse past types (types that were different in previous generations)
+  const pastTypes: PastTypes[] = (data.past_types ?? []).map((pt) => ({
+    generation: pt.generation.name,
+    types: pt.types
+      .sort((a, b) => a.slot - b.slot)
+      .map((t) => t.type.name as PokemonType),
+  }))
+
   return {
     id: data.id,
     name: formatName(data.name),
@@ -74,6 +93,8 @@ export async function getPokemon(nameOrId: string | number): Promise<Pokemon> {
     weight: data.weight,
     stats,
     abilities,
+    pastAbilities,
+    pastTypes,
   }
 }
 
@@ -558,6 +579,74 @@ export const VERSION_GROUPS = [
 ] as const
 
 export type VersionGroup = typeof VERSION_GROUPS[number]["id"]
+
+// Map generation names to numbers for comparison
+const GENERATION_ORDER: Record<string, number> = {
+  "generation-i": 1,
+  "generation-ii": 2,
+  "generation-iii": 3,
+  "generation-iv": 4,
+  "generation-v": 5,
+  "generation-vi": 6,
+  "generation-vii": 7,
+  "generation-viii": 8,
+  "generation-ix": 9,
+}
+
+// Get the generation number for a version group
+export function getGenerationForVersionGroup(versionGroup: VersionGroup): number {
+  const vg = VERSION_GROUPS.find(v => v.id === versionGroup)
+  return vg?.generation ?? 9
+}
+
+// Get abilities for a specific version group, considering past abilities
+export function getAbilitiesForVersion(
+  pokemon: Pokemon,
+  versionGroup: VersionGroup
+): PokemonAbility[] {
+  const targetGen = getGenerationForVersionGroup(versionGroup)
+
+  // Sort past abilities by generation (ascending)
+  const sortedPastAbilities = [...pokemon.pastAbilities].sort(
+    (a, b) => GENERATION_ORDER[a.generation] - GENERATION_ORDER[b.generation]
+  )
+
+  // Find the past abilities entry that applies to this version
+  // past_abilities means "this was valid up to and including this generation"
+  for (const past of sortedPastAbilities) {
+    const pastGen = GENERATION_ORDER[past.generation]
+    if (targetGen <= pastGen) {
+      return past.abilities
+    }
+  }
+
+  // No past abilities apply, use current abilities
+  return pokemon.abilities
+}
+
+// Get types for a specific version group, considering past types
+export function getTypesForVersion(
+  pokemon: Pokemon,
+  versionGroup: VersionGroup
+): PokemonType[] {
+  const targetGen = getGenerationForVersionGroup(versionGroup)
+
+  // Sort past types by generation (ascending)
+  const sortedPastTypes = [...pokemon.pastTypes].sort(
+    (a, b) => GENERATION_ORDER[a.generation] - GENERATION_ORDER[b.generation]
+  )
+
+  // Find the past types entry that applies to this version
+  for (const past of sortedPastTypes) {
+    const pastGen = GENERATION_ORDER[past.generation]
+    if (targetGen <= pastGen) {
+      return past.types
+    }
+  }
+
+  // No past types apply, use current types
+  return pokemon.types
+}
 
 // Get available version groups for a Pokemon (games where it has move data)
 export async function getAvailableVersionGroups(

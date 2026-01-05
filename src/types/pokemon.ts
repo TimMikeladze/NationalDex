@@ -40,6 +40,17 @@ export interface PokemonAbility {
   isHidden: boolean
 }
 
+// Historical data for abilities/types that changed across generations
+export interface PastAbilities {
+  generation: string // e.g., "generation-v" means this was valid up to and including Gen V
+  abilities: PokemonAbility[]
+}
+
+export interface PastTypes {
+  generation: string
+  types: PokemonType[]
+}
+
 export interface Pokemon {
   id: number
   name: string
@@ -50,6 +61,9 @@ export interface Pokemon {
   weight: number // in hectograms
   stats: PokemonStat[]
   abilities: PokemonAbility[]
+  // Historical data
+  pastAbilities: PastAbilities[]
+  pastTypes: PastTypes[]
 }
 
 export interface PokemonSpecies {
