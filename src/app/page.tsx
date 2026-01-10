@@ -4,9 +4,8 @@ import { useEffect, Suspense, useState } from "react"
 import { useInView } from "react-intersection-observer"
 import Link from "next/link"
 import { PokemonCard, PokemonCardSkeleton } from "@/components/pokemon/pokemon-card"
-import { DexFilter, useFilteredPokemon, useFilteredMoves, useFilteredAbilities, useFilteredItems, useFilteredNews, type DexFilterState } from "@/components/pokemon/dex-filter"
+import { DexFilter, useFilteredPokemon, useFilteredMoves, useFilteredAbilities, useFilteredItems, type DexFilterState } from "@/components/pokemon/dex-filter"
 import { usePokemonList, getPokemonIdFromUrl } from "@/hooks/use-pokemon"
-import { NewsCard, NewsCardSkeleton } from "@/components/news/news-card"
 
 const ITEMS_PER_PAGE = 50
 
@@ -32,7 +31,6 @@ function HomeContent() {
   const { filteredMoves, isLoading: isMovesLoading } = useFilteredMoves(filter)
   const { filteredAbilities, isLoading: isAbilitiesLoading } = useFilteredAbilities(filter)
   const { filteredItems, isLoading: isItemsLoading } = useFilteredItems(filter)
-  const { filteredNews, isLoading: isNewsLoading } = useFilteredNews(filter)
 
   // Pokemon infinite scroll
   useEffect(() => {
@@ -261,37 +259,6 @@ function HomeContent() {
               {filteredItems && itemsDisplayCount >= filteredItems.length && filteredItems.length > 0 && (
                 <div className="py-4 text-center text-xs text-muted-foreground">
                   {filteredItems.length} items total
-                </div>
-              )}
-            </>
-          )}
-        </>
-      )}
-
-      {/* News List */}
-      {filter.category === "news" && (
-        <>
-          {isNewsLoading ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <NewsCardSkeleton key={i} />
-              ))}
-            </div>
-          ) : (
-            <>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {filteredNews?.map((news) => (
-                  <NewsCard key={news.id} news={news} />
-                ))}
-              </div>
-              {filteredNews && filteredNews.length > 0 && (
-                <div className="py-4 text-center text-xs text-muted-foreground">
-                  {filteredNews.length} news items
-                </div>
-              )}
-              {filteredNews && filteredNews.length === 0 && (
-                <div className="py-8 text-center text-muted-foreground">
-                  No news found
                 </div>
               )}
             </>

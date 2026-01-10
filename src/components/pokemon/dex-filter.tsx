@@ -7,11 +7,9 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { TypeBadge } from "@/components/pokemon/type-badge"
 import { ALL_TYPES, getAllPokemonNames, getAllMoveNames, getAllAbilityNames, getAllItemNames } from "@/lib/pokeapi"
-import { getNewsList, NEWS_PER_PAGE } from "@/lib/news"
 import type { PokemonType } from "@/types/pokemon"
-import type { NewsItem, NewsFilterState } from "@/types/news"
 
-export type DexCategory = "pokemon" | "moves" | "abilities" | "items" | "news"
+export type DexCategory = "pokemon" | "moves" | "abilities" | "items"
 
 export interface DexFilterState {
   search: string
@@ -29,7 +27,6 @@ const CATEGORY_LABELS: Record<DexCategory, string> = {
   moves: "Moves",
   abilities: "Abilities",
   items: "Items",
-  news: "News",
 }
 
 const CATEGORY_PLACEHOLDERS: Record<DexCategory, string> = {
@@ -37,7 +34,6 @@ const CATEGORY_PLACEHOLDERS: Record<DexCategory, string> = {
   moves: "Search Moves...",
   abilities: "Search Abilities...",
   items: "Search Items...",
-  news: "Search News...",
 }
 
 export function DexFilter({ onFilterChange, filter }: DexFilterProps) {
@@ -75,7 +71,7 @@ export function DexFilter({ onFilterChange, filter }: DexFilterProps) {
     <div className="space-y-3">
       {/* Category Chips */}
       <div className="flex flex-wrap gap-2">
-        {(["pokemon", "moves", "abilities", "items", "news"] as const).map((cat) => (
+        {(["pokemon", "moves", "abilities", "items"] as const).map((cat) => (
           <button
             key={cat}
             onClick={() => handleCategoryChange(cat)}
@@ -280,28 +276,5 @@ export function useFilteredItems(filter: DexFilterState) {
     isLoading,
     hasActiveFilters,
     totalCount: allItems?.length ?? 0,
-  }
-}
-
-// Hook to get filtered News based on filter state
-export function useFilteredNews(filter: DexFilterState) {
-  const hasActiveFilters = filter.search.length > 0
-
-  const { data: allNews, isLoading } = useQuery({
-    queryKey: ["all-news", filter.search],
-    queryFn: () => getNewsList({ search: filter.search }, 0, 100),
-    staleTime: 1000 * 60 * 5, // 5 minutes
-  })
-
-  const filteredNews = useMemo(() => {
-    if (!allNews) return undefined
-    return allNews.items
-  }, [allNews])
-
-  return {
-    filteredNews,
-    isLoading,
-    hasActiveFilters,
-    totalCount: allNews?.total ?? 0,
   }
 }
