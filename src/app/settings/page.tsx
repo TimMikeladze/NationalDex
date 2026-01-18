@@ -2,11 +2,26 @@
 
 import { useTheme } from "next-themes";
 import { useFavorites } from "@/hooks/use-favorites";
+import { useSpritePreferences } from "@/hooks/use-sprite-preferences";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const { favorites, clearFavorites } = useFavorites();
+  const {
+    defaultPokemonSpriteGen,
+    showPokemonSpriteVariants,
+    setDefaultPokemonSpriteGen,
+    setShowPokemonSpriteVariants,
+  } = useSpritePreferences();
 
   return (
     <div className="p-4 md:p-6">
@@ -31,6 +46,50 @@ export default function SettingsPage() {
                 {t}
               </button>
             ))}
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider block">
+            sprites
+          </p>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-4 py-2 border-b">
+              <div>
+                <p className="text-sm">default pokemon avatar</p>
+                <p className="text-xs text-muted-foreground">
+                  Used across cards, evolutions, and pokemon pages
+                </p>
+              </div>
+              <Select
+                value={defaultPokemonSpriteGen}
+                onValueChange={(value) =>
+                  setDefaultPokemonSpriteGen(value as "gen5" | "ani")
+                }
+              >
+                <SelectTrigger className="w-44 justify-between">
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
+                <SelectContent align="end">
+                  <SelectItem value="gen5">Gen 5 (static)</SelectItem>
+                  <SelectItem value="ani">Animated</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center justify-between gap-4 py-2 border-b">
+              <div>
+                <p className="text-sm">pokemon page sprite variants</p>
+                <p className="text-xs text-muted-foreground">
+                  Show controls to switch shiny / back sprites
+                </p>
+              </div>
+              <Switch
+                checked={showPokemonSpriteVariants}
+                onCheckedChange={setShowPokemonSpriteVariants}
+              />
+            </div>
           </div>
         </section>
 

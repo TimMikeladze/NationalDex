@@ -9,12 +9,14 @@ export function pokemonSprite(
     gen?: SpriteGen
     shiny?: boolean
     female?: boolean
+    side?: "front" | "back"
   }
 ) {
   const sprite = Sprites.getPokemon(name, {
     gen: options?.gen ?? "gen5",
     shiny: options?.shiny,
     gender: options?.female ? "F" : "M",
+    side: options?.side === "back" ? "p1" : "p2",
   })
   return sprite.url
 }

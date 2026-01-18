@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useSpritePreferences } from "@/hooks/use-sprite-preferences";
 import { getPokemonMoves } from "@/lib/learnsets";
 import {
   gens,
@@ -61,8 +62,10 @@ function findSpeciesByNumOrName(nameOrId: string | number) {
 }
 
 export function usePokemon(nameOrId: string | number | null) {
+  const { defaultPokemonSpriteGen } = useSpritePreferences();
+
   return useQuery<Pokemon>({
-    queryKey: ["pokemon", nameOrId],
+    queryKey: ["pokemon", nameOrId, defaultPokemonSpriteGen],
     queryFn: () => {
       if (nameOrId === null) throw new Error("Pokemon id is required");
       const species = findSpeciesByNumOrName(nameOrId);
@@ -88,10 +91,14 @@ export function usePokemon(nameOrId: string | number | null) {
         id: species.num,
         name: species.name,
         types: species.types as PokemonType[],
-        sprite: pokemonSprite(species.name) || pokemonSpriteById(species.num),
+        sprite:
+          pokemonSprite(species.name, { gen: defaultPokemonSpriteGen }) ||
+          pokemonSpriteById(species.num),
         spriteShiny:
-          pokemonSprite(species.name, { shiny: true }) ||
-          pokemonSpriteById(species.num, { shiny: true }),
+          pokemonSprite(species.name, {
+            gen: defaultPokemonSpriteGen,
+            shiny: true,
+          }) || pokemonSpriteById(species.num, { shiny: true }),
         height: 0, // Height not available in @pkmn/dex
         weight: species.weightkg * 10, // Convert kg to decigrams (API format)
         stats,
@@ -175,8 +182,10 @@ export function usePokemonMoves(nameOrId: string | number | null) {
 }
 
 export function useEvolutionChain(evolutionChainUrl: string | null) {
+  const { defaultPokemonSpriteGen } = useSpritePreferences();
+
   return useQuery<EvolutionChainLink>({
-    queryKey: ["evolution-chain", evolutionChainUrl],
+    queryKey: ["evolution-chain", evolutionChainUrl, defaultPokemonSpriteGen],
     queryFn: () => {
       if (!evolutionChainUrl) throw new Error("No evolution chain");
 
@@ -265,7 +274,9 @@ export function useEvolutionChain(evolutionChainUrl: string | null) {
         return {
           id: sp.num,
           name: sp.name,
-          sprite: pokemonSprite(sp.name) || pokemonSpriteById(sp.num),
+          sprite:
+            pokemonSprite(sp.name, { gen: defaultPokemonSpriteGen }) ||
+            pokemonSpriteById(sp.num),
           evolvesTo: evolutions,
           evolutionDetails,
         };

@@ -158,6 +158,8 @@
 .pixelated {
   image-rendering: pixelated;
   image-rendering: crisp-edges;
+  object-fit: contain;
+  object-position: center;
 }
 
 /* PWA safe area utilities */
@@ -173,10 +175,32 @@
   padding-bottom: calc(3rem + env(safe-area-inset-bottom, 0px));
 }
 
+/* App chrome height (desktop header + optional secondary toolbar) */
+.app-shell {
+  --app-secondary-height: 3.5rem; /* 56px */
+  --app-top-offset: 0px; /* mobile default (no desktop header) */
+  --app-bottom-offset: 3rem; /* mobile bottom nav (h-12) */
+}
+
+.app-shell[data-secondary="true"] {
+  --app-top-offset: var(--app-secondary-height);
+}
+
+@media (min-width: 1024px) {
+  .app-shell {
+    --app-top-offset: 3.5rem; /* desktop header */
+    --app-bottom-offset: 0px; /* no bottom nav on desktop */
+  }
+
+  .app-shell[data-secondary="true"] {
+    --app-top-offset: 7rem; /* desktop header + secondary */
+  }
+}
+
 /* PWA standalone mode - only applies on mobile/tablet (below lg breakpoint) */
 @media (display-mode: standalone) and (max-width: 1023px) {
   .pwa-pt-safe {
-    padding-top: calc(env(safe-area-inset-top, 0px) + 0.5rem);
+    padding-top: calc(var(--app-top-offset, 0px) + env(safe-area-inset-top, 0px) + 0.5rem);
   }
 }
 
@@ -184,7 +208,7 @@
 @supports (-webkit-touch-callout: none) {
   @media (display-mode: standalone) and (max-width: 1023px) {
     .pwa-pt-safe {
-      padding-top: calc(env(safe-area-inset-top, 0px) + 0.5rem);
+      padding-top: calc(var(--app-top-offset, 0px) + env(safe-area-inset-top, 0px) + 0.5rem);
     }
   }
 }

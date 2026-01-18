@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,6 +31,29 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { useNav } from "./navigation/nav-provider";
+
+type SecondaryToolbarState = {
+  content: React.ReactNode | null;
+  className?: string;
+  heightClassName?: string; // defaults to h-14
+};
+
+type SecondaryToolbarContextValue = {
+  setSecondaryToolbar: (next: SecondaryToolbarState | null) => void;
+};
+
+const SecondaryToolbarContext = createContext<SecondaryToolbarContextValue | null>(
+  null,
+);
+
+export function useSecondaryToolbar() {
+  const ctx = useContext(SecondaryToolbarContext);
+  if (!ctx) {
+    throw new Error("useSecondaryToolbar must be used within AppShell");
+  }
+
+  return ctx.setSecondaryToolbar;
+}
 
 const navItems = [
   { href: "/", icon: Grid3X3, label: "dex" },
@@ -62,6 +85,20 @@ export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const { toggleSearch, moreOpen, setMoreOpen } = useNav();
   const isPopStateNav = useRef(false);
+  const [secondaryToolbar, setSecondaryToolbar] =
+    useState<SecondaryToolbarState | null>(null);
+
+  const setSecondaryToolbarStable = useCallback(
+    (next: SecondaryToolbarState | null) => {
+      setSecondaryToolbar(next);
+    },
+    [],
+  );
+
+  const secondaryToolbarValue = useMemo<SecondaryToolbarContextValue>(
+    () => ({ setSecondaryToolbar: setSecondaryToolbarStable }),
+    [setSecondaryToolbarStable],
+  );
 
   // Track back/forward navigation via popstate
   useEffect(() => {
@@ -187,79 +224,114 @@ export function AppShell({ children }: AppShellProps) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Desktop Header */}
-      <header className="hidden lg:flex fixed top-0 left-0 right-0 z-50 h-14 items-center border-b bg-background px-6 fixed-bottom-stable">
-        <div className="flex w-full items-center justify-between">
-          <Link href="/" className="text-lg font-medium">
-            nationaldex
-          </Link>
-          <nav className="flex items-center gap-1">
-            {navItems.map((item) => renderNavItem(item, "desktop"))}
-            {/* Desktop More Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-muted transition-colors",
-                  isMoreActive
-                    ? "text-foreground"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                <MoreHorizontal className="size-4" strokeWidth={1.5} />
-                <span className="text-xs">more</span>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {moreMenuItems.map((item) => {
-                  const isActive =
-                    item.href === "/"
-                      ? pathname === "/"
-                      : pathname.startsWith(item.href);
-                  return (
-                    <DropdownMenuItem key={item.href} asChild>
-                      <Link
-                        href={item.href}
-                        className={cn(
-                          "flex items-center gap-2 cursor-pointer",
-                          isActive && "bg-muted",
-                        )}
-                      >
-                        <item.icon className="size-4" strokeWidth={1.5} />
-                        <span>{item.label}</span>
-                      </Link>
-                    </DropdownMenuItem>
-                  );
-                })}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </nav>
-        </div>
-      </header>
+    <SecondaryToolbarContext.Provider value={secondaryToolbarValue}>
+      <div
+        className="app-shell min-h-screen flex flex-col"
+        data-secondary={secondaryToolbar?.content ? "true" : "false"}
+      >
+        {/* Desktop Header */}
+        <header className="hidden lg:flex fixed top-0 left-0 right-0 z-50 h-14 items-center border-b bg-background px-6 fixed-bottom-stable">
+          <div className="flex w-full items-center justify-between">
+            <Link href="/" className="text-lg font-medium">
+              nationaldex
+            </Link>
+            <nav className="flex items-center gap-1">
+              {navItems.map((item) => renderNavItem(item, "desktop"))}
+              {/* Desktop More Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-muted transition-colors",
+                    isMoreActive
+                      ? "text-foreground"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <MoreHorizontal className="size-4" strokeWidth={1.5} />
+                  <span className="text-xs">more</span>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {moreMenuItems.map((item) => {
+                    const isActive =
+                      item.href === "/"
+                        ? pathname === "/"
+                        : pathname.startsWith(item.href);
+                    return (
+                      <DropdownMenuItem key={item.href} asChild>
+                        <Link
+                          href={item.href}
+                          className={cn(
+                            "flex items-center gap-2 cursor-pointer",
+                            isActive && "bg-muted",
+                          )}
+                        >
+                          <item.icon className="size-4" strokeWidth={1.5} />
+                          <span>{item.label}</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </nav>
+          </div>
+        </header>
 
-      <main className="flex-1 pb-nav lg:pb-0 lg:pt-14 pwa-pt-safe">
-        <div className="w-full">
-          {children}
-        </div>
-      </main>
+        {/* Optional per-page secondary toolbar */}
+        {secondaryToolbar?.content && (
+          <header
+            className={cn(
+              "fixed left-0 right-0 z-40 border-b bg-background/80 backdrop-blur supports-backdrop-filter:bg-background/60 fixed-bottom-stable",
+              "top-0 lg:top-14",
+              secondaryToolbar.className,
+            )}
+          >
+            <div
+              className={cn(
+                "flex items-center px-4 md:px-6",
+                secondaryToolbar.heightClassName ?? "h-14",
+              )}
+            >
+              {secondaryToolbar.content}
+            </div>
+          </header>
+        )}
 
-      {/* Mobile/Tablet Bottom Nav - hidden on desktop */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background pb-safe lg:hidden fixed-bottom-stable">
-        <div className="flex h-12 items-center justify-around max-w-lg mx-auto">
-          {navItems.map((item) => renderNavItem(item, "mobile"))}
-        </div>
-      </nav>
+        <main
+          className={cn(
+            // Keep content constrained between fixed toolbars.
+            // Height = viewport minus bottom nav (and safe-area bottom).
+            "flex-1 min-h-0 pwa-pt-safe overflow-hidden overscroll-none",
+            "h-[calc(100dvh-var(--app-bottom-offset)-env(safe-area-inset-bottom,0px))]",
+            "max-h-[calc(100dvh-var(--app-bottom-offset)-env(safe-area-inset-bottom,0px))]",
+            // offset content by top chrome (css var set on .app-shell)
+            "pt-(--app-top-offset)",
+          )}
+        >
+          <div className="w-full">
+            {children}
+          </div>
+        </main>
 
-      {/* Mobile More Menu Sheet */}
-      <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
-        <SheetContent side="bottom" className="pb-safe">
-          <SheetHeader>
-            <SheetTitle>More</SheetTitle>
-          </SheetHeader>
-          <nav className="flex flex-col gap-1 py-2">
-            {moreMenuItems.map(renderMoreMenuItem)}
-          </nav>
-        </SheetContent>
-      </Sheet>
-    </div>
+        {/* Mobile/Tablet Bottom Nav - hidden on desktop */}
+        <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background pb-safe lg:hidden fixed-bottom-stable">
+          <div className="flex h-12 items-center justify-around max-w-lg mx-auto">
+            {navItems.map((item) => renderNavItem(item, "mobile"))}
+          </div>
+        </nav>
+
+        {/* Mobile More Menu Sheet */}
+        <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
+          <SheetContent side="bottom" className="pb-safe">
+            <SheetHeader>
+              <SheetTitle>More</SheetTitle>
+            </SheetHeader>
+            <nav className="flex flex-col gap-1 py-2">
+              {moreMenuItems.map(renderMoreMenuItem)}
+            </nav>
+          </SheetContent>
+        </Sheet>
+      </div>
+    </SecondaryToolbarContext.Provider>
   );
 }
