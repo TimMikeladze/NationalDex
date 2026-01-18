@@ -202,6 +202,10 @@ function PokemonCardContent({
   }
 
   if (variant === "detail") {
+    // DetailCard requires full Pokemon data (with stats, abilities, etc.)
+    if (!("stats" in pokemon)) {
+      return <CompactCard pokemon={pokemon} className={className} />;
+    }
     return (
       <DetailCard
         pokemon={pokemon}

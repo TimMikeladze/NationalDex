@@ -144,6 +144,7 @@ export default function WhosThatPokemonPage() {
           <div className="size-48 animate-pulse bg-muted rounded-lg" />
         ) : pokemon ? (
           <div className="relative">
+            {/* biome-ignore lint/performance/noImgElement: external sprite URLs */}
             <img
               src={pokemon.sprite}
               alt={revealed ? pokemon.name : "Mystery Pokemon"}

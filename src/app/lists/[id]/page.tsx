@@ -20,13 +20,26 @@ interface PageProps {
 export default function ListDetailPage({ params }: PageProps) {
   const { id: listId } = use(params);
   const router = useRouter();
-  const { lists, isLoaded, getList, updateList, removeItem } = useLists();
+  const { isLoaded, getList, updateList, removeItem } = useLists();
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [editedName, setEditedName] = useState("");
   const [editedDescription, setEditedDescription] = useState("");
 
   const list = useMemo(() => getList(listId), [getList, listId]);
+
+  // Group items by type - must be called before any early returns
+  const groupedItems = useMemo(() => {
+    if (!list) return {};
+    const groups: Partial<Record<ListItemType, ListItem[]>> = {};
+    for (const item of list.items) {
+      if (!groups[item.type]) {
+        groups[item.type] = [];
+      }
+      groups[item.type]?.push(item);
+    }
+    return groups;
+  }, [list]);
 
   useEffect(() => {
     if (isLoaded && !list) {
@@ -100,18 +113,6 @@ export default function ListDetailPage({ params }: PageProps) {
     }
     return null;
   };
-
-  // Group items by type
-  const groupedItems = useMemo(() => {
-    const groups: Partial<Record<ListItemType, ListItem[]>> = {};
-    for (const item of list.items) {
-      if (!groups[item.type]) {
-        groups[item.type] = [];
-      }
-      groups[item.type]?.push(item);
-    }
-    return groups;
-  }, [list.items]);
 
   const typeOrder: ListItemType[] = [
     "pokemon",
@@ -230,6 +231,7 @@ export default function ListDetailPage({ params }: PageProps) {
                           >
                             {sprite ? (
                               <div className="size-10 rounded-md bg-muted flex items-center justify-center shrink-0">
+                                {/* biome-ignore lint/performance/noImgElement: external sprite URLs */}
                                 <img
                                   src={sprite}
                                   alt={item.name}

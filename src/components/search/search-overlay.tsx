@@ -139,6 +139,7 @@ function ResultIcon({ result }: { result: SearchResult }) {
   switch (result.type) {
     case "pokemon":
       return (
+        // biome-ignore lint/performance/noImgElement: external sprite URLs
         <img
           src={result.sprite}
           alt={result.name}
@@ -147,6 +148,7 @@ function ResultIcon({ result }: { result: SearchResult }) {
       );
     case "item":
       return result.sprite ? (
+        // biome-ignore lint/performance/noImgElement: external sprite URLs
         <img
           src={result.sprite}
           alt={result.name}

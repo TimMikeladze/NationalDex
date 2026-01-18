@@ -62,8 +62,11 @@ export default function ListsPage() {
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">list name</label>
+                <label htmlFor="list-name" className="text-sm font-medium">
+                  list name
+                </label>
                 <Input
+                  id="list-name"
                   placeholder="My Favorite Pokemon"
                   value={newListName}
                   onChange={(e) => setNewListName(e.target.value)}
@@ -73,10 +76,14 @@ export default function ListsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">
+                <label
+                  htmlFor="list-description"
+                  className="text-sm font-medium"
+                >
                   description (optional)
                 </label>
                 <Textarea
+                  id="list-description"
                   placeholder="A collection of..."
                   value={newListDescription}
                   onChange={(e) => setNewListDescription(e.target.value)}
@@ -100,7 +107,7 @@ export default function ListsPage() {
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
             <div
-              key={i}
+              key={`skeleton-${i}`}
               className="h-24 rounded-lg border bg-muted/50 animate-pulse"
             />
           ))}

@@ -21,7 +21,7 @@ export default function ComparisonPage() {
       <div className="p-4 md:p-6">
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <ComparisonCardSkeleton key={i} />
+            <ComparisonCardSkeleton key={`skeleton-${i}`} />
           ))}
         </div>
       </div>
@@ -115,6 +115,7 @@ function ComparisonCard({
           <span className="text-xs text-muted-foreground tabular-nums">
             #{pokemon.id.toString().padStart(3, "0")}
           </span>
+          {/* biome-ignore lint/performance/noImgElement: external sprite URLs */}
           <img
             src={pokemon.sprite}
             alt={pokemon.name}
@@ -327,6 +328,7 @@ function PokemonTableHeader({ pokemonId }: { pokemonId: number }) {
   return (
     <th className="text-center py-2 px-2 font-normal">
       <div className="flex flex-col items-center gap-1">
+        {/* biome-ignore lint/performance/noImgElement: external sprite URLs */}
         <img
           src={pokemon.sprite}
           alt={pokemon.name}
@@ -339,6 +341,7 @@ function PokemonTableHeader({ pokemonId }: { pokemonId: number }) {
 }
 
 function StatsComparisonRows({ pokemonIds }: { pokemonIds: number[] }) {
+  // biome-ignore lint/correctness/useHookAtTopLevel: pokemonIds array is stable from localStorage state
   const pokemonQueries = pokemonIds.map((id) => usePokemon(id.toString()));
   const allLoaded = pokemonQueries.every((q) => q.data);
 
@@ -361,7 +364,10 @@ function StatsComparisonRows({ pokemonIds }: { pokemonIds: number[] }) {
     );
   }
 
-  const pokemonData = pokemonQueries.map((q) => q.data!);
+  // We've already checked allLoaded above, so data is guaranteed to exist
+  const pokemonData = pokemonQueries
+    .map((q) => q.data)
+    .filter(Boolean) as NonNullable<(typeof pokemonQueries)[0]["data"]>[];
 
   // Find highest stat for each row
   const getHighestIndex = (statIndex: number) => {

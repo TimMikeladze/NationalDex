@@ -123,11 +123,18 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "liga" 0, "calt" 0;
+    font-feature-settings:
+      "liga" 0,
+      "calt" 0;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     @apply tracking-tight font-medium;
   }
 }
@@ -200,7 +207,11 @@
 /* PWA standalone mode - only applies on mobile/tablet (below lg breakpoint) */
 @media (display-mode: standalone) and (max-width: 1023px) {
   .pwa-pt-safe {
-    padding-top: calc(var(--app-top-offset, 0px) + env(safe-area-inset-top, 0px) + 0.5rem);
+    padding-top: calc(
+      var(--app-top-offset, 0px) +
+      env(safe-area-inset-top, 0px) +
+      0.5rem
+    );
   }
 }
 
@@ -208,7 +219,11 @@
 @supports (-webkit-touch-callout: none) {
   @media (display-mode: standalone) and (max-width: 1023px) {
     .pwa-pt-safe {
-      padding-top: calc(var(--app-top-offset, 0px) + env(safe-area-inset-top, 0px) + 0.5rem);
+      padding-top: calc(
+        var(--app-top-offset, 0px) +
+        env(safe-area-inset-top, 0px) +
+        0.5rem
+      );
     }
   }
 }

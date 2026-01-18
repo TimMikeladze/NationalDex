@@ -61,8 +61,11 @@ export default function TeamsPage() {
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">team name</label>
+                <label htmlFor="team-name" className="text-sm font-medium">
+                  team name
+                </label>
                 <Input
+                  id="team-name"
                   placeholder="My Awesome Team"
                   value={newTeamName}
                   onChange={(e) => setNewTeamName(e.target.value)}
@@ -72,7 +75,12 @@ export default function TeamsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">generation</label>
+                <label
+                  htmlFor="team-generation"
+                  className="text-sm font-medium"
+                >
+                  generation
+                </label>
                 <Select
                   value={newTeamGeneration}
                   onValueChange={(value) =>
@@ -111,7 +119,7 @@ export default function TeamsPage() {
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
             <div
-              key={i}
+              key={`skeleton-${i}`}
               className="h-24 rounded-lg border bg-muted/50 animate-pulse"
             />
           ))}
@@ -164,6 +172,7 @@ export default function TeamsPage() {
                           key={member.id}
                           className="size-10 rounded-md bg-muted flex items-center justify-center"
                         >
+                          {/* biome-ignore lint/performance/noImgElement: external sprite URLs */}
                           <img
                             src={pokemonSpriteById(member.id)}
                             alt={member.name}
