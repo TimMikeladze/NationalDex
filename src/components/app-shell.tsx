@@ -8,6 +8,7 @@ import {
   Info,
   ListPlus,
   MapPin,
+  MessageSquare,
   MoreHorizontal,
   Package,
   Search,
@@ -81,6 +82,7 @@ const moreMenuItems = [
   { href: "/settings", icon: Settings, label: "Settings" },
   { href: "/locations", icon: MapPin, label: "Locations" },
   { href: "/items", icon: Package, label: "Items" },
+  { href: "/feedback", icon: MessageSquare, label: "Feedback" },
   { href: "/about", icon: Info, label: "About" },
 ];
 

@@ -57,6 +57,9 @@ export interface PokemonMove {
   category: string;
   learnMethod: LearnMethod;
   levelLearnedAt: number;
+  description: string;
+  priority: number;
+  target: string;
 }
 
 function parseLearnMethod(source: string): {
@@ -114,6 +117,9 @@ export async function getPokemonMoves(
       category: move.category,
       learnMethod: method,
       levelLearnedAt: level,
+      description: move.shortDesc || move.desc || "",
+      priority: move.priority,
+      target: move.target,
     });
   }
 

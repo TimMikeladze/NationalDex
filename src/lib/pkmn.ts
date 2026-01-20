@@ -89,6 +89,27 @@ export function getTypeMatchups(types: string[], genNum = 9) {
   return { weaknesses, resistances, immunities };
 }
 
+export function getOffensiveTypeMatchups(attackingType: string, genNum = 9) {
+  const gen = gens.get(genNum);
+  const superEffective: string[] = [];
+  const notVeryEffective: string[] = [];
+  const noEffect: string[] = [];
+
+  for (const defendingType of gen.types) {
+    if (!defendingType.exists) continue;
+    // biome-ignore lint/suspicious/noExplicitAny: library typing
+    const eff = gen.types.totalEffectiveness(
+      attackingType as any,
+      [defendingType.name] as any,
+    );
+    if (eff > 1) superEffective.push(defendingType.name);
+    else if (eff < 1 && eff > 0) notVeryEffective.push(defendingType.name);
+    else if (eff === 0) noEffect.push(defendingType.name);
+  }
+
+  return { superEffective, notVeryEffective, noEffect };
+}
+
 export function formatStatName(stat: string): string {
   const map: Record<string, string> = {
     hp: "HP",

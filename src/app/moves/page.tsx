@@ -79,8 +79,10 @@ export default function MovesPage() {
 
       // Generation filter
       if (filters.generations.length > 0) {
-        const moveGen = move.generation.toLowerCase().replace(/\s+/g, "-");
-        if (!filters.generations.includes(moveGen)) {
+        // Convert "Gen VII" → "generation-vii" to match GENERATIONS.id format
+        const romanNumeral = move.generation.split(" ")[1]?.toLowerCase();
+        const moveGenId = romanNumeral ? `generation-${romanNumeral}` : "";
+        if (!filters.generations.includes(moveGenId)) {
           return false;
         }
       }

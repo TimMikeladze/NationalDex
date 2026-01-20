@@ -174,6 +174,9 @@ export function usePokemonMoves(nameOrId: string | number | null) {
         damageClass: m.category as "Physical" | "Special" | "Status",
         learnMethod: m.learnMethod,
         levelLearnedAt: m.levelLearnedAt,
+        description: m.description,
+        priority: m.priority,
+        target: m.target,
       }));
     },
     enabled: nameOrId !== null,

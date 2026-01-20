@@ -65,6 +65,9 @@ export interface PokemonMove {
   damageClass: "Physical" | "Special" | "Status";
   learnMethod: "level-up" | "machine" | "egg" | "tutor" | "other";
   levelLearnedAt: number;
+  description: string;
+  priority: number;
+  target: string;
 }
 
 export interface EvolutionChainLink {
