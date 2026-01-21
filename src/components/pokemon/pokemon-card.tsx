@@ -1,7 +1,6 @@
 "use client";
 
 import { GitCompareArrows, Heart } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { useMemo } from "react";
 import { Card } from "@/components/ui/card";
@@ -12,6 +11,7 @@ import { calculateTypeEffectiveness, usePokemon } from "@/hooks/use-pokemon";
 import { toID } from "@/lib/pkmn";
 import { cn } from "@/lib/utils";
 import type { Pokemon, PokemonType, TypeEffectiveness } from "@/types/pokemon";
+import { PokemonImage } from "./pokemon-image";
 import { StatsGrid } from "./stat-bar";
 import { TypeBadge } from "./type-badge";
 
@@ -253,14 +253,13 @@ function CompactCard({
     <Link href={href} className={cn("block", className)}>
       <Card className="p-2 hover:bg-muted/50 transition-colors">
         <div className="flex items-center gap-2">
-          <Image
+          <PokemonImage
             src={pokemon.sprite}
             alt={pokemon.name}
+            pokemonId={pokemon.id}
             width={40}
             height={40}
-            className="size-10 pixelated"
-            loading="lazy"
-            unoptimized
+            className="size-10"
           />
           <div className="flex-1 min-w-0">
             <h3 className="text-xs font-medium truncate">{pokemon.name}</h3>
@@ -356,14 +355,13 @@ function DefaultCard({
         </div>
 
         <div className="flex flex-col items-center py-2 md:py-3">
-          <Image
+          <PokemonImage
             src={pokemon.sprite}
             alt={pokemon.name}
+            pokemonId={pokemon.id}
             width={96}
             height={96}
-            className="size-16 md:size-20 lg:size-24 pixelated"
-            loading="lazy"
-            unoptimized
+            className="size-16 md:size-20 lg:size-24"
           />
         </div>
 
@@ -450,14 +448,13 @@ function DetailCard({
       {/* Pokemon Image & Name */}
       <Link href={href} className="block">
         <div className="flex flex-col items-center mb-4">
-          <Image
+          <PokemonImage
             src={pokemon.sprite}
             alt={pokemon.name}
+            pokemonId={pokemon.id}
             width={128}
             height={128}
-            className="size-24 md:size-32 pixelated"
-            loading="lazy"
-            unoptimized
+            className="size-24 md:size-32"
           />
           <h3 className="text-lg font-medium mt-2">{pokemon.name}</h3>
           <div className="flex gap-2 mt-2">
