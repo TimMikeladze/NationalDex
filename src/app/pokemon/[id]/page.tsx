@@ -1,5 +1,11 @@
+import { getAllSpecies } from "@/lib/pkmn";
 import { getPokedexEntry } from "@/lib/pokeapi";
 import { PokemonPageClient } from "./client";
+
+export async function generateStaticParams() {
+  const species = getAllSpecies();
+  return species.map((s) => ({ id: s.num.toString() }));
+}
 
 interface PageProps {
   params: Promise<{ id: string }>;
