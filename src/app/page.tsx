@@ -28,6 +28,7 @@ function HomeContent() {
   const [filter, setFilter] = useState<DexFilterState>({
     search: "",
     types: [],
+    generations: [],
     category: "pokemon",
   });
   const [pokemonDisplayCount, setPokemonDisplayCount] =
@@ -43,8 +44,8 @@ function HomeContent() {
   );
 
   const filterResetKey = useMemo(() => {
-    return `${filter.category}|${filter.search}|${filter.types.join(",")}`;
-  }, [filter.category, filter.search, filter.types]);
+    return `${filter.category}|${filter.search}|${filter.types.join(",")}|${filter.generations.join(",")}`;
+  }, [filter.category, filter.search, filter.types, filter.generations]);
 
   const allPokemon = useMemo(() => {
     return getDexPokemonList(9, { forms: "distinct-sprites" }).map((p) => ({
