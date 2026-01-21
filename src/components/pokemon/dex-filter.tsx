@@ -144,27 +144,6 @@ export function DexFilter({ onFilterChange, filter }: DexFilterProps) {
         )}
       </div>
 
-      {/* Type Filters - only show for Pokemon */}
-      {filter.category === "pokemon" && (
-        <div className="flex flex-wrap gap-1.5">
-          {ALL_TYPES.map((type) => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => handleTypeToggle(type as PokemonType)}
-              className={`transition-opacity ${
-                filter.types.length > 0 &&
-                !filter.types.includes(type as PokemonType)
-                  ? "opacity-40 hover:opacity-70"
-                  : "opacity-100"
-              }`}
-            >
-              <TypeBadge type={type as PokemonType} size="sm" />
-            </button>
-          ))}
-        </div>
-      )}
-
       {/* Generation Filter - only show for Pokemon */}
       {filter.category === "pokemon" && (
         <div className="flex items-center gap-2">
@@ -215,6 +194,27 @@ export function DexFilter({ onFilterChange, filter }: DexFilterProps) {
               )}
             </PopoverContent>
           </Popover>
+        </div>
+      )}
+
+      {/* Type Filters - only show for Pokemon */}
+      {filter.category === "pokemon" && (
+        <div className="flex flex-wrap gap-1.5">
+          {ALL_TYPES.map((type) => (
+            <button
+              key={type}
+              type="button"
+              onClick={() => handleTypeToggle(type as PokemonType)}
+              className={`transition-opacity ${
+                filter.types.length > 0 &&
+                !filter.types.includes(type as PokemonType)
+                  ? "opacity-40 hover:opacity-70"
+                  : "opacity-100"
+              }`}
+            >
+              <TypeBadge type={type as PokemonType} size="sm" />
+            </button>
+          ))}
         </div>
       )}
 
