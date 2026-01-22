@@ -122,14 +122,19 @@ export function usePokemonSpecies(nameOrId: string | number | null) {
       const species = findSpeciesByNumOrName(nameOrId);
       if (!species) throw new Error("Species not found");
 
+      // For formes (Mega, Gmax, regional, etc.), use the base species for evolution chain
+      // since formes don't have their own evolution data
+      const evolutionSpeciesId = species.baseSpecies
+        ? toID(species.baseSpecies)
+        : species.id;
+
       return {
         id: species.num,
         name: species.name,
         description: species.desc || "",
         genus: species.forme ? `${species.baseForme || "Base"} Forme` : "",
-        // Use the species id so base-stage Pokémon still build a chain.
-        // (The chain builder walks backwards via `prevo` to find the root.)
-        evolutionChainUrl: `evo-${species.id}`,
+        // Use the base species id for formes so they show the base form's evolution chain
+        evolutionChainUrl: `evo-${evolutionSpeciesId}`,
         generation: getGenerationName(species.gen),
         genderRate:
           species.genderRatio?.F !== undefined
@@ -169,7 +174,15 @@ export function usePokemonMoves(nameOrId: string | number | null) {
       const species = findSpeciesByNumOrName(nameOrId);
       if (!species) throw new Error("Species not found");
 
-      const moves = await getPokemonMoves(species.name);
+      // Try to get moves for the exact species first
+      let moves = await getPokemonMoves(species.name);
+
+      // If no moves found and this is a forme (Mega, Gmax, regional, etc.),
+      // fall back to the base species' learnset
+      if (moves.length === 0 && species.baseSpecies) {
+        moves = await getPokemonMoves(species.baseSpecies);
+      }
+
       return moves.map((m) => ({
         name: m.name,
         type: m.type as PokemonType,
