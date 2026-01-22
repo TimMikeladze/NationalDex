@@ -14,16 +14,9 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AddToListDialog } from "@/components/add-to-list-dialog";
 import { useSecondaryToolbar } from "@/components/app-shell";
-import { PokemonImage } from "@/components/pokemon/pokemon-image";
 import { StatBar } from "@/components/pokemon/stat-bar";
 import { TypeBadge } from "@/components/pokemon/type-badge";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Popover,
   PopoverContent,
@@ -377,11 +370,6 @@ export function PokemonPageClient({
     return calculateTypeEffectiveness(pokemon.types);
   }, [pokemon]);
 
-  const variations = useMemo(() => {
-    if (!pokemon) return [];
-    return getDexPokemonVariationsByDexNumber(9, pokemon.id);
-  }, [pokemon]);
-
   const secondaryToolbarContent = useMemo(() => {
     if (!pokemon) return null;
 
@@ -720,76 +708,6 @@ export function PokemonPageClient({
             isLoading={evolutionLoading}
             currentSlug={currentSlug}
           />
-
-          {/* Variations / Formes */}
-          {variations.length > 1 && (
-            <section className="space-y-2">
-              <Label>variations</Label>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full justify-between gap-3 px-3"
-                  >
-                    <span className="flex items-center gap-2 min-w-0">
-                      <Image
-                        src={pokemon.sprite}
-                        alt={pokemon.name}
-                        width={20}
-                        height={20}
-                        className="size-5 pixelated"
-                        unoptimized={isAnimatedSprite(pokemon.sprite)}
-                      />
-                      <span className="truncate text-xs font-medium">
-                        {pokemon.name}
-                      </span>
-                    </span>
-                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                      change
-                    </span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="start"
-                  className="w-(--radix-dropdown-menu-trigger-width)"
-                >
-                  {variations.map((v) => {
-                    const isCurrent = v.slug === toID(pokemon.name);
-                    const sprite = pokemonSprite(v.name, {
-                      gen: defaultPokemonSpriteGen,
-                    });
-                    return (
-                      <DropdownMenuItem key={v.slug} asChild>
-                        <Link
-                          href={`/pokemon/${v.slug}`}
-                          className={cn(
-                            "flex items-center gap-2",
-                            isCurrent && "bg-muted",
-                          )}
-                        >
-                          <PokemonImage
-                            src={sprite}
-                            alt={v.name}
-                            pokemonId={v.id}
-                            width={20}
-                            height={20}
-                            className="size-5"
-                          />
-                          <span className="text-sm">{v.name}</span>
-                          {isCurrent && (
-                            <span className="ml-auto text-[10px] uppercase tracking-wider text-muted-foreground">
-                              current
-                            </span>
-                          )}
-                        </Link>
-                      </DropdownMenuItem>
-                    );
-                  })}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </section>
-          )}
 
           <DetailsSection pokemon={pokemon} species={species} />
         </div>
@@ -1301,8 +1219,15 @@ function EvolutionNode({
   isFirst?: boolean;
 }) {
   const hasBranching = pokemon.evolvesTo.length > 1;
-  const href = `/pokemon/${toID(pokemon.name)}`;
-  const isCurrent = toID(pokemon.name) === currentSlug;
+
+  // Get all variations for this Pokemon
+  const variations = useMemo(() => {
+    return getDexPokemonVariationsByDexNumber(9, pokemon.id);
+  }, [pokemon.id]);
+
+  // Check if this node contains the current Pokemon (either base or a variation)
+  const currentVariation = variations.find((v) => v.slug === currentSlug);
+  const hasCurrentVariation = Boolean(currentVariation);
 
   return (
     <div className="flex items-center gap-2">
@@ -1320,27 +1245,23 @@ function EvolutionNode({
         </div>
       )}
 
-      {/* Pokemon card */}
-      <Link
-        href={href}
-        className={cn(
-          "flex flex-col items-center gap-1 p-2 rounded hover:bg-muted transition-colors",
-          isCurrent && "bg-muted ring-1 ring-primary",
+      {/* Pokemon card with variations */}
+      <div className="flex flex-col items-center gap-1">
+        {variations.length > 1 ? (
+          <EvolutionNodeVariations
+            variations={variations}
+            currentSlug={currentSlug}
+            pokemonId={pokemon.id}
+          />
+        ) : (
+          <EvolutionNodeCard
+            name={pokemon.name}
+            sprite={pokemon.sprite}
+            id={pokemon.id}
+            isCurrent={hasCurrentVariation}
+          />
         )}
-      >
-        <Image
-          src={pokemon.sprite}
-          alt={pokemon.name}
-          width={96}
-          height={96}
-          className="size-16 md:size-20 lg:size-24 pixelated"
-          unoptimized={isAnimatedSprite(pokemon.sprite)}
-        />
-        <span className="text-xs">{pokemon.name}</span>
-        <span className="text-[10px] text-muted-foreground">
-          #{pokemon.id.toString().padStart(3, "0")}
-        </span>
-      </Link>
+      </div>
 
       {/* Evolutions */}
       {pokemon.evolvesTo.length > 0 && (
@@ -1357,6 +1278,105 @@ function EvolutionNode({
               currentSlug={currentSlug}
             />
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EvolutionNodeCard({
+  name,
+  sprite,
+  id,
+  isCurrent,
+  isSmall = false,
+}: {
+  name: string;
+  sprite: string;
+  id: number;
+  isCurrent: boolean;
+  isSmall?: boolean;
+}) {
+  const href = `/pokemon/${toID(name)}`;
+
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "flex flex-col items-center gap-1 p-2 rounded hover:bg-muted transition-colors",
+        isCurrent && "bg-muted ring-1 ring-primary",
+      )}
+    >
+      <Image
+        src={sprite}
+        alt={name}
+        width={96}
+        height={96}
+        className={cn(
+          "pixelated",
+          isSmall ? "size-10 md:size-12" : "size-16 md:size-20 lg:size-24",
+        )}
+        unoptimized={isAnimatedSprite(sprite)}
+      />
+      <span className={cn("text-center", isSmall ? "text-[10px]" : "text-xs")}>
+        {name}
+      </span>
+      {!isSmall && (
+        <span className="text-[10px] text-muted-foreground">
+          #{id.toString().padStart(3, "0")}
+        </span>
+      )}
+    </Link>
+  );
+}
+
+function EvolutionNodeVariations({
+  variations,
+  currentSlug,
+  pokemonId,
+}: {
+  variations: ReturnType<typeof getDexPokemonVariationsByDexNumber>;
+  currentSlug: string;
+  pokemonId: number;
+}) {
+  const { defaultPokemonSpriteGen } = useSpritePreferences();
+
+  // Separate base form from other variations
+  const baseVariation = variations.find((v) => !v.isForm) ?? variations[0];
+  const otherVariations = variations.filter((v) => v !== baseVariation);
+
+  const baseSprite =
+    pokemonSprite(baseVariation.name, { gen: defaultPokemonSpriteGen }) ?? "";
+  const isBaseCurrentSlug = baseVariation.slug === currentSlug;
+
+  return (
+    <div className="flex flex-col items-center gap-1">
+      {/* Base form - larger */}
+      <EvolutionNodeCard
+        name={baseVariation.name}
+        sprite={baseSprite}
+        id={pokemonId}
+        isCurrent={isBaseCurrentSlug}
+      />
+
+      {/* Other variations - smaller grid */}
+      {otherVariations.length > 0 && (
+        <div className="flex flex-wrap justify-center gap-0.5 max-w-32">
+          {otherVariations.map((v) => {
+            const sprite =
+              pokemonSprite(v.name, { gen: defaultPokemonSpriteGen }) ?? "";
+            const isCurrent = v.slug === currentSlug;
+            return (
+              <EvolutionNodeCard
+                key={v.slug}
+                name={v.name}
+                sprite={sprite}
+                id={v.id}
+                isCurrent={isCurrent}
+                isSmall
+              />
+            );
+          })}
         </div>
       )}
     </div>
