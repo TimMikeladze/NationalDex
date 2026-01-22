@@ -38,8 +38,12 @@ function HomeContent() {
 
   // Scroll direction detection for collapsible toolbar
   useEffect(() => {
+    // Find the scrollable main element from app-shell
+    const scrollContainer = document.querySelector("main");
+    if (!scrollContainer) return;
+
     const handleScroll = () => {
-      const currentScrollY = window.scrollY;
+      const currentScrollY = scrollContainer.scrollTop;
       const scrollDelta = currentScrollY - lastScrollY.current;
 
       // Only toggle if we've scrolled past the threshold
@@ -60,8 +64,8 @@ function HomeContent() {
       }
     };
 
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    scrollContainer.addEventListener("scroll", handleScroll, { passive: true });
+    return () => scrollContainer.removeEventListener("scroll", handleScroll);
   }, []);
 
   const loadingRowKeys = useMemo(
