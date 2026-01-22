@@ -1,5 +1,6 @@
 "use client";
 
+import { Dex } from "@pkmn/dex";
 import { useQuery } from "@tanstack/react-query";
 import { useSpritePreferences } from "@/hooks/use-sprite-preferences";
 import { getPokemonMoves } from "@/lib/learnsets";
@@ -37,27 +38,31 @@ import type {
 } from "@/types/pokemon";
 
 function findSpeciesByNumOrName(nameOrId: string | number) {
-  const gen = gens.get(9);
+  // Use Dex.species directly to include ALL Pokemon forms (Mega, Gmax, etc.)
+  // not just those in Gen 9 games
+  const allSpecies = Dex.species.all();
+
   if (typeof nameOrId === "number") {
-    // Find by dex number
+    // Find by dex number - prefer base form, then any form
     return (
-      Array.from(gen.species).find(
-        (s) => s.num === nameOrId && s.exists && !s.forme,
-      ) ?? Array.from(gen.species).find((s) => s.num === nameOrId && s.exists)
+      allSpecies.find((s) => s.num === nameOrId && !s.forme) ??
+      allSpecies.find((s) => s.num === nameOrId)
     );
   }
+
   // Try to get by name/id first
-  const byName = gen.species.get(nameOrId);
-  if (byName) return byName;
+  const byName = Dex.species.get(nameOrId);
+  if (byName?.exists) return byName;
+
   // Try parsing as number
   const asNum = Number.parseInt(nameOrId, 10);
   if (!Number.isNaN(asNum)) {
     return (
-      Array.from(gen.species).find(
-        (s) => s.num === asNum && s.exists && !s.forme,
-      ) ?? Array.from(gen.species).find((s) => s.num === asNum && s.exists)
+      allSpecies.find((s) => s.num === asNum && !s.forme) ??
+      allSpecies.find((s) => s.num === asNum)
     );
   }
+
   return undefined;
 }
 
