@@ -316,7 +316,7 @@ export function AppShell({ children }: AppShellProps) {
           <header
             className={cn(
               "fixed left-0 right-0 z-40 border-b bg-background/80 backdrop-blur supports-backdrop-filter:bg-background/60 fixed-bottom-stable",
-              "top-0 lg:top-14",
+              "top-0 lg:top-14 pwa-fixed-top",
               secondaryToolbar.className,
             )}
           >
@@ -336,7 +336,8 @@ export function AppShell({ children }: AppShellProps) {
           className={cn(
             // Keep content constrained between fixed toolbars.
             // Height = viewport minus bottom nav (and safe-area bottom).
-            "flex-1 min-h-0 pwa-pt-safe",
+            // In PWA mode, pwa-main-height and pwa-pt-safe handle safe areas.
+            "flex-1 min-h-0 pwa-pt-safe pwa-main-height",
             "overflow-y-auto overflow-x-hidden",
             "h-[calc(100dvh-var(--app-bottom-offset)-env(safe-area-inset-bottom,0px))]",
             "max-h-[calc(100dvh-var(--app-bottom-offset)-env(safe-area-inset-bottom,0px))]",

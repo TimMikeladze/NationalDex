@@ -206,11 +206,33 @@
 
 /* PWA standalone mode - only applies on mobile/tablet (below lg breakpoint) */
 @media (display-mode: standalone) and (max-width: 1023px) {
-  .pwa-pt-safe {
+  /* Fixed elements at top need safe area offset - use .app-shell for higher specificity */
+  .app-shell .pwa-fixed-top {
+    top: env(safe-area-inset-top, 0px);
+  }
+
+  /* Main content padding including safe area */
+  .app-shell .pwa-pt-safe {
     padding-top: calc(
       var(--app-top-offset, 0px) +
       env(safe-area-inset-top, 0px) +
       0.5rem
+    );
+  }
+
+  /* Main content height accounting for safe areas */
+  .app-shell .pwa-main-height {
+    height: calc(
+      100dvh -
+      var(--app-bottom-offset, 0px) -
+      env(safe-area-inset-bottom, 0px) -
+      env(safe-area-inset-top, 0px)
+    );
+    max-height: calc(
+      100dvh -
+      var(--app-bottom-offset, 0px) -
+      env(safe-area-inset-bottom, 0px) -
+      env(safe-area-inset-top, 0px)
     );
   }
 }
@@ -218,11 +240,30 @@
 /* iOS Safari standalone fallback using supports */
 @supports (-webkit-touch-callout: none) {
   @media (display-mode: standalone) and (max-width: 1023px) {
-    .pwa-pt-safe {
+    .app-shell .pwa-fixed-top {
+      top: env(safe-area-inset-top, 0px);
+    }
+
+    .app-shell .pwa-pt-safe {
       padding-top: calc(
         var(--app-top-offset, 0px) +
         env(safe-area-inset-top, 0px) +
         0.5rem
+      );
+    }
+
+    .app-shell .pwa-main-height {
+      height: calc(
+        100dvh -
+        var(--app-bottom-offset, 0px) -
+        env(safe-area-inset-bottom, 0px) -
+        env(safe-area-inset-top, 0px)
+      );
+      max-height: calc(
+        100dvh -
+        var(--app-bottom-offset, 0px) -
+        env(safe-area-inset-bottom, 0px) -
+        env(safe-area-inset-top, 0px)
       );
     }
   }
