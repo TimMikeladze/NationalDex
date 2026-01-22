@@ -30,6 +30,7 @@ function HomeContent() {
     types: [],
     generations: [],
     category: "pokemon",
+    randomSeed: null,
   });
   const [pokemonDisplayCount, setPokemonDisplayCount] =
     useState(ITEMS_PER_PAGE);
@@ -44,8 +45,8 @@ function HomeContent() {
   );
 
   const filterResetKey = useMemo(() => {
-    return `${filter.category}|${filter.search}|${filter.types.join(",")}|${filter.generations.join(",")}`;
-  }, [filter.category, filter.search, filter.types, filter.generations]);
+    return `${filter.category}|${filter.search}|${filter.types.join(",")}|${filter.generations.join(",")}|${filter.randomSeed}`;
+  }, [filter.category, filter.search, filter.types, filter.generations, filter.randomSeed]);
 
   const allPokemon = useMemo(() => {
     return getDexPokemonList(9, { forms: "distinct-sprites" }).map((p) => ({

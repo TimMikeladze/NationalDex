@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, Search, X } from "lucide-react";
+import { ChevronDown, Search, Shuffle, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { TypeBadge } from "@/components/pokemon/type-badge";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ export interface DexFilterState {
   types: PokemonType[];
   generations: string[];
   category: DexCategory;
+  randomSeed: number | null;
 }
 
 interface DexFilterProps {
@@ -67,6 +68,7 @@ export function DexFilter({ onFilterChange, filter }: DexFilterProps) {
         search: "",
         types: [],
         generations: [],
+        randomSeed: null,
       });
     },
     [filter, onFilterChange],
@@ -93,7 +95,15 @@ export function DexFilter({ onFilterChange, filter }: DexFilterProps) {
   );
 
   const handleClearFilters = useCallback(() => {
-    onFilterChange({ ...filter, search: "", types: [], generations: [] });
+    onFilterChange({ ...filter, search: "", types: [], generations: [], randomSeed: null });
+  }, [filter, onFilterChange]);
+
+  const handleRandomSort = useCallback(() => {
+    onFilterChange({ ...filter, randomSeed: Date.now() });
+  }, [filter, onFilterChange]);
+
+  const handleClearRandomSort = useCallback(() => {
+    onFilterChange({ ...filter, randomSeed: null });
   }, [filter, onFilterChange]);
 
   const hasActiveFilters =
@@ -144,7 +154,7 @@ export function DexFilter({ onFilterChange, filter }: DexFilterProps) {
         )}
       </div>
 
-      {/* Generation Filter - only show for Pokemon */}
+      {/* Generation Filter and Random Sort - only show for Pokemon */}
       {filter.category === "pokemon" && (
         <div className="flex items-center gap-2">
           <Popover open={genPopoverOpen} onOpenChange={setGenPopoverOpen}>
@@ -152,7 +162,7 @@ export function DexFilter({ onFilterChange, filter }: DexFilterProps) {
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 w-full gap-1.5 sm:w-auto"
+                className="h-8 gap-1.5"
               >
                 {filter.generations.length > 0
                   ? `${filter.generations.length} Gen${filter.generations.length > 1 ? "s" : ""}`
@@ -194,6 +204,15 @@ export function DexFilter({ onFilterChange, filter }: DexFilterProps) {
               )}
             </PopoverContent>
           </Popover>
+          <Button
+            variant={filter.randomSeed ? "default" : "outline"}
+            size="sm"
+            className="h-8 gap-1.5"
+            onClick={filter.randomSeed ? handleClearRandomSort : handleRandomSort}
+          >
+            <Shuffle className="h-3.5 w-3.5" />
+            {filter.randomSeed ? "Shuffle" : "Shuffle"}
+          </Button>
         </div>
       )}
 
@@ -242,6 +261,27 @@ export function DexFilter({ onFilterChange, filter }: DexFilterProps) {
   );
 }
 
+// Seeded random shuffle function using Fisher-Yates algorithm
+function seededShuffle<T>(array: T[], seed: number): T[] {
+  const shuffled = [...array];
+  let currentSeed = seed;
+
+  // Simple seeded random number generator (mulberry32)
+  const random = () => {
+    currentSeed |= 0;
+    currentSeed = (currentSeed + 0x6d2b79f5) | 0;
+    let t = Math.imul(currentSeed ^ (currentSeed >>> 15), 1 | currentSeed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
 // Hook to get filtered Pokemon based on filter state
 export function useFilteredPokemon(filter: DexFilterState) {
   const allPokemon = useMemo(
@@ -261,38 +301,50 @@ export function useFilteredPokemon(filter: DexFilterState) {
     filter.generations.length > 0;
 
   const filteredPokemon = useMemo(() => {
-    if (!hasActiveFilters) return null;
+    if (!hasActiveFilters && !filter.randomSeed) return null;
 
-    const searchLower = filter.search.toLowerCase();
+    let result = allPokemon;
 
-    return allPokemon.filter((pokemon) => {
-      if (searchLower && !pokemon.name.toLowerCase().includes(searchLower)) {
-        return false;
-      }
-      if (filter.types.length > 0) {
-        const hasType = filter.types.some((t) => pokemon.types.includes(t));
-        if (!hasType) return false;
-      }
-      if (filter.generations.length > 0) {
-        const pokemonGen = getGenerationByPokemonId(pokemon.baseId);
-        if (!pokemonGen || !filter.generations.includes(pokemonGen)) {
+    // Apply filters if any
+    if (hasActiveFilters) {
+      const searchLower = filter.search.toLowerCase();
+      result = allPokemon.filter((pokemon) => {
+        if (searchLower && !pokemon.name.toLowerCase().includes(searchLower)) {
           return false;
         }
-      }
-      return true;
-    });
+        if (filter.types.length > 0) {
+          const hasType = filter.types.some((t) => pokemon.types.includes(t));
+          if (!hasType) return false;
+        }
+        if (filter.generations.length > 0) {
+          const pokemonGen = getGenerationByPokemonId(pokemon.baseId);
+          if (!pokemonGen || !filter.generations.includes(pokemonGen)) {
+            return false;
+          }
+        }
+        return true;
+      });
+    }
+
+    // Apply random shuffle if seed is set
+    if (filter.randomSeed) {
+      result = seededShuffle(result, filter.randomSeed);
+    }
+
+    return result;
   }, [
     allPokemon,
     filter.search,
     filter.types,
     filter.generations,
+    filter.randomSeed,
     hasActiveFilters,
   ]);
 
   return {
     filteredPokemon,
     isLoading: false,
-    hasActiveFilters,
+    hasActiveFilters: hasActiveFilters || filter.randomSeed !== null,
     totalCount: allPokemon.length,
   };
 }
