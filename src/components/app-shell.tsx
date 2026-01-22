@@ -94,6 +94,8 @@ export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const { toggleSearch, moreOpen, setMoreOpen } = useNav();
   const isPopStateNav = useRef(false);
+  const mainRef = useRef<HTMLElement>(null);
+  const prevPathname = useRef(pathname);
   const [secondaryToolbar, setSecondaryToolbar] =
     useState<SecondaryToolbarState | null>(null);
   const setSecondaryToolbarStable = useCallback(
@@ -118,14 +120,38 @@ export function AppShell({ children }: AppShellProps) {
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
-  // Reset scroll position on forward navigation, preserve on back/forward
+  // Save scroll position before navigation and restore/reset on route change
   useEffect(() => {
-    void pathname;
-    if (isPopStateNav.current) {
-      isPopStateNav.current = false;
+    if (pathname === prevPathname.current) return;
+
+    const mainEl = mainRef.current;
+    if (!mainEl) return;
+
+    // Save scroll position of the previous page before navigating
+    const scrollKey = `scroll:${prevPathname.current}`;
+    const currentScroll = mainEl.scrollTop;
+    if (currentScroll > 0) {
+      sessionStorage.setItem(scrollKey, String(currentScroll));
     } else {
-      window.scrollTo(0, 0);
+      sessionStorage.removeItem(scrollKey);
     }
+
+    if (isPopStateNav.current) {
+      // Back/forward navigation - restore saved scroll position
+      isPopStateNav.current = false;
+      const savedScroll = sessionStorage.getItem(`scroll:${pathname}`);
+      if (savedScroll) {
+        // Use requestAnimationFrame to ensure DOM has updated
+        requestAnimationFrame(() => {
+          mainEl.scrollTo(0, parseInt(savedScroll, 10));
+        });
+      }
+    } else {
+      // Forward navigation - scroll to top
+      mainEl.scrollTo(0, 0);
+    }
+
+    prevPathname.current = pathname;
   }, [pathname]);
 
   const handleAction = (item: (typeof navItems)[0]) => {
@@ -306,6 +332,7 @@ export function AppShell({ children }: AppShellProps) {
         )}
 
         <main
+          ref={mainRef}
           className={cn(
             // Keep content constrained between fixed toolbars.
             // Height = viewport minus bottom nav (and safe-area bottom).
