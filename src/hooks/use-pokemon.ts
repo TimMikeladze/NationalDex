@@ -122,14 +122,19 @@ export function usePokemonSpecies(nameOrId: string | number | null) {
       const species = findSpeciesByNumOrName(nameOrId);
       if (!species) throw new Error("Species not found");
 
+      // For formes (Mega, Gmax, regional, etc.), use the base species for evolution chain
+      // since formes don't have their own evolution data
+      const evolutionSpeciesId = species.baseSpecies
+        ? toID(species.baseSpecies)
+        : species.id;
+
       return {
         id: species.num,
         name: species.name,
         description: species.desc || "",
         genus: species.forme ? `${species.baseForme || "Base"} Forme` : "",
-        // Use the species id so base-stage Pokémon still build a chain.
-        // (The chain builder walks backwards via `prevo` to find the root.)
-        evolutionChainUrl: `evo-${species.id}`,
+        // Use the base species id for formes so they show the base form's evolution chain
+        evolutionChainUrl: `evo-${evolutionSpeciesId}`,
         generation: getGenerationName(species.gen),
         genderRate:
           species.genderRatio?.F !== undefined
@@ -169,7 +174,15 @@ export function usePokemonMoves(nameOrId: string | number | null) {
       const species = findSpeciesByNumOrName(nameOrId);
       if (!species) throw new Error("Species not found");
 
-      const moves = await getPokemonMoves(species.name);
+      // Try to get moves for the exact species first
+      let moves = await getPokemonMoves(species.name);
+
+      // If no moves found and this is a forme (Mega, Gmax, regional, etc.),
+      // fall back to the base species' learnset
+      if (moves.length === 0 && species.baseSpecies) {
+        moves = await getPokemonMoves(species.baseSpecies);
+      }
+
       return moves.map((m) => ({
         name: m.name,
         type: m.type as PokemonType,
@@ -198,15 +211,16 @@ export function useEvolutionChain(evolutionChainUrl: string | null) {
       if (!evolutionChainUrl) throw new Error("No evolution chain");
 
       const startId = evolutionChainUrl.replace("evo-", "");
-      const startSpecies = gens.get(9).species.get(startId);
-      if (!startSpecies) throw new Error("Species not found");
+      // Use Dex.species.get() to include ALL Pokemon, not just those in Gen 9 games
+      const startSpecies = Dex.species.get(startId);
+      if (!startSpecies?.exists) throw new Error("Species not found");
 
       function buildChain(
         speciesId: string,
         evolutionDetails: EvolutionChainLink["evolutionDetails"] = [],
       ): EvolutionChainLink {
-        const sp = gens.get(9).species.get(speciesId);
-        if (!sp) throw new Error(`Species ${speciesId} not found`);
+        const sp = Dex.species.get(speciesId);
+        if (!sp?.exists) throw new Error(`Species ${speciesId} not found`);
 
         const evolutions: EvolutionChainLink[] = [];
         for (const otherSpecies of getAllSpecies(9, { includeFormes: true })) {
@@ -292,10 +306,8 @@ export function useEvolutionChain(evolutionChainUrl: string | null) {
 
       let baseSpecies = startSpecies;
       while (baseSpecies.prevo) {
-        const prev =
-          gens.get(9).species.get(toID(baseSpecies.prevo)) ??
-          gens.get(9).species.get(baseSpecies.prevo);
-        if (prev) baseSpecies = prev;
+        const prev = Dex.species.get(baseSpecies.prevo);
+        if (prev?.exists) baseSpecies = prev;
         else break;
       }
 

@@ -24,12 +24,19 @@ export async function getLearnset(
   if (cache.has(id)) {
     return cache.get(id);
   }
-  const gen = gens.get(genNum);
-  const learnset = await gen.learnsets.get(speciesName);
-  if (learnset) {
-    cache.set(id, learnset);
+
+  // Try the target generation first, then fall back to earlier generations
+  // This handles Pokemon not in Gen 9 games (like Kakuna)
+  for (let g = genNum; g >= 1; g--) {
+    const gen = gens.get(g);
+    const learnset = await gen.learnsets.get(speciesName);
+    if (learnset?.learnset && Object.keys(learnset.learnset).length > 0) {
+      cache.set(id, learnset);
+      return learnset;
+    }
   }
-  return learnset;
+
+  return undefined;
 }
 
 export function canLearn(
@@ -93,18 +100,35 @@ export async function getPokemonMoves(
 
   const moves: PokemonMove[] = [];
   const gen = gens.get(genNum);
-  const targetGenStr = genNum.toString();
 
   for (const [moveId, sources] of Object.entries(learnset.learnset)) {
     const move = gen.moves.get(moveId);
     if (!move || !move.exists) continue;
 
-    // Filter to sources from the target generation
-    const genSources = sources.filter((s) => s.startsWith(targetGenStr));
-    if (genSources.length === 0) continue;
+    // Try to find sources from the target generation first, then fall back to
+    // the most recent generation available. This handles Pokemon not in Gen 9
+    // games (like Weedle) by showing their most recent learnset.
+    let targetSources = sources.filter((s) => s.startsWith(genNum.toString()));
 
-    // Prefer latest source in this generation
-    const source = genSources[genSources.length - 1];
+    // If no sources for target gen, find the most recent generation available
+    if (targetSources.length === 0) {
+      // Find the highest generation number in the sources
+      let maxGen = 0;
+      for (const s of sources) {
+        const sourceGen = Number.parseInt(s[0], 10);
+        if (!Number.isNaN(sourceGen) && sourceGen > maxGen) {
+          maxGen = sourceGen;
+        }
+      }
+      if (maxGen > 0) {
+        targetSources = sources.filter((s) => s.startsWith(maxGen.toString()));
+      }
+    }
+
+    if (targetSources.length === 0) continue;
+
+    // Prefer latest source
+    const source = targetSources[targetSources.length - 1];
     const { method, level } = parseLearnMethod(source);
 
     moves.push({
