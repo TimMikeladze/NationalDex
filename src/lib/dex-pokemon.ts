@@ -111,10 +111,9 @@ export function getDexPokemonList(
       )
         continue;
 
-      // Skip Mega, Totem, and other special battle forms (but include Gmax)
+      // Skip Totem and other special battle forms (but include Mega and Gmax)
       const formeLower = form.forme?.toLowerCase() ?? "";
       if (
-        formeLower.includes("mega") ||
         formeLower.includes("eternamax") ||
         formeLower.includes("totem") ||
         formeLower === "primal"
