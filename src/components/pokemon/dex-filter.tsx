@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, Search, X } from "lucide-react";
+import { ListFilter, Search, Shuffle, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { TypeBadge } from "@/components/pokemon/type-badge";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ export interface DexFilterState {
   types: PokemonType[];
   generations: string[];
   category: DexCategory;
+  randomSeed: number | null;
 }
 
 interface DexFilterProps {
@@ -67,6 +68,7 @@ export function DexFilter({ onFilterChange, filter }: DexFilterProps) {
         search: "",
         types: [],
         generations: [],
+        randomSeed: null,
       });
     },
     [filter, onFilterChange],
@@ -93,7 +95,15 @@ export function DexFilter({ onFilterChange, filter }: DexFilterProps) {
   );
 
   const handleClearFilters = useCallback(() => {
-    onFilterChange({ ...filter, search: "", types: [], generations: [] });
+    onFilterChange({ ...filter, search: "", types: [], generations: [], randomSeed: null });
+  }, [filter, onFilterChange]);
+
+  const handleRandomSort = useCallback(() => {
+    onFilterChange({ ...filter, randomSeed: Date.now() });
+  }, [filter, onFilterChange]);
+
+  const handleClearRandomSort = useCallback(() => {
+    onFilterChange({ ...filter, randomSeed: null });
   }, [filter, onFilterChange]);
 
   const hasActiveFilters =
@@ -123,7 +133,7 @@ export function DexFilter({ onFilterChange, filter }: DexFilterProps) {
         ))}
       </div>
 
-      {/* Search Input */}
+      {/* Search Input with embedded filter buttons */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -131,71 +141,87 @@ export function DexFilter({ onFilterChange, filter }: DexFilterProps) {
           placeholder={CATEGORY_PLACEHOLDERS[filter.category]}
           value={filter.search}
           onChange={(e) => handleSearchChange(e.target.value)}
-          className="pl-9 pr-9"
+          className={`pl-9 ${filter.category === "pokemon" ? "pr-20" : "pr-9"}`}
         />
-        {filter.search && (
-          <button
-            type="button"
-            onClick={() => handleSearchChange("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
-      </div>
-
-      {/* Generation Filter - only show for Pokemon */}
-      {filter.category === "pokemon" && (
-        <div className="flex items-center gap-2">
-          <Popover open={genPopoverOpen} onOpenChange={setGenPopoverOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 w-full gap-1.5 sm:w-auto"
-              >
-                {filter.generations.length > 0
-                  ? `${filter.generations.length} Gen${filter.generations.length > 1 ? "s" : ""}`
-                  : "Generation"}
-                <ChevronDown className="h-3.5 w-3.5 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-56 p-2" align="start">
-              <div className="space-y-1">
-                {GEN_RANGES.map((gen) => (
-                  <label
-                    key={gen.id}
-                    htmlFor={`gen-filter-${gen.id}`}
-                    className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+          {filter.search && (
+            <button
+              type="button"
+              onClick={() => handleSearchChange("")}
+              className="p-1 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+          {filter.category === "pokemon" && (
+            <>
+              <Popover open={genPopoverOpen} onOpenChange={setGenPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className={`relative p-1 transition-colors ${
+                      filter.generations.length > 0
+                        ? "text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
                   >
-                    <Checkbox
-                      id={`gen-filter-${gen.id}`}
-                      checked={filter.generations.includes(gen.id)}
-                      onCheckedChange={() => handleGenerationToggle(gen.id)}
-                    />
-                    <span>
-                      {gen.name}{" "}
-                      <span className="text-muted-foreground">
-                        ({gen.label})
+                    <ListFilter className="h-4 w-4" />
+                    {filter.generations.length > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-foreground text-[8px] font-medium text-background">
+                        {filter.generations.length}
                       </span>
-                    </span>
-                  </label>
-                ))}
-              </div>
-              {filter.generations.length > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="mt-2 h-7 w-full text-xs"
-                  onClick={() => onFilterChange({ ...filter, generations: [] })}
-                >
-                  Clear generations
-                </Button>
-              )}
-            </PopoverContent>
-          </Popover>
+                    )}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-2" align="end">
+                  <div className="space-y-1">
+                    {GEN_RANGES.map((gen) => (
+                      <label
+                        key={gen.id}
+                        htmlFor={`gen-filter-${gen.id}`}
+                        className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+                      >
+                        <Checkbox
+                          id={`gen-filter-${gen.id}`}
+                          checked={filter.generations.includes(gen.id)}
+                          onCheckedChange={() => handleGenerationToggle(gen.id)}
+                        />
+                        <span>
+                          {gen.name}{" "}
+                          <span className="text-muted-foreground">
+                            ({gen.label})
+                          </span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                  {filter.generations.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="mt-2 h-7 w-full text-xs"
+                      onClick={() => onFilterChange({ ...filter, generations: [] })}
+                    >
+                      Clear generations
+                    </Button>
+                  )}
+                </PopoverContent>
+              </Popover>
+              <button
+                type="button"
+                onClick={filter.randomSeed ? handleClearRandomSort : handleRandomSort}
+                className={`p-1 transition-colors ${
+                  filter.randomSeed
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Shuffle className="h-4 w-4" />
+              </button>
+            </>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Type Filters - only show for Pokemon */}
       {filter.category === "pokemon" && (
@@ -242,6 +268,27 @@ export function DexFilter({ onFilterChange, filter }: DexFilterProps) {
   );
 }
 
+// Seeded random shuffle function using Fisher-Yates algorithm
+function seededShuffle<T>(array: T[], seed: number): T[] {
+  const shuffled = [...array];
+  let currentSeed = seed;
+
+  // Simple seeded random number generator (mulberry32)
+  const random = () => {
+    currentSeed |= 0;
+    currentSeed = (currentSeed + 0x6d2b79f5) | 0;
+    let t = Math.imul(currentSeed ^ (currentSeed >>> 15), 1 | currentSeed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
 // Hook to get filtered Pokemon based on filter state
 export function useFilteredPokemon(filter: DexFilterState) {
   const allPokemon = useMemo(
@@ -261,38 +308,50 @@ export function useFilteredPokemon(filter: DexFilterState) {
     filter.generations.length > 0;
 
   const filteredPokemon = useMemo(() => {
-    if (!hasActiveFilters) return null;
+    if (!hasActiveFilters && !filter.randomSeed) return null;
 
-    const searchLower = filter.search.toLowerCase();
+    let result = allPokemon;
 
-    return allPokemon.filter((pokemon) => {
-      if (searchLower && !pokemon.name.toLowerCase().includes(searchLower)) {
-        return false;
-      }
-      if (filter.types.length > 0) {
-        const hasType = filter.types.some((t) => pokemon.types.includes(t));
-        if (!hasType) return false;
-      }
-      if (filter.generations.length > 0) {
-        const pokemonGen = getGenerationByPokemonId(pokemon.baseId);
-        if (!pokemonGen || !filter.generations.includes(pokemonGen)) {
+    // Apply filters if any
+    if (hasActiveFilters) {
+      const searchLower = filter.search.toLowerCase();
+      result = allPokemon.filter((pokemon) => {
+        if (searchLower && !pokemon.name.toLowerCase().includes(searchLower)) {
           return false;
         }
-      }
-      return true;
-    });
+        if (filter.types.length > 0) {
+          const hasType = filter.types.some((t) => pokemon.types.includes(t));
+          if (!hasType) return false;
+        }
+        if (filter.generations.length > 0) {
+          const pokemonGen = getGenerationByPokemonId(pokemon.baseId);
+          if (!pokemonGen || !filter.generations.includes(pokemonGen)) {
+            return false;
+          }
+        }
+        return true;
+      });
+    }
+
+    // Apply random shuffle if seed is set
+    if (filter.randomSeed) {
+      result = seededShuffle(result, filter.randomSeed);
+    }
+
+    return result;
   }, [
     allPokemon,
     filter.search,
     filter.types,
     filter.generations,
+    filter.randomSeed,
     hasActiveFilters,
   ]);
 
   return {
     filteredPokemon,
     isLoading: false,
-    hasActiveFilters,
+    hasActiveFilters: hasActiveFilters || filter.randomSeed !== null,
     totalCount: allPokemon.length,
   };
 }
