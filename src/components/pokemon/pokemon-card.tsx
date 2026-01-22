@@ -16,6 +16,128 @@ import { StatsGrid } from "./stat-bar";
 import { TypeBadge } from "./type-badge";
 
 // =============================================================================
+// Variant Helpers
+// =============================================================================
+
+const VARIANT_SUFFIXES = [
+  "Gmax",
+  "Mega",
+  "Mega-X",
+  "Mega-Y",
+  "Alola",
+  "Galar",
+  "Hisui",
+  "Paldea",
+];
+
+/**
+ * Extract the variant suffix from a Pokemon name.
+ * e.g., "Pikachu-Gmax" -> "Gmax", "Raichu-Alola" -> "Alola"
+ */
+function getVariantFromName(name: string): string | null {
+  for (const suffix of VARIANT_SUFFIXES) {
+    if (name.endsWith(`-${suffix}`)) {
+      return suffix;
+    }
+  }
+  return null;
+}
+
+/**
+ * Get the base name without the variant suffix.
+ * e.g., "Pikachu-Gmax" -> "Pikachu", "Raichu-Alola" -> "Raichu"
+ */
+function getBaseName(name: string): string {
+  const variant = getVariantFromName(name);
+  if (variant) {
+    return name.slice(0, -(variant.length + 1)); // Remove "-Variant"
+  }
+  return name;
+}
+
+// Variant display names for prettier rendering
+const VARIANT_DISPLAY_NAMES: Record<string, string> = {
+  Gmax: "Gigantamax",
+  Mega: "Mega",
+  "Mega-X": "Mega X",
+  "Mega-Y": "Mega Y",
+  Alola: "Alolan",
+  Galar: "Galarian",
+  Hisui: "Hisuian",
+  Paldea: "Paldean",
+};
+
+function VariantBadge({
+  variant,
+  size = "sm",
+}: {
+  variant: string;
+  size?: "sm" | "default";
+}) {
+  const displayName = VARIANT_DISPLAY_NAMES[variant] ?? variant;
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center font-medium rounded border border-border bg-muted text-muted-foreground",
+        size === "sm" ? "px-1.5 py-0.5 text-[10px]" : "px-2 py-0.5 text-xs",
+      )}
+    >
+      {displayName}
+    </span>
+  );
+}
+
+// =============================================================================
+// Region Helpers
+// =============================================================================
+
+type Region =
+  | "Kanto"
+  | "Johto"
+  | "Hoenn"
+  | "Sinnoh"
+  | "Unova"
+  | "Kalos"
+  | "Alola"
+  | "Galar"
+  | "Paldea";
+
+/**
+ * Get the region a Pokemon is originally from based on its dex number.
+ */
+function getRegionFromDexNumber(dexNumber: number): Region | null {
+  if (dexNumber >= 1 && dexNumber <= 151) return "Kanto";
+  if (dexNumber >= 152 && dexNumber <= 251) return "Johto";
+  if (dexNumber >= 252 && dexNumber <= 386) return "Hoenn";
+  if (dexNumber >= 387 && dexNumber <= 493) return "Sinnoh";
+  if (dexNumber >= 494 && dexNumber <= 649) return "Unova";
+  if (dexNumber >= 650 && dexNumber <= 721) return "Kalos";
+  if (dexNumber >= 722 && dexNumber <= 809) return "Alola";
+  if (dexNumber >= 810 && dexNumber <= 905) return "Galar";
+  if (dexNumber >= 906 && dexNumber <= 1025) return "Paldea";
+  return null;
+}
+
+function RegionBadge({
+  region,
+  size = "sm",
+}: {
+  region: Region;
+  size?: "sm" | "default";
+}) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center font-medium rounded border border-border bg-muted text-muted-foreground",
+        size === "sm" ? "px-1.5 py-0.5 text-[10px]" : "px-2 py-0.5 text-xs",
+      )}
+    >
+      {region}
+    </span>
+  );
+}
+
+// =============================================================================
 // Types
 // =============================================================================
 
@@ -262,14 +384,24 @@ function CompactCard({
             className="size-10"
           />
           <div className="flex-1 min-w-0">
-            <h3 className="text-xs font-medium truncate">{pokemon.name}</h3>
-            {pokemon.types?.length ? (
-              <div className="flex gap-1 flex-wrap">
-                {pokemon.types.map((type) => (
-                  <TypeBadge key={type} type={type} size="sm" />
-                ))}
-              </div>
-            ) : null}
+            <h3 className="text-xs font-medium truncate">
+              {getBaseName(pokemon.name)}
+            </h3>
+            <div className="flex gap-1 flex-wrap">
+              {pokemon.types?.map((type) => (
+                <TypeBadge key={type} type={type} size="sm" />
+              ))}
+              {(() => {
+                const variant = getVariantFromName(pokemon.name);
+                if (variant) {
+                  return <VariantBadge variant={variant} size="sm" />;
+                }
+                const region = getRegionFromDexNumber(pokemon.id);
+                return region ? (
+                  <RegionBadge region={region} size="sm" />
+                ) : null;
+              })()}
+            </div>
           </div>
         </div>
       </Card>
@@ -366,14 +498,22 @@ function DefaultCard({
         </div>
 
         <div className="space-y-1">
-          <h3 className="text-sm font-medium truncate">{pokemon.name}</h3>
-          {pokemon.types?.length ? (
-            <div className="flex gap-1 flex-wrap">
-              {pokemon.types.map((type) => (
-                <TypeBadge key={type} type={type} size="sm" />
-              ))}
-            </div>
-          ) : null}
+          <h3 className="text-sm font-medium truncate">
+            {getBaseName(pokemon.name)}
+          </h3>
+          <div className="flex gap-1 flex-wrap">
+            {pokemon.types?.map((type) => (
+              <TypeBadge key={type} type={type} size="sm" />
+            ))}
+            {(() => {
+              const variant = getVariantFromName(pokemon.name);
+              if (variant) {
+                return <VariantBadge variant={variant} size="sm" />;
+              }
+              const region = getRegionFromDexNumber(pokemon.id);
+              return region ? <RegionBadge region={region} size="sm" /> : null;
+            })()}
+          </div>
         </div>
       </Link>
     </Card>
@@ -456,11 +596,21 @@ function DetailCard({
             height={128}
             className="size-24 md:size-32"
           />
-          <h3 className="text-lg font-medium mt-2">{pokemon.name}</h3>
-          <div className="flex gap-2 mt-2">
+          <h3 className="text-lg font-medium mt-2">
+            {getBaseName(pokemon.name)}
+          </h3>
+          <div className="flex gap-2 mt-2 flex-wrap justify-center">
             {pokemon.types.map((type) => (
               <TypeBadge key={type} type={type} />
             ))}
+            {(() => {
+              const variant = getVariantFromName(pokemon.name);
+              if (variant) {
+                return <VariantBadge variant={variant} />;
+              }
+              const region = getRegionFromDexNumber(pokemon.id);
+              return region ? <RegionBadge region={region} /> : null;
+            })()}
           </div>
         </div>
       </Link>

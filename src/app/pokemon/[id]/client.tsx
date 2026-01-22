@@ -62,6 +62,99 @@ const MAX_POKEMON_ID = 1025;
 
 const _isAnimatedSprite = (src: string) => src.toLowerCase().endsWith(".gif");
 
+// =============================================================================
+// Variant & Region Helpers
+// =============================================================================
+
+const VARIANT_SUFFIXES = [
+  "Gmax",
+  "Mega",
+  "Mega-X",
+  "Mega-Y",
+  "Alola",
+  "Galar",
+  "Hisui",
+  "Paldea",
+];
+
+function getVariantFromName(name: string): string | null {
+  for (const suffix of VARIANT_SUFFIXES) {
+    if (name.endsWith(`-${suffix}`)) {
+      return suffix;
+    }
+  }
+  return null;
+}
+
+function getBaseName(name: string): string {
+  const variant = getVariantFromName(name);
+  if (variant) {
+    return name.slice(0, -(variant.length + 1));
+  }
+  return name;
+}
+
+const VARIANT_DISPLAY_NAMES: Record<string, string> = {
+  Gmax: "Gigantamax",
+  Mega: "Mega",
+  "Mega-X": "Mega X",
+  "Mega-Y": "Mega Y",
+  Alola: "Alolan",
+  Galar: "Galarian",
+  Hisui: "Hisuian",
+  Paldea: "Paldean",
+};
+
+type Region =
+  | "Kanto"
+  | "Johto"
+  | "Hoenn"
+  | "Sinnoh"
+  | "Unova"
+  | "Kalos"
+  | "Alola"
+  | "Galar"
+  | "Paldea";
+
+function getRegionFromDexNumber(dexNumber: number): Region | null {
+  if (dexNumber >= 1 && dexNumber <= 151) return "Kanto";
+  if (dexNumber >= 152 && dexNumber <= 251) return "Johto";
+  if (dexNumber >= 252 && dexNumber <= 386) return "Hoenn";
+  if (dexNumber >= 387 && dexNumber <= 493) return "Sinnoh";
+  if (dexNumber >= 494 && dexNumber <= 649) return "Unova";
+  if (dexNumber >= 650 && dexNumber <= 721) return "Kalos";
+  if (dexNumber >= 722 && dexNumber <= 809) return "Alola";
+  if (dexNumber >= 810 && dexNumber <= 905) return "Galar";
+  if (dexNumber >= 906 && dexNumber <= 1025) return "Paldea";
+  return null;
+}
+
+function VariantOrRegionBadge({
+  name,
+  dexNumber,
+}: {
+  name: string;
+  dexNumber: number;
+}) {
+  const variant = getVariantFromName(name);
+  if (variant) {
+    return (
+      <span className="inline-flex items-center font-medium rounded border border-border bg-muted text-muted-foreground px-2 py-0.5 text-xs">
+        {VARIANT_DISPLAY_NAMES[variant] ?? variant}
+      </span>
+    );
+  }
+  const region = getRegionFromDexNumber(dexNumber);
+  if (region) {
+    return (
+      <span className="inline-flex items-center font-medium rounded border border-border bg-muted text-muted-foreground px-2 py-0.5 text-xs">
+        {region}
+      </span>
+    );
+  }
+  return null;
+}
+
 // Display names for game versions
 const VERSION_DISPLAY_NAMES: Record<string, string> = {
   red: "Red",
@@ -613,16 +706,17 @@ export function PokemonPageClient({
               />
 
               <div className="text-center space-y-2">
-                <h1 className="text-xl font-medium">{pokemon.name}</h1>
-                {(pokedexEntry?.genus || species?.genus) && (
-                  <p className="text-xs text-muted-foreground">
-                    {pokedexEntry?.genus || species?.genus}
-                  </p>
-                )}
-                <div className="flex justify-center gap-2">
+                <h1 className="text-xl font-medium">
+                  {getBaseName(pokemon.name)}
+                </h1>
+                <div className="flex justify-center gap-2 flex-wrap">
                   {pokemon.types.map((type) => (
                     <TypeBadge key={type} type={type} size="default" linkable />
                   ))}
+                  <VariantOrRegionBadge
+                    name={pokemon.name}
+                    dexNumber={pokemon.id}
+                  />
                 </div>
               </div>
             </div>
