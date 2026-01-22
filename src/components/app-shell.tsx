@@ -316,7 +316,7 @@ export function AppShell({ children }: AppShellProps) {
           <header
             className={cn(
               "fixed left-0 right-0 z-40 border-b bg-background/80 backdrop-blur supports-backdrop-filter:bg-background/60 fixed-bottom-stable",
-              "top-0 lg:top-14 pwa-fixed-top",
+              "top-0 lg:top-14 pwa-glass-header",
               secondaryToolbar.className,
             )}
           >
@@ -349,7 +349,7 @@ export function AppShell({ children }: AppShellProps) {
         </main>
 
         {/* Mobile/Tablet Bottom Nav - hidden on desktop */}
-        <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background pb-safe lg:hidden fixed-bottom-stable">
+        <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background pb-safe lg:hidden fixed-bottom-stable pwa-glass-nav">
           <div className="flex h-12 items-center justify-around max-w-lg mx-auto">
             {navItems.map((item) => renderNavItem(item, "mobile"))}
           </div>
