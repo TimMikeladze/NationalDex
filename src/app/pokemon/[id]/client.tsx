@@ -1103,7 +1103,7 @@ function MoveGroup({
                   </span>
                 </Link>
               </TooltipTrigger>
-              <TooltipContent side="top" className="w-72 p-0">
+              <TooltipContent side="top" className="w-fit max-w-none p-0">
                 <MoveTooltipContent move={move} />
               </TooltipContent>
             </Tooltip>
@@ -1199,31 +1199,43 @@ function MoveTooltipContent({ move }: { move: PokemonMove }) {
 
       {/* Type Effectiveness - only for damaging moves */}
       {move.damageClass !== "Status" && (
-        <div className="flex flex-wrap gap-1 pt-1 border-t border-muted">
-          {typeMatchups.superEffective.map((t) => (
-            <TypeBadge
-              key={t}
-              type={t as PokemonMove["type"]}
-              size="sm"
-              multiplier={2}
-            />
-          ))}
-          {typeMatchups.notVeryEffective.map((t) => (
-            <TypeBadge
-              key={t}
-              type={t as PokemonMove["type"]}
-              size="sm"
-              multiplier={0.5}
-            />
-          ))}
-          {typeMatchups.noEffect.map((t) => (
-            <TypeBadge
-              key={t}
-              type={t as PokemonMove["type"]}
-              size="sm"
-              multiplier={0}
-            />
-          ))}
+        <div className="space-y-1 pt-1 border-t border-muted">
+          {typeMatchups.superEffective.length > 0 && (
+            <div className="flex flex-wrap sm:flex-nowrap gap-1">
+              {typeMatchups.superEffective.map((t) => (
+                <TypeBadge
+                  key={t}
+                  type={t as PokemonMove["type"]}
+                  size="sm"
+                  multiplier={2}
+                />
+              ))}
+            </div>
+          )}
+          {typeMatchups.notVeryEffective.length > 0 && (
+            <div className="flex flex-wrap sm:flex-nowrap gap-1">
+              {typeMatchups.notVeryEffective.map((t) => (
+                <TypeBadge
+                  key={t}
+                  type={t as PokemonMove["type"]}
+                  size="sm"
+                  multiplier={0.5}
+                />
+              ))}
+            </div>
+          )}
+          {typeMatchups.noEffect.length > 0 && (
+            <div className="flex flex-wrap sm:flex-nowrap gap-1">
+              {typeMatchups.noEffect.map((t) => (
+                <TypeBadge
+                  key={t}
+                  type={t as PokemonMove["type"]}
+                  size="sm"
+                  multiplier={0}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
