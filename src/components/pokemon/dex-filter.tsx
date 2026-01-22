@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, Search, Shuffle, X } from "lucide-react";
+import { ListFilter, Search, Shuffle, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { TypeBadge } from "@/components/pokemon/type-badge";
 import { Button } from "@/components/ui/button";
@@ -133,7 +133,7 @@ export function DexFilter({ onFilterChange, filter }: DexFilterProps) {
         ))}
       </div>
 
-      {/* Search Input */}
+      {/* Search Input with embedded filter buttons */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -141,80 +141,87 @@ export function DexFilter({ onFilterChange, filter }: DexFilterProps) {
           placeholder={CATEGORY_PLACEHOLDERS[filter.category]}
           value={filter.search}
           onChange={(e) => handleSearchChange(e.target.value)}
-          className="pl-9 pr-9"
+          className={`pl-9 ${filter.category === "pokemon" ? "pr-20" : "pr-9"}`}
         />
-        {filter.search && (
-          <button
-            type="button"
-            onClick={() => handleSearchChange("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
-      </div>
-
-      {/* Generation Filter and Random Sort - only show for Pokemon */}
-      {filter.category === "pokemon" && (
-        <div className="flex items-center gap-2">
-          <Popover open={genPopoverOpen} onOpenChange={setGenPopoverOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5"
-              >
-                {filter.generations.length > 0
-                  ? `${filter.generations.length} Gen${filter.generations.length > 1 ? "s" : ""}`
-                  : "Generation"}
-                <ChevronDown className="h-3.5 w-3.5 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-56 p-2" align="start">
-              <div className="space-y-1">
-                {GEN_RANGES.map((gen) => (
-                  <label
-                    key={gen.id}
-                    htmlFor={`gen-filter-${gen.id}`}
-                    className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+          {filter.search && (
+            <button
+              type="button"
+              onClick={() => handleSearchChange("")}
+              className="p-1 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+          {filter.category === "pokemon" && (
+            <>
+              <Popover open={genPopoverOpen} onOpenChange={setGenPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className={`relative p-1 transition-colors ${
+                      filter.generations.length > 0
+                        ? "text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
                   >
-                    <Checkbox
-                      id={`gen-filter-${gen.id}`}
-                      checked={filter.generations.includes(gen.id)}
-                      onCheckedChange={() => handleGenerationToggle(gen.id)}
-                    />
-                    <span>
-                      {gen.name}{" "}
-                      <span className="text-muted-foreground">
-                        ({gen.label})
+                    <ListFilter className="h-4 w-4" />
+                    {filter.generations.length > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-foreground text-[8px] font-medium text-background">
+                        {filter.generations.length}
                       </span>
-                    </span>
-                  </label>
-                ))}
-              </div>
-              {filter.generations.length > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="mt-2 h-7 w-full text-xs"
-                  onClick={() => onFilterChange({ ...filter, generations: [] })}
-                >
-                  Clear generations
-                </Button>
-              )}
-            </PopoverContent>
-          </Popover>
-          <Button
-            variant={filter.randomSeed ? "default" : "outline"}
-            size="sm"
-            className="h-8 gap-1.5"
-            onClick={filter.randomSeed ? handleClearRandomSort : handleRandomSort}
-          >
-            <Shuffle className="h-3.5 w-3.5" />
-            {filter.randomSeed ? "Shuffle" : "Shuffle"}
-          </Button>
+                    )}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-2" align="end">
+                  <div className="space-y-1">
+                    {GEN_RANGES.map((gen) => (
+                      <label
+                        key={gen.id}
+                        htmlFor={`gen-filter-${gen.id}`}
+                        className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+                      >
+                        <Checkbox
+                          id={`gen-filter-${gen.id}`}
+                          checked={filter.generations.includes(gen.id)}
+                          onCheckedChange={() => handleGenerationToggle(gen.id)}
+                        />
+                        <span>
+                          {gen.name}{" "}
+                          <span className="text-muted-foreground">
+                            ({gen.label})
+                          </span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                  {filter.generations.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="mt-2 h-7 w-full text-xs"
+                      onClick={() => onFilterChange({ ...filter, generations: [] })}
+                    >
+                      Clear generations
+                    </Button>
+                  )}
+                </PopoverContent>
+              </Popover>
+              <button
+                type="button"
+                onClick={filter.randomSeed ? handleClearRandomSort : handleRandomSort}
+                className={`p-1 transition-colors ${
+                  filter.randomSeed
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Shuffle className="h-4 w-4" />
+              </button>
+            </>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Type Filters - only show for Pokemon */}
       {filter.category === "pokemon" && (
