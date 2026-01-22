@@ -8,7 +8,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { useFavorites } from "@/hooks/use-favorites";
+import { useLastPage } from "@/hooks/use-last-page";
 import { useSpritePreferences } from "@/hooks/use-sprite-preferences";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +19,7 @@ export default function SettingsPage() {
   const { favorites, clearFavorites } = useFavorites();
   const { defaultPokemonSpriteGen, setDefaultPokemonSpriteGen } =
     useSpritePreferences();
+  const { rememberLastPage, setRememberLastPage } = useLastPage();
 
   return (
     <div className="p-4 md:p-6">
@@ -41,6 +44,24 @@ export default function SettingsPage() {
                 {t}
               </button>
             ))}
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider block">
+            navigation
+          </p>
+          <div className="flex items-center justify-between gap-4 py-2 border-b">
+            <div>
+              <p className="text-sm">remember last page</p>
+              <p className="text-xs text-muted-foreground">
+                Return to the last visited page when opening the app
+              </p>
+            </div>
+            <Switch
+              checked={rememberLastPage}
+              onCheckedChange={setRememberLastPage}
+            />
           </div>
         </section>
 
