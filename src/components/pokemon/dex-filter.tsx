@@ -1,6 +1,12 @@
 "use client";
 
 import { ListFilter, Search, Shuffle, X } from "lucide-react";
+import {
+  parseAsArrayOf,
+  parseAsInteger,
+  parseAsString,
+  useQueryStates,
+} from "nuqs";
 import { useCallback, useMemo, useState } from "react";
 import { TypeBadge } from "@/components/pokemon/type-badge";
 import { Button } from "@/components/ui/button";
@@ -31,6 +37,56 @@ export interface DexFilterState {
   generations: string[];
   category: DexCategory;
   randomSeed: number | null;
+}
+
+const dexFilterParsers = {
+  search: parseAsString.withDefault(""),
+  types: parseAsArrayOf(parseAsString).withDefault([]),
+  generations: parseAsArrayOf(parseAsString).withDefault([]),
+  category: parseAsString.withDefault("pokemon"),
+  randomSeed: parseAsInteger,
+};
+
+const dexFilterUrlKeys = {
+  search: "q",
+  types: "t",
+  generations: "g",
+  category: "c",
+  randomSeed: "r",
+};
+
+export function useDexFilter() {
+  const [queryState, setQueryState] = useQueryStates(dexFilterParsers, {
+    urlKeys: dexFilterUrlKeys,
+    shallow: false,
+  });
+
+  const filter: DexFilterState = useMemo(
+    () => ({
+      search: queryState.search,
+      types: queryState.types as PokemonType[],
+      generations: queryState.generations,
+      category: queryState.category as DexCategory,
+      randomSeed: queryState.randomSeed,
+    }),
+    [queryState],
+  );
+
+  const setFilter = useCallback(
+    (newFilter: DexFilterState) => {
+      setQueryState({
+        search: newFilter.search || null,
+        types: newFilter.types.length > 0 ? newFilter.types : null,
+        generations:
+          newFilter.generations.length > 0 ? newFilter.generations : null,
+        category: newFilter.category === "pokemon" ? null : newFilter.category,
+        randomSeed: newFilter.randomSeed,
+      });
+    },
+    [setQueryState],
+  );
+
+  return [filter, setFilter] as const;
 }
 
 interface DexFilterProps {
@@ -95,7 +151,13 @@ export function DexFilter({ onFilterChange, filter }: DexFilterProps) {
   );
 
   const handleClearFilters = useCallback(() => {
-    onFilterChange({ ...filter, search: "", types: [], generations: [], randomSeed: null });
+    onFilterChange({
+      ...filter,
+      search: "",
+      types: [],
+      generations: [],
+      randomSeed: null,
+    });
   }, [filter, onFilterChange]);
 
   const handleRandomSort = useCallback(() => {
@@ -200,7 +262,9 @@ export function DexFilter({ onFilterChange, filter }: DexFilterProps) {
                       variant="ghost"
                       size="sm"
                       className="mt-2 h-7 w-full text-xs"
-                      onClick={() => onFilterChange({ ...filter, generations: [] })}
+                      onClick={() =>
+                        onFilterChange({ ...filter, generations: [] })
+                      }
                     >
                       Clear generations
                     </Button>
@@ -209,7 +273,9 @@ export function DexFilter({ onFilterChange, filter }: DexFilterProps) {
               </Popover>
               <button
                 type="button"
-                onClick={filter.randomSeed ? handleClearRandomSort : handleRandomSort}
+                onClick={
+                  filter.randomSeed ? handleClearRandomSort : handleRandomSort
+                }
                 className={`p-1 transition-colors ${
                   filter.randomSeed
                     ? "text-foreground"

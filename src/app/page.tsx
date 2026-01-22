@@ -5,7 +5,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useInView } from "react-intersection-observer";
 import {
   DexFilter,
-  type DexFilterState,
+  useDexFilter,
   useFilteredAbilities,
   useFilteredItems,
   useFilteredMoves,
@@ -25,13 +25,7 @@ function HomeContent() {
   const { ref: movesRef, inView: movesInView } = useInView();
   const { ref: abilitiesRef, inView: abilitiesInView } = useInView();
   const { ref: itemsRef, inView: itemsInView } = useInView();
-  const [filter, setFilter] = useState<DexFilterState>({
-    search: "",
-    types: [],
-    generations: [],
-    category: "pokemon",
-    randomSeed: null,
-  });
+  const [filter, setFilter] = useDexFilter();
   const [pokemonDisplayCount, setPokemonDisplayCount] =
     useState(ITEMS_PER_PAGE);
   const [movesDisplayCount, setMovesDisplayCount] = useState(ITEMS_PER_PAGE);
@@ -46,7 +40,13 @@ function HomeContent() {
 
   const filterResetKey = useMemo(() => {
     return `${filter.category}|${filter.search}|${filter.types.join(",")}|${filter.generations.join(",")}|${filter.randomSeed}`;
-  }, [filter.category, filter.search, filter.types, filter.generations, filter.randomSeed]);
+  }, [
+    filter.category,
+    filter.search,
+    filter.types,
+    filter.generations,
+    filter.randomSeed,
+  ]);
 
   const allPokemon = useMemo(() => {
     return getDexPokemonList(9, { forms: "distinct-sprites" }).map((p) => ({
