@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import { pokemonSpriteById } from "@/lib/sprites";
 import { cn } from "@/lib/utils";
 
 interface PokemonImageProps {
@@ -15,8 +14,29 @@ interface PokemonImageProps {
 }
 
 /**
+ * Generate fallback sprite URLs for a Pokemon.
+ * Tries multiple sources to ensure something always displays.
+ */
+function getFallbackUrls(name: string, id: number): string[] {
+  // Convert name to slug format (lowercase, no special chars)
+  const slug = name.toLowerCase().replace(/[^a-z0-9-]/g, "");
+
+  return [
+    // 1. Pokemon Showdown animated (primary - already tried)
+    // 2. Pokemon Showdown gen5ani (animated gen5 style)
+    `https://play.pokemonshowdown.com/sprites/gen5ani/${slug}.gif`,
+    // 3. Pokemon Showdown gen5 static
+    `https://play.pokemonshowdown.com/sprites/gen5/${slug}.png`,
+    // 4. PokeAPI official artwork (base Pokemon only)
+    `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`,
+    // 5. PokeAPI default sprite (base Pokemon only)
+    `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`,
+  ];
+}
+
+/**
  * Pokemon image component with automatic fallback.
- * If the primary sprite fails to load, falls back to PokeAPI sprites.
+ * If a sprite fails to load, tries multiple fallback sources.
  */
 export function PokemonImage({
   src,
@@ -27,13 +47,13 @@ export function PokemonImage({
   className,
 }: PokemonImageProps) {
   const [imgSrc, setImgSrc] = useState(src);
-  const [hasError, setHasError] = useState(false);
+  const [fallbackIndex, setFallbackIndex] = useState(0);
+  const fallbacks = getFallbackUrls(alt, pokemonId);
 
   const handleError = () => {
-    if (!hasError) {
-      // Fall back to PokeAPI sprite
-      setImgSrc(pokemonSpriteById(pokemonId));
-      setHasError(true);
+    if (fallbackIndex < fallbacks.length) {
+      setImgSrc(fallbacks[fallbackIndex]);
+      setFallbackIndex(fallbackIndex + 1);
     }
   };
 
