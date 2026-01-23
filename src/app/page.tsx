@@ -11,23 +11,18 @@ import {
   useFilteredMoves,
   useFilteredPokemon,
 } from "@/components/pokemon/dex-filter";
-import {
-  PokemonCard,
-  PokemonCardSkeleton,
-} from "@/components/pokemon/pokemon-card";
+import { PokemonCardSkeleton } from "@/components/pokemon/pokemon-card";
+import { VirtualizedPokemonGrid } from "@/components/pokemon/virtualized-pokemon-grid";
 import { getDexPokemonList } from "@/lib/dex-pokemon";
 import { toID } from "@/lib/pkmn";
 
 const ITEMS_PER_PAGE = 50;
 
 function HomeContent() {
-  const { ref: pokemonRef, inView: pokemonInView } = useInView();
   const { ref: movesRef, inView: movesInView } = useInView();
   const { ref: abilitiesRef, inView: abilitiesInView } = useInView();
   const { ref: itemsRef, inView: itemsInView } = useInView();
   const [filter, setFilter] = useDexFilter();
-  const [pokemonDisplayCount, setPokemonDisplayCount] =
-    useState(ITEMS_PER_PAGE);
   const [movesDisplayCount, setMovesDisplayCount] = useState(ITEMS_PER_PAGE);
   const [abilitiesDisplayCount, setAbilitiesDisplayCount] =
     useState(ITEMS_PER_PAGE);
@@ -97,26 +92,6 @@ function HomeContent() {
     useFilteredAbilities(filter);
   const { filteredItems, isLoading: isItemsLoading } = useFilteredItems(filter);
 
-  // Pokemon infinite scroll
-  useEffect(() => {
-    if (
-      pokemonInView &&
-      !hasPokemonFilters &&
-      filter.category === "pokemon" &&
-      pokemonDisplayCount < allPokemon.length
-    ) {
-      setPokemonDisplayCount((prev) =>
-        Math.min(prev + ITEMS_PER_PAGE, allPokemon.length),
-      );
-    }
-  }, [
-    pokemonInView,
-    hasPokemonFilters,
-    filter.category,
-    allPokemon.length,
-    pokemonDisplayCount,
-  ]);
-
   // Moves infinite scroll
   useEffect(() => {
     if (
@@ -159,15 +134,12 @@ function HomeContent() {
   // Reset display counts when filter changes
   useEffect(() => {
     void filterResetKey;
-    setPokemonDisplayCount(ITEMS_PER_PAGE);
     setMovesDisplayCount(ITEMS_PER_PAGE);
     setAbilitiesDisplayCount(ITEMS_PER_PAGE);
     setItemsDisplayCount(ITEMS_PER_PAGE);
   }, [filterResetKey]);
 
-  const displayedPokemon = hasPokemonFilters
-    ? filteredPokemon
-    : allPokemon.slice(0, pokemonDisplayCount);
+  const displayedPokemon = hasPokemonFilters ? filteredPokemon : allPokemon;
 
   return (
     <div>
@@ -184,29 +156,14 @@ function HomeContent() {
         {/* Pokemon Grid */}
         {filter.category === "pokemon" && (
           <>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 md:gap-3 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
-              {displayedPokemon?.map((pokemon) => (
-                <PokemonCard
-                  key={`${pokemon.id}-${pokemon.name}`}
-                  name={pokemon.name}
-                  id={pokemon.id}
-                />
-              ))}
-            </div>
+            {displayedPokemon && displayedPokemon.length > 0 && (
+              <VirtualizedPokemonGrid pokemon={displayedPokemon} />
+            )}
 
             {/* Filtered Results Count */}
             {hasPokemonFilters && filteredPokemon && (
               <div className="mt-4 text-center text-sm text-muted-foreground">
                 {filteredPokemon.length} Pokemon found
-              </div>
-            )}
-
-            {/* Infinite Scroll Trigger */}
-            {!hasPokemonFilters && pokemonDisplayCount < allPokemon.length && (
-              <div ref={pokemonRef} className="flex justify-center py-6">
-                <span className="text-xs text-muted-foreground">
-                  Showing {pokemonDisplayCount} of {allPokemon.length}
-                </span>
               </div>
             )}
           </>
