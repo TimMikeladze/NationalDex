@@ -144,7 +144,7 @@ function HomeContent() {
   return (
     <div>
       {/* Sticky Filter Toolbar */}
-      <div className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 px-4 md:px-6 py-3 lg:top-14">
+      <div className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 px-4 md:px-6 py-3 lg:top-14 pwa-sticky-toolbar relative">
         <DexFilter
           filter={filter}
           onFilterChange={setFilter}
@@ -361,7 +361,7 @@ function HomePageSkeleton() {
   return (
     <div>
       {/* Sticky Filter Skeleton */}
-      <div className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 px-4 md:px-6 py-3 lg:top-14">
+      <div className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 px-4 md:px-6 py-3 lg:top-14 pwa-sticky-toolbar relative">
         <div className="space-y-3">
           <div className="h-9 animate-pulse rounded-md bg-muted" />
           <div className="flex flex-wrap gap-1.5">

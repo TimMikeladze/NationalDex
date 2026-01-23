@@ -210,16 +210,36 @@
   .app-shell .pwa-glass-header {
     top: 0;
     padding-top: env(safe-area-inset-top, 0px);
-    background: color-mix(in srgb, var(--background) 70%, transparent);
+    background: color-mix(in srgb, var(--background) 85%, transparent);
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
   }
 
   /* Glass bottom nav */
   .app-shell .pwa-glass-nav {
-    background: color-mix(in srgb, var(--background) 70%, transparent);
+    background: color-mix(in srgb, var(--background) 85%, transparent);
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
+  }
+
+  /* Sticky toolbar inside main content - extends blur to cover safe area */
+  .app-shell .pwa-sticky-toolbar {
+    background: color-mix(in srgb, var(--background) 85%, transparent);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+  }
+
+  /* Pseudo-element to extend blur effect into safe area */
+  .app-shell .pwa-sticky-toolbar::before {
+    content: "";
+    position: absolute;
+    top: calc(-1 * env(safe-area-inset-top, 0px));
+    left: 0;
+    right: 0;
+    height: env(safe-area-inset-top, 0px);
+    background: inherit;
+    backdrop-filter: inherit;
+    -webkit-backdrop-filter: inherit;
   }
 
   /* Main content padding - just needs small gap when no secondary toolbar */
@@ -251,15 +271,33 @@
     .app-shell .pwa-glass-header {
       top: 0;
       padding-top: env(safe-area-inset-top, 0px);
-      background: color-mix(in srgb, var(--background) 70%, transparent);
+      background: color-mix(in srgb, var(--background) 85%, transparent);
       backdrop-filter: blur(20px) saturate(180%);
       -webkit-backdrop-filter: blur(20px) saturate(180%);
     }
 
     .app-shell .pwa-glass-nav {
-      background: color-mix(in srgb, var(--background) 70%, transparent);
+      background: color-mix(in srgb, var(--background) 85%, transparent);
       backdrop-filter: blur(20px) saturate(180%);
       -webkit-backdrop-filter: blur(20px) saturate(180%);
+    }
+
+    .app-shell .pwa-sticky-toolbar {
+      background: color-mix(in srgb, var(--background) 85%, transparent);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+    }
+
+    .app-shell .pwa-sticky-toolbar::before {
+      content: "";
+      position: absolute;
+      top: calc(-1 * env(safe-area-inset-top, 0px));
+      left: 0;
+      right: 0;
+      height: env(safe-area-inset-top, 0px);
+      background: inherit;
+      backdrop-filter: inherit;
+      -webkit-backdrop-filter: inherit;
     }
 
     .app-shell .pwa-pt-safe {
