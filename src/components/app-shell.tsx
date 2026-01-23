@@ -315,7 +315,7 @@ export function AppShell({ children }: AppShellProps) {
         {secondaryToolbar?.content && (
           <header
             className={cn(
-              "fixed left-0 right-0 z-40 border-b bg-background/80 backdrop-blur supports-backdrop-filter:bg-background/60 fixed-bottom-stable",
+              "fixed left-0 right-0 z-40 border-b fixed-bottom-stable bg-background lg:bg-background/80 lg:backdrop-blur lg:supports-backdrop-filter:bg-background/60",
               "top-0 lg:top-14 pwa-glass-header",
               secondaryToolbar.className,
             )}
