@@ -84,7 +84,6 @@ export function ItemImage({
       height={height}
       className={cn("pixelated", className)}
       loading="lazy"
-      unoptimized
       onError={handleError}
     />
   );
