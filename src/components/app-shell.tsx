@@ -335,14 +335,15 @@ export function AppShell({ children }: AppShellProps) {
           ref={mainRef}
           className={cn(
             // Keep content constrained between fixed toolbars.
-            // Height = viewport minus bottom nav (and safe-area bottom).
+            // Height = viewport minus top/bottom chrome (and safe-area bottom).
             // In PWA mode, pwa-main-height and pwa-pt-safe handle safe areas.
             "flex-1 min-h-0 pwa-pt-safe pwa-main-height",
             "overflow-y-auto overflow-x-hidden",
-            "h-[calc(100dvh-var(--app-bottom-offset)-env(safe-area-inset-bottom,0px))]",
-            "max-h-[calc(100dvh-var(--app-bottom-offset)-env(safe-area-inset-bottom,0px))]",
-            // offset content by top chrome (css var set on .app-shell)
-            "pt-(--app-top-offset)",
+            "h-[calc(100dvh-var(--app-top-offset)-var(--app-bottom-offset)-env(safe-area-inset-bottom,0px))]",
+            "max-h-[calc(100dvh-var(--app-top-offset)-var(--app-bottom-offset)-env(safe-area-inset-bottom,0px))]",
+            // On mobile: use padding-top for offset (pwa-pt-safe overrides in PWA mode)
+            // On desktop (lg+): use margin-top so scroll container starts below header
+            "pt-(--app-top-offset) lg:pt-0 lg:mt-(--app-top-offset)",
           )}
         >
           <div className="w-full">{children}</div>
