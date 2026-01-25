@@ -1,9 +1,9 @@
 "use client";
 
 import { Search, X } from "lucide-react";
-import Image from "next/image";
 import { useMemo, useState } from "react";
 import { AddToListDialog } from "@/components/add-to-list-dialog";
+import { ItemImage } from "@/components/pokemon/item-image";
 import {
   PokemonCard,
   PokemonCardSkeleton,
@@ -40,17 +40,14 @@ export function ItemDetailClient({ name }: { name: string }) {
         {/* Header */}
         <section className="space-y-3">
           <div className="flex items-center gap-4">
-            {item.sprite && (
-              <div className="size-16 relative">
-                <Image
-                  src={item.sprite}
-                  alt={item.name}
-                  fill
-                  className="object-contain pixelated"
-                  unoptimized
-                />
-              </div>
-            )}
+            <div className="size-16 flex items-center justify-center">
+              <ItemImage
+                src={item.sprite || ""}
+                alt={item.name}
+                width={64}
+                height={64}
+              />
+            </div>
             <div>
               <div className="flex items-center gap-3">
                 <h1 className="text-xl font-medium">{item.name}</h1>

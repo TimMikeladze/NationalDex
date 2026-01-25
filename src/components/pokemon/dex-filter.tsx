@@ -220,7 +220,7 @@ export function DexFilter({
           placeholder={CATEGORY_PLACEHOLDERS[filter.category]}
           value={filter.search}
           onChange={(e) => handleSearchChange(e.target.value)}
-          className={`pl-9 ${filter.category === "pokemon" ? "pr-20" : "pr-9"}`}
+          className={`pl-9 ${filter.category === "pokemon" || filter.category === "moves" ? "pr-20" : "pr-14"}`}
         />
         <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
           {filter.search && (
@@ -233,81 +233,79 @@ export function DexFilter({
             </button>
           )}
           {filter.category === "pokemon" && (
-            <>
-              <Popover open={genPopoverOpen} onOpenChange={setGenPopoverOpen}>
-                <PopoverTrigger asChild>
-                  <button
-                    type="button"
-                    className={`relative p-1 transition-colors ${
-                      filter.generations.length > 0
-                        ? "text-foreground"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <ListFilter className="h-4 w-4" />
-                    {filter.generations.length > 0 && (
-                      <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-foreground text-[8px] font-medium text-background">
-                        {filter.generations.length}
-                      </span>
-                    )}
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-56 p-2" align="end">
-                  <div className="space-y-1">
-                    {GEN_RANGES.map((gen) => (
-                      <label
-                        key={gen.id}
-                        htmlFor={`gen-filter-${gen.id}`}
-                        className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
-                      >
-                        <Checkbox
-                          id={`gen-filter-${gen.id}`}
-                          checked={filter.generations.includes(gen.id)}
-                          onCheckedChange={() => handleGenerationToggle(gen.id)}
-                        />
-                        <span>
-                          {gen.name}{" "}
-                          <span className="text-muted-foreground">
-                            ({gen.label})
-                          </span>
-                        </span>
-                      </label>
-                    ))}
-                  </div>
+            <Popover open={genPopoverOpen} onOpenChange={setGenPopoverOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className={`relative p-1 transition-colors ${
+                    filter.generations.length > 0
+                      ? "text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <ListFilter className="h-4 w-4" />
                   {filter.generations.length > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="mt-2 h-7 w-full text-xs"
-                      onClick={() =>
-                        onFilterChange({ ...filter, generations: [] })
-                      }
-                    >
-                      Clear generations
-                    </Button>
+                    <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-foreground text-[8px] font-medium text-background">
+                      {filter.generations.length}
+                    </span>
                   )}
-                </PopoverContent>
-              </Popover>
-              <button
-                type="button"
-                onClick={
-                  filter.randomSeed ? handleClearRandomSort : handleRandomSort
-                }
-                className={`p-1 transition-colors ${
-                  filter.randomSeed
-                    ? "text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Shuffle className="h-4 w-4" />
-              </button>
-            </>
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56 p-2" align="end">
+                <div className="space-y-1">
+                  {GEN_RANGES.map((gen) => (
+                    <label
+                      key={gen.id}
+                      htmlFor={`gen-filter-${gen.id}`}
+                      className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+                    >
+                      <Checkbox
+                        id={`gen-filter-${gen.id}`}
+                        checked={filter.generations.includes(gen.id)}
+                        onCheckedChange={() => handleGenerationToggle(gen.id)}
+                      />
+                      <span>
+                        {gen.name}{" "}
+                        <span className="text-muted-foreground">
+                          ({gen.label})
+                        </span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                {filter.generations.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="mt-2 h-7 w-full text-xs"
+                    onClick={() =>
+                      onFilterChange({ ...filter, generations: [] })
+                    }
+                  >
+                    Clear generations
+                  </Button>
+                )}
+              </PopoverContent>
+            </Popover>
           )}
+          <button
+            type="button"
+            onClick={
+              filter.randomSeed ? handleClearRandomSort : handleRandomSort
+            }
+            className={`p-1 transition-colors ${
+              filter.randomSeed
+                ? "text-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Shuffle className="h-4 w-4" />
+          </button>
         </div>
       </div>
 
-      {/* Type Filters - only show for Pokemon, collapsible */}
-      {filter.category === "pokemon" && (
+      {/* Type Filters - show for Pokemon and Moves, collapsible */}
+      {(filter.category === "pokemon" || filter.category === "moves") && (
         <div
           className={`grid transition-all duration-200 ease-in-out ${
             collapsed
@@ -466,29 +464,55 @@ export function useFilteredMoves(filter: DexFilterState) {
       getAllMoves().map((m) => ({
         name: m.name,
         id: m.num,
+        type: m.type as string,
+        category: m.category as "Physical" | "Special" | "Status",
+        power: m.basePower,
+        accuracy: m.accuracy,
+        pp: m.pp,
       })),
     [],
   );
 
-  const hasActiveFilters = filter.search.length > 0;
+  const hasActiveFilters = filter.search.length > 0 || filter.types.length > 0;
 
   const filteredMoves = useMemo(() => {
-    if (!hasActiveFilters) return allMoves;
+    if (!hasActiveFilters && !filter.randomSeed) return allMoves;
 
-    const searchLower = filter.search.toLowerCase();
+    let result = allMoves;
 
-    return allMoves.filter((move) => {
-      if (searchLower && !move.name.toLowerCase().includes(searchLower)) {
-        return false;
-      }
-      return true;
-    });
-  }, [allMoves, filter.search, hasActiveFilters]);
+    if (hasActiveFilters) {
+      const searchLower = filter.search.toLowerCase();
+
+      result = allMoves.filter((move) => {
+        if (searchLower && !move.name.toLowerCase().includes(searchLower)) {
+          return false;
+        }
+        if (filter.types.length > 0) {
+          if (!filter.types.includes(move.type as PokemonType)) {
+            return false;
+          }
+        }
+        return true;
+      });
+    }
+
+    if (filter.randomSeed) {
+      result = seededShuffle(result, filter.randomSeed);
+    }
+
+    return result;
+  }, [
+    allMoves,
+    filter.search,
+    filter.types,
+    filter.randomSeed,
+    hasActiveFilters,
+  ]);
 
   return {
     filteredMoves,
     isLoading: false,
-    hasActiveFilters,
+    hasActiveFilters: hasActiveFilters || filter.randomSeed !== null,
     totalCount: allMoves.length,
   };
 }
@@ -500,6 +524,7 @@ export function useFilteredAbilities(filter: DexFilterState) {
       getAllAbilities().map((a) => ({
         name: a.name,
         id: a.num,
+        shortDesc: a.shortDesc || a.desc || "",
       })),
     [],
   );
@@ -507,22 +532,32 @@ export function useFilteredAbilities(filter: DexFilterState) {
   const hasActiveFilters = filter.search.length > 0;
 
   const filteredAbilities = useMemo(() => {
-    if (!hasActiveFilters) return allAbilities;
+    if (!hasActiveFilters && !filter.randomSeed) return allAbilities;
 
-    const searchLower = filter.search.toLowerCase();
+    let result = allAbilities;
 
-    return allAbilities.filter((ability) => {
-      if (searchLower && !ability.name.toLowerCase().includes(searchLower)) {
-        return false;
-      }
-      return true;
-    });
-  }, [allAbilities, filter.search, hasActiveFilters]);
+    if (hasActiveFilters) {
+      const searchLower = filter.search.toLowerCase();
+
+      result = allAbilities.filter((ability) => {
+        if (searchLower && !ability.name.toLowerCase().includes(searchLower)) {
+          return false;
+        }
+        return true;
+      });
+    }
+
+    if (filter.randomSeed) {
+      result = seededShuffle(result, filter.randomSeed);
+    }
+
+    return result;
+  }, [allAbilities, filter.search, filter.randomSeed, hasActiveFilters]);
 
   return {
     filteredAbilities,
     isLoading: false,
-    hasActiveFilters,
+    hasActiveFilters: hasActiveFilters || filter.randomSeed !== null,
     totalCount: allAbilities.length,
   };
 }
@@ -542,22 +577,32 @@ export function useFilteredItems(filter: DexFilterState) {
   const hasActiveFilters = filter.search.length > 0;
 
   const filteredItems = useMemo(() => {
-    if (!hasActiveFilters) return allItems;
+    if (!hasActiveFilters && !filter.randomSeed) return allItems;
 
-    const searchLower = filter.search.toLowerCase();
+    let result = allItems;
 
-    return allItems.filter((item) => {
-      if (searchLower && !item.name.toLowerCase().includes(searchLower)) {
-        return false;
-      }
-      return true;
-    });
-  }, [allItems, filter.search, hasActiveFilters]);
+    if (hasActiveFilters) {
+      const searchLower = filter.search.toLowerCase();
+
+      result = allItems.filter((item) => {
+        if (searchLower && !item.name.toLowerCase().includes(searchLower)) {
+          return false;
+        }
+        return true;
+      });
+    }
+
+    if (filter.randomSeed) {
+      result = seededShuffle(result, filter.randomSeed);
+    }
+
+    return result;
+  }, [allItems, filter.search, filter.randomSeed, hasActiveFilters]);
 
   return {
     filteredItems,
     isLoading: false,
-    hasActiveFilters,
+    hasActiveFilters: hasActiveFilters || filter.randomSeed !== null,
     totalCount: allItems.length,
   };
 }
