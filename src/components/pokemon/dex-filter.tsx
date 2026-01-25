@@ -466,6 +466,11 @@ export function useFilteredMoves(filter: DexFilterState) {
       getAllMoves().map((m) => ({
         name: m.name,
         id: m.num,
+        type: m.type as string,
+        category: m.category as "Physical" | "Special" | "Status",
+        power: m.basePower,
+        accuracy: m.accuracy,
+        pp: m.pp,
       })),
     [],
   );
@@ -500,6 +505,7 @@ export function useFilteredAbilities(filter: DexFilterState) {
       getAllAbilities().map((a) => ({
         name: a.name,
         id: a.num,
+        shortDesc: a.shortDesc || a.desc || "",
       })),
     [],
   );

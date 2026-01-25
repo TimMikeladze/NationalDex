@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useInView } from "react-intersection-observer";
@@ -12,9 +13,11 @@ import {
   useFilteredPokemon,
 } from "@/components/pokemon/dex-filter";
 import { PokemonCardSkeleton } from "@/components/pokemon/pokemon-card";
+import { TypeBadge } from "@/components/pokemon/type-badge";
 import { VirtualizedPokemonGrid } from "@/components/pokemon/virtualized-pokemon-grid";
 import { getDexPokemonList } from "@/lib/dex-pokemon";
 import { toID } from "@/lib/pkmn";
+import type { PokemonType } from "@/types/pokemon";
 
 const ITEMS_PER_PAGE = 50;
 
@@ -174,37 +177,75 @@ function HomeContent() {
           (isMovesLoading ? (
             <div className="space-y-1">
               {loadingRowKeys.map((key) => (
-                <div key={key} className="h-8 animate-pulse rounded bg-muted" />
+                <div
+                  key={key}
+                  className="h-12 animate-pulse rounded bg-muted"
+                />
               ))}
             </div>
           ) : (
             <>
               <div className="rounded-lg border bg-card">
-                <div className="grid grid-cols-[60px_1fr] text-xs font-medium text-muted-foreground border-b px-3 py-2 sm:grid-cols-[60px_1fr_100px]">
-                  <span>#</span>
-                  <span>Name</span>
-                  <span className="hidden sm:block text-right">ID</span>
+                <div className="grid grid-cols-[1fr_auto] gap-2 text-xs font-medium text-muted-foreground border-b px-3 py-2 sm:grid-cols-[1fr_80px_60px_60px_50px_70px]">
+                  <span>Move</span>
+                  <span className="hidden sm:block text-center">Type</span>
+                  <span className="hidden sm:block text-center">Cat.</span>
+                  <span className="hidden sm:block text-right">Power</span>
+                  <span className="hidden sm:block text-right">Acc.</span>
+                  <span className="text-right">PP</span>
                 </div>
                 <div className="divide-y">
-                  {filteredMoves
-                    ?.slice(0, movesDisplayCount)
-                    .map((move, index) => (
-                      <Link
-                        key={move.id}
-                        href={`/moves/${toID(move.name)}`}
-                        className="grid grid-cols-[60px_1fr] items-center px-3 py-2 text-sm transition-colors hover:bg-accent sm:grid-cols-[60px_1fr_100px]"
-                      >
-                        <span className="text-muted-foreground tabular-nums">
-                          {index + 1}
-                        </span>
+                  {filteredMoves?.slice(0, movesDisplayCount).map((move) => (
+                    <Link
+                      key={move.id}
+                      href={`/moves/${toID(move.name)}`}
+                      className="grid grid-cols-[1fr_auto] gap-2 items-center px-3 py-2.5 text-sm transition-colors hover:bg-accent sm:grid-cols-[1fr_80px_60px_60px_50px_70px]"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
                         <span className="font-medium truncate">
                           {move.name}
                         </span>
-                        <span className="hidden sm:block text-right text-muted-foreground tabular-nums">
-                          {move.id}
+                        <TypeBadge
+                          type={move.type as PokemonType}
+                          size="sm"
+                          className="sm:hidden flex-shrink-0"
+                        />
+                      </div>
+                      <div className="hidden sm:flex justify-center">
+                        <TypeBadge type={move.type as PokemonType} size="sm" />
+                      </div>
+                      <div className="hidden sm:flex justify-center">
+                        <span
+                          className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                            move.category === "Physical"
+                              ? "bg-orange-500/20 text-orange-600 dark:text-orange-400"
+                              : move.category === "Special"
+                                ? "bg-blue-500/20 text-blue-600 dark:text-blue-400"
+                                : "bg-gray-500/20 text-gray-600 dark:text-gray-400"
+                          }`}
+                        >
+                          {move.category === "Physical"
+                            ? "Phys"
+                            : move.category === "Special"
+                              ? "Spec"
+                              : "Stat"}
                         </span>
-                      </Link>
-                    ))}
+                      </div>
+                      <span className="hidden sm:block text-right text-muted-foreground tabular-nums">
+                        {move.power || "—"}
+                      </span>
+                      <span className="hidden sm:block text-right text-muted-foreground tabular-nums">
+                        {move.accuracy === true
+                          ? "—"
+                          : move.accuracy
+                            ? `${move.accuracy}%`
+                            : "—"}
+                      </span>
+                      <span className="text-right text-muted-foreground tabular-nums">
+                        {move.pp}
+                      </span>
+                    </Link>
+                  ))}
                 </div>
               </div>
               {filteredMoves && movesDisplayCount < filteredMoves.length && (
@@ -229,38 +270,38 @@ function HomeContent() {
           (isAbilitiesLoading ? (
             <div className="space-y-1">
               {loadingRowKeys.map((key) => (
-                <div key={key} className="h-8 animate-pulse rounded bg-muted" />
+                <div
+                  key={key}
+                  className="h-16 animate-pulse rounded bg-muted"
+                />
               ))}
             </div>
           ) : (
             <>
-              <div className="rounded-lg border bg-card">
-                <div className="grid grid-cols-[60px_1fr] text-xs font-medium text-muted-foreground border-b px-3 py-2 sm:grid-cols-[60px_1fr_100px]">
-                  <span>#</span>
-                  <span>Name</span>
-                  <span className="hidden sm:block text-right">ID</span>
-                </div>
-                <div className="divide-y">
-                  {filteredAbilities
-                    ?.slice(0, abilitiesDisplayCount)
-                    .map((ability, index) => (
-                      <Link
-                        key={ability.id}
-                        href={`/abilities/${toID(ability.name)}`}
-                        className="grid grid-cols-[60px_1fr] items-center px-3 py-2 text-sm transition-colors hover:bg-accent sm:grid-cols-[60px_1fr_100px]"
-                      >
-                        <span className="text-muted-foreground tabular-nums">
-                          {index + 1}
-                        </span>
-                        <span className="font-medium truncate">
+              <div className="rounded-lg border bg-card divide-y">
+                {filteredAbilities
+                  ?.slice(0, abilitiesDisplayCount)
+                  .map((ability) => (
+                    <Link
+                      key={ability.id}
+                      href={`/abilities/${toID(ability.name)}`}
+                      className="block px-3 py-3 transition-colors hover:bg-accent"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="font-medium text-sm">
                           {ability.name}
                         </span>
-                        <span className="hidden sm:block text-right text-muted-foreground tabular-nums">
-                          {ability.id}
+                        <span className="text-xs text-muted-foreground tabular-nums flex-shrink-0">
+                          #{ability.id}
                         </span>
-                      </Link>
-                    ))}
-                </div>
+                      </div>
+                      {ability.shortDesc && (
+                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                          {ability.shortDesc}
+                        </p>
+                      )}
+                    </Link>
+                  ))}
               </div>
               {filteredAbilities &&
                 abilitiesDisplayCount < filteredAbilities.length && (
@@ -286,38 +327,39 @@ function HomeContent() {
           (isItemsLoading ? (
             <div className="space-y-1">
               {loadingRowKeys.map((key) => (
-                <div key={key} className="h-8 animate-pulse rounded bg-muted" />
+                <div
+                  key={key}
+                  className="h-12 animate-pulse rounded bg-muted"
+                />
               ))}
             </div>
           ) : (
             <>
-              <div className="rounded-lg border bg-card">
-                <div className="grid grid-cols-[60px_1fr] text-xs font-medium text-muted-foreground border-b px-3 py-2 sm:grid-cols-[60px_1fr_100px]">
-                  <span>#</span>
-                  <span>Name</span>
-                  <span className="hidden sm:block text-right">ID</span>
-                </div>
-                <div className="divide-y">
-                  {filteredItems
-                    ?.slice(0, itemsDisplayCount)
-                    .map((item, index) => (
-                      <Link
-                        key={item.id}
-                        href={`/items/${toID(item.name)}`}
-                        className="grid grid-cols-[60px_1fr] items-center px-3 py-2 text-sm transition-colors hover:bg-accent sm:grid-cols-[60px_1fr_100px]"
-                      >
-                        <span className="text-muted-foreground tabular-nums">
-                          {index + 1}
-                        </span>
-                        <span className="font-medium truncate">
-                          {item.name}
-                        </span>
-                        <span className="hidden sm:block text-right text-muted-foreground tabular-nums">
-                          {item.id}
-                        </span>
-                      </Link>
-                    ))}
-                </div>
+              <div className="rounded-lg border bg-card divide-y">
+                {filteredItems?.slice(0, itemsDisplayCount).map((item) => (
+                  <Link
+                    key={item.id}
+                    href={`/items/${toID(item.name)}`}
+                    className="flex items-center gap-3 px-3 py-2.5 transition-colors hover:bg-accent"
+                  >
+                    <div className="w-8 h-8 flex items-center justify-center flex-shrink-0">
+                      <Image
+                        src={item.sprite}
+                        alt={item.name}
+                        width={32}
+                        height={32}
+                        className="pixelated"
+                        unoptimized
+                      />
+                    </div>
+                    <span className="font-medium text-sm truncate flex-1">
+                      {item.name}
+                    </span>
+                    <span className="text-xs text-muted-foreground tabular-nums flex-shrink-0">
+                      #{item.id}
+                    </span>
+                  </Link>
+                ))}
               </div>
               {filteredItems && itemsDisplayCount < filteredItems.length && (
                 <div ref={itemsRef} className="flex justify-center py-4">
