@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useInView } from "react-intersection-observer";
@@ -12,6 +11,7 @@ import {
   useFilteredMoves,
   useFilteredPokemon,
 } from "@/components/pokemon/dex-filter";
+import { ItemImage } from "@/components/pokemon/item-image";
 import { PokemonCardSkeleton } from "@/components/pokemon/pokemon-card";
 import { TypeBadge } from "@/components/pokemon/type-badge";
 import { VirtualizedPokemonGrid } from "@/components/pokemon/virtualized-pokemon-grid";
@@ -343,13 +343,11 @@ function HomeContent() {
                     className="flex items-center gap-3 px-3 py-2.5 transition-colors hover:bg-accent"
                   >
                     <div className="w-8 h-8 flex items-center justify-center flex-shrink-0">
-                      <Image
+                      <ItemImage
                         src={item.sprite}
                         alt={item.name}
                         width={32}
                         height={32}
-                        className="pixelated"
-                        unoptimized
                       />
                     </div>
                     <span className="font-medium text-sm truncate flex-1">
