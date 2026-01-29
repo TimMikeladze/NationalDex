@@ -2,107 +2,152 @@
 
 import { ArrowRight, ExternalLink } from "lucide-react";
 import Link from "next/link";
-import type {
-  AboutPageConfig,
-  FeatureConfig,
-  FooterLink,
-  HeroConfig,
-} from "./config";
+import type { FeatureConfig, FooterLink } from "./config";
 import { aboutConfig } from "./config";
 
-function HeroOrb() {
+function FloatingOrbs() {
   return (
-    <div className="relative size-32 md:size-40 mx-auto">
-      {/* Outer glow */}
-      <div className="absolute inset-0 rounded-full bg-gradient-to-br from-rose-500/20 via-transparent to-indigo-500/20 blur-2xl" />
-      {/* Main orb */}
-      <div className="absolute inset-2 rounded-full bg-gradient-to-br from-foreground/[0.03] to-foreground/[0.08] border border-foreground/[0.06]" />
-      {/* Inner accent */}
-      <div className="absolute inset-6 rounded-full bg-gradient-to-tl from-rose-500/10 to-indigo-500/10" />
-      {/* Center dot */}
-      <div className="absolute inset-0 flex items-center justify-center">
-        <div className="size-2 rounded-full bg-foreground/20" />
-      </div>
-      {/* Orbiting dot */}
-      <div className="absolute top-4 right-6 size-1.5 rounded-full bg-rose-400/40" />
-      <div className="absolute bottom-8 left-4 size-1 rounded-full bg-indigo-400/40" />
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {/* Primary gradient orb */}
+      <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-rose-500/10 via-purple-500/10 to-transparent blur-3xl animate-pulse" />
+      {/* Secondary orb */}
+      <div className="absolute top-1/3 -left-20 w-60 h-60 bg-gradient-to-tr from-indigo-500/8 via-cyan-500/8 to-transparent blur-3xl" />
+      {/* Bottom accent */}
+      <div className="absolute -bottom-20 right-1/4 w-72 h-72 bg-gradient-to-t from-amber-500/6 via-rose-500/6 to-transparent blur-3xl" />
     </div>
   );
 }
 
-function HeroSection({ hero }: { hero: HeroConfig }) {
+function GridPattern() {
   return (
-    <section className="relative text-center py-12 md:py-20">
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-b from-foreground/[0.02] via-transparent to-transparent pointer-events-none" />
+    <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-[0.03]">
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundImage: `
+            linear-gradient(to right, currentColor 1px, transparent 1px),
+            linear-gradient(to bottom, currentColor 1px, transparent 1px)
+          `,
+          backgroundSize: "60px 60px",
+        }}
+      />
+    </div>
+  );
+}
 
-      <div className="relative space-y-8">
-        <HeroOrb />
+function HeroSection() {
+  const { hero } = aboutConfig;
 
+  return (
+    <section className="relative min-h-[70vh] flex flex-col items-center justify-center px-6 py-20">
+      <FloatingOrbs />
+      <GridPattern />
+
+      <div className="relative z-10 max-w-3xl mx-auto text-center space-y-8">
+        {/* Logo mark */}
+        <div className="flex justify-center">
+          <div className="relative">
+            <div className="w-16 h-16 border border-foreground/10 flex items-center justify-center">
+              <div className="w-8 h-8 bg-gradient-to-br from-foreground/80 to-foreground/40" />
+            </div>
+            <div className="absolute -inset-4 border border-foreground/5" />
+          </div>
+        </div>
+
+        {/* Title */}
         <div className="space-y-4">
-          <h1 className="text-4xl md:text-5xl font-semibold tracking-tight">
+          <h1 className="text-5xl md:text-7xl font-semibold tracking-tighter">
             {hero.title}
           </h1>
-          <p className="text-base md:text-lg text-muted-foreground font-medium">
+          <p className="text-xl md:text-2xl text-muted-foreground font-medium tracking-tight">
             {hero.tagline}
           </p>
         </div>
 
-        <p className="text-sm text-muted-foreground/80 max-w-md mx-auto leading-relaxed">
+        {/* Description */}
+        <p className="text-base text-muted-foreground/70 max-w-xl mx-auto leading-relaxed">
           {hero.description}
         </p>
 
+        {/* CTA */}
         {hero.cta && (
-          <div className="pt-2">
+          <div className="pt-4">
             <Link
               href={hero.cta.href}
-              className="group inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium bg-foreground text-background hover:bg-foreground/90 transition-colors"
+              className="group inline-flex items-center gap-3 px-8 py-4 text-sm font-medium border border-foreground/20 hover:bg-foreground hover:text-background transition-all duration-300"
             >
               {hero.cta.label}
-              <ArrowRight className="size-4 group-hover:translate-x-0.5 transition-transform" />
+              <ArrowRight className="size-4 group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
         )}
+
+        {/* Scroll indicator */}
+        <div className="pt-12 flex justify-center">
+          <div className="flex flex-col items-center gap-2 text-muted-foreground/40">
+            <span className="text-[10px] uppercase tracking-[0.3em]">
+              Explore
+            </span>
+            <div className="w-px h-8 bg-gradient-to-b from-foreground/20 to-transparent" />
+          </div>
+        </div>
       </div>
     </section>
   );
 }
 
-function FeatureCard({
+function BentoFeatureCard({
   feature,
-  index,
+  className = "",
+  size = "default",
 }: {
   feature: FeatureConfig;
-  index: number;
+  className?: string;
+  size?: "default" | "large" | "wide";
 }) {
   const Icon = feature.icon;
-  const isEven = index % 2 === 0;
+
+  const sizeClasses = {
+    default: "p-6",
+    large: "p-8 md:row-span-2",
+    wide: "p-6 md:col-span-2",
+  };
 
   return (
     <div
-      className="group relative p-4 md:p-5 transition-all duration-300 hover:bg-foreground/[0.02]"
-      style={{
-        borderLeft: isEven ? `1px solid ${feature.accent}15` : undefined,
-        borderRight: !isEven ? `1px solid ${feature.accent}15` : undefined,
-      }}
+      className={`group relative border border-foreground/[0.06] hover:border-foreground/[0.12] bg-foreground/[0.01] hover:bg-foreground/[0.03] transition-all duration-500 ${sizeClasses[size]} ${className}`}
     >
-      <div className="flex items-start gap-4">
+      {/* Accent line */}
+      <div
+        className="absolute top-0 left-0 w-full h-px opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+        style={{
+          background: `linear-gradient(to right, transparent, ${feature.accent}40, transparent)`,
+        }}
+      />
+
+      <div
+        className={`flex flex-col h-full ${size === "large" ? "justify-between" : "gap-4"}`}
+      >
+        {/* Icon */}
         <div
-          className="relative shrink-0 p-2 rounded-sm transition-colors duration-300"
-          style={{ backgroundColor: `${feature.accent}08` }}
+          className="w-10 h-10 flex items-center justify-center border transition-colors duration-500"
+          style={{
+            borderColor: `${feature.accent}20`,
+            backgroundColor: `${feature.accent}08`,
+          }}
         >
           <Icon
-            className="size-4 transition-colors duration-300"
-            style={{ color: `${feature.accent}90` }}
-          />
-          <div
-            className="absolute inset-0 rounded-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-            style={{ backgroundColor: `${feature.accent}12` }}
+            className="size-5 transition-colors duration-500"
+            style={{ color: feature.accent }}
           />
         </div>
-        <div className="space-y-1.5 min-w-0">
-          <p className="text-sm font-medium tracking-tight">{feature.title}</p>
-          <p className="text-xs text-muted-foreground leading-relaxed">
+
+        {/* Content */}
+        <div className={`space-y-2 ${size === "large" ? "mt-auto" : ""}`}>
+          <h3 className="text-base font-medium tracking-tight">
+            {feature.title}
+          </h3>
+          <p className="text-sm text-muted-foreground/70 leading-relaxed">
             {feature.description}
           </p>
         </div>
@@ -111,28 +156,77 @@ function FeatureCard({
   );
 }
 
-function FeaturesSection({ features }: { features: FeatureConfig[] }) {
+function FeaturesSection() {
+  const { features } = aboutConfig;
+
+  // Arrange features in a visually interesting bento layout
+  const layoutPattern = [
+    "large", // Search
+    "default", // Favorites
+    "default", // Team Builder
+    "wide", // Compare
+    "default", // Locations
+    "default", // Dark Mode
+    "default", // Install
+    "large", // Lightning Fast
+    "default", // Animated Sprites
+    "wide", // Complete Data
+  ] as const;
+
   return (
-    <section className="space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="h-px flex-1 bg-gradient-to-r from-transparent to-foreground/5" />
-        <p className="text-[10px] text-muted-foreground/60 uppercase tracking-[0.2em]">
-          Features
-        </p>
-        <div className="h-px flex-1 bg-gradient-to-l from-transparent to-foreground/5" />
+    <section className="relative px-6 py-20">
+      {/* Section header */}
+      <div className="max-w-5xl mx-auto mb-12">
+        <div className="flex items-center gap-4 mb-8">
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-foreground/10 to-transparent" />
+          <span className="text-[10px] text-muted-foreground/50 uppercase tracking-[0.3em]">
+            Everything you need
+          </span>
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-foreground/10 to-transparent" />
+        </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2">
-        {features.map((feature, i) => (
-          <FeatureCard key={feature.title} feature={feature} index={i} />
-        ))}
+
+      {/* Bento grid */}
+      <div className="max-w-5xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {features.map((feature, i) => (
+            <BentoFeatureCard
+              key={feature.title}
+              feature={feature}
+              size={layoutPattern[i] || "default"}
+            />
+          ))}
+        </div>
       </div>
     </section>
   );
 }
 
+function VisualDivider() {
+  return (
+    <div className="relative py-12">
+      <div className="max-w-5xl mx-auto px-6">
+        <div className="flex items-center gap-8">
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent to-foreground/10" />
+          <div className="flex gap-2">
+            {[...Array(3)].map((_, i) => (
+              <div
+                key={i}
+                className="w-1 h-1 bg-foreground/20"
+                style={{ opacity: 1 - i * 0.3 }}
+              />
+            ))}
+          </div>
+          <div className="h-px flex-1 bg-gradient-to-l from-transparent to-foreground/10" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function FooterLinksSection({ links }: { links: FooterLink[] }) {
   return (
-    <div className="flex flex-wrap justify-center gap-6">
+    <div className="flex flex-wrap justify-center gap-8">
       {links.map((link) =>
         link.external ? (
           <a
@@ -140,16 +234,16 @@ function FooterLinksSection({ links }: { links: FooterLink[] }) {
             href={link.href}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-muted-foreground/60 hover:text-foreground transition-colors duration-200 inline-flex items-center gap-1.5"
+            className="group text-sm text-muted-foreground/50 hover:text-foreground transition-colors duration-300 inline-flex items-center gap-2"
           >
             {link.label}
-            <ExternalLink className="size-3" />
+            <ExternalLink className="size-3 opacity-0 group-hover:opacity-100 transition-opacity" />
           </a>
         ) : (
           <Link
             key={link.label}
             href={link.href}
-            className="text-xs text-muted-foreground/60 hover:text-foreground transition-colors duration-200"
+            className="text-sm text-muted-foreground/50 hover:text-foreground transition-colors duration-300"
           >
             {link.label}
           </Link>
@@ -159,61 +253,48 @@ function FooterLinksSection({ links }: { links: FooterLink[] }) {
   );
 }
 
-function AttributionSection({
-  attribution,
-}: {
-  attribution: AboutPageConfig["attribution"];
-}) {
-  return (
-    <div className="text-center space-y-2">
-      <p className="text-[10px] text-muted-foreground/40">
-        data via{" "}
-        <a
-          href={attribution.dataSource.href}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline underline-offset-2 hover:text-muted-foreground transition-colors"
-        >
-          {attribution.dataSource.label}
-        </a>
-      </p>
-      <p className="text-[10px] text-muted-foreground/30">
-        {attribution.disclaimer}
-      </p>
-    </div>
-  );
-}
+function FooterSection() {
+  const { footerLinks, attribution } = aboutConfig;
 
-function FooterSection({
-  links,
-  attribution,
-}: {
-  links: FooterLink[];
-  attribution: AboutPageConfig["attribution"];
-}) {
   return (
-    <section className="pt-10 space-y-6">
-      <div className="flex items-center gap-4">
-        <div className="h-px flex-1 bg-gradient-to-r from-transparent to-foreground/5" />
-        <div className="size-1 rounded-full bg-foreground/10" />
-        <div className="h-px flex-1 bg-gradient-to-l from-transparent to-foreground/5" />
+    <footer className="relative px-6 py-16">
+      <div className="max-w-5xl mx-auto space-y-12">
+        <FooterLinksSection links={footerLinks} />
+
+        {/* Attribution */}
+        <div className="text-center space-y-3">
+          <p className="text-xs text-muted-foreground/30">
+            data via{" "}
+            <a
+              href={attribution.dataSource.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-2 hover:text-muted-foreground/50 transition-colors"
+            >
+              {attribution.dataSource.label}
+            </a>
+          </p>
+          <p className="text-[10px] text-muted-foreground/20">
+            {attribution.disclaimer}
+          </p>
+        </div>
+
+        {/* Bottom accent */}
+        <div className="flex justify-center">
+          <div className="w-12 h-px bg-gradient-to-r from-transparent via-foreground/20 to-transparent" />
+        </div>
       </div>
-      <FooterLinksSection links={links} />
-      <AttributionSection attribution={attribution} />
-    </section>
+    </footer>
   );
 }
 
 export default function AboutPage() {
-  const { hero, features, footerLinks, attribution } = aboutConfig;
-
   return (
-    <div className="relative p-4 md:p-6 overflow-hidden">
-      <div className="relative max-w-2xl mx-auto space-y-8">
-        <HeroSection hero={hero} />
-        <FeaturesSection features={features} />
-        <FooterSection links={footerLinks} attribution={attribution} />
-      </div>
+    <div className="relative min-h-screen overflow-hidden">
+      <HeroSection />
+      <VisualDivider />
+      <FeaturesSection />
+      <FooterSection />
     </div>
   );
 }
