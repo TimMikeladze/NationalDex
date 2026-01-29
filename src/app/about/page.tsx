@@ -15,7 +15,7 @@ function HeroSection() {
           {hero.title}
         </h1>
         <p className="text-muted-foreground mb-6">{hero.tagline}</p>
-        <p className="text-sm text-muted-foreground/60 mb-8 max-w-lg">
+        <p className="text-sm text-muted-foreground/80 mb-8 max-w-lg">
           {hero.description}
         </p>
         {hero.cta && (
@@ -43,7 +43,7 @@ function FeatureItem({ feature }: { feature: FeatureConfig }) {
       />
       <div className="min-w-0">
         <h3 className="text-sm font-medium">{feature.title}</h3>
-        <p className="text-xs text-muted-foreground/50 mt-0.5 leading-relaxed">
+        <p className="text-xs text-muted-foreground/70 mt-0.5 leading-relaxed">
           {feature.description}
         </p>
       </div>
@@ -60,7 +60,7 @@ function FeaturesSection() {
   return (
     <section className="px-6 py-8">
       <div className="max-w-2xl mx-auto">
-        <p className="text-[10px] text-muted-foreground/40 uppercase tracking-widest mb-4">
+        <p className="text-[10px] text-muted-foreground/60 uppercase tracking-widest mb-4">
           Features
         </p>
         <div className="grid md:grid-cols-2 gap-x-8">
@@ -86,7 +86,7 @@ function FooterSection() {
   return (
     <footer className="px-6 py-8 mt-4">
       <div className="max-w-2xl mx-auto">
-        <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted-foreground/40 mb-6">
+        <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted-foreground/60 mb-6">
           {footerLinks.map((link: FooterLink) =>
             link.external ? (
               <a
@@ -109,13 +109,13 @@ function FooterSection() {
             ),
           )}
         </div>
-        <p className="text-[10px] text-muted-foreground/25">
+        <p className="text-[10px] text-muted-foreground/50">
           data via{" "}
           <a
             href={attribution.dataSource.href}
             target="_blank"
             rel="noopener noreferrer"
-            className="underline underline-offset-2 hover:text-muted-foreground/40"
+            className="underline underline-offset-2 hover:text-muted-foreground/70"
           >
             {attribution.dataSource.label}
           </a>
