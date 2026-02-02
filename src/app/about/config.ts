@@ -1,6 +1,8 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  CloudSun,
   Database,
+  Github,
   GitCompareArrows,
   Heart,
   MapPin,
@@ -8,6 +10,7 @@ import {
   Search,
   Smartphone,
   Sparkles,
+  Twitter,
   Users,
   Zap,
 } from "lucide-react";
@@ -35,15 +38,28 @@ export interface FooterLink {
   external?: boolean;
 }
 
+export interface DataSource {
+  label: string;
+  href: string;
+  description?: string;
+}
+
+export interface ContactLink {
+  label: string;
+  href: string;
+  icon: LucideIcon;
+}
+
 export interface AboutPageConfig {
   hero: HeroConfig;
   features: FeatureConfig[];
   footerLinks: FooterLink[];
+  contact: {
+    title: string;
+    links: ContactLink[];
+  };
   attribution: {
-    dataSource: {
-      label: string;
-      href: string;
-    };
+    dataSources: DataSource[];
     disclaimer: string;
   };
 }
@@ -142,11 +158,28 @@ export const aboutConfig: AboutPageConfig = {
     },
   ],
 
+  contact: {
+    title: "built by @linesofcode",
+    links: [
+      { label: "GitHub", href: "https://github.com/TimMikeladze", icon: Github },
+      { label: "Twitter", href: "https://twitter.com/linesofcode", icon: Twitter },
+      { label: "Bluesky", href: "https://bsky.app/profile/linesofcode.bsky.social", icon: CloudSun },
+    ],
+  },
+
   attribution: {
-    dataSource: {
-      label: "pokeapi.co",
-      href: "https://pokeapi.co",
-    },
+    dataSources: [
+      {
+        label: "PokeAPI",
+        href: "https://github.com/PokeAPI/pokeapi",
+        description: "Pokemon data and game information",
+      },
+      {
+        label: "pkmn/ps",
+        href: "https://github.com/pkmn/ps",
+        description: "Sprites and competitive data",
+      },
+    ],
     disclaimer: "Pokemon is a trademark of Nintendo",
   },
 };

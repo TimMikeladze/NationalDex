@@ -2,7 +2,8 @@
 
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
-import type { FeatureConfig, FooterLink } from "./config";
+import type { DataSource, FeatureConfig, FooterLink } from "./config";
+import { BuiltBy } from "@/components/built-by";
 import { aboutConfig } from "./config";
 
 function HeroSection() {
@@ -80,6 +81,16 @@ function FeaturesSection() {
   );
 }
 
+function ContactSection() {
+  return (
+    <section className="px-6 py-8">
+      <div className="max-w-2xl mx-auto">
+        <BuiltBy />
+      </div>
+    </section>
+  );
+}
+
 function FooterSection() {
   const { footerLinks, attribution } = aboutConfig;
 
@@ -111,14 +122,19 @@ function FooterSection() {
         </div>
         <p className="text-[10px] text-muted-foreground/50">
           data via{" "}
-          <a
-            href={attribution.dataSource.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline underline-offset-2 hover:text-muted-foreground/70"
-          >
-            {attribution.dataSource.label}
-          </a>
+          {attribution.dataSources.map((source: DataSource, index: number) => (
+            <span key={source.label}>
+              <a
+                href={source.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-2 hover:text-muted-foreground/70"
+              >
+                {source.label}
+              </a>
+              {index < attribution.dataSources.length - 1 && " & "}
+            </span>
+          ))}
           {" · "}
           {attribution.disclaimer}
         </p>
@@ -132,6 +148,7 @@ export default function AboutPage() {
     <div className="min-h-screen">
       <HeroSection />
       <FeaturesSection />
+      <ContactSection />
       <FooterSection />
     </div>
   );

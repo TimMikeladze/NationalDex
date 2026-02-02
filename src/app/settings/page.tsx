@@ -11,6 +11,7 @@ import {
 import { useFavorites } from "@/hooks/use-favorites";
 import { useSpritePreferences } from "@/hooks/use-sprite-preferences";
 import { cn } from "@/lib/utils";
+import { BuiltBy } from "@/components/built-by";
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
@@ -97,16 +98,29 @@ export default function SettingsPage() {
           </div>
         </section>
 
+        <section className="pt-8">
+          <BuiltBy />
+        </section>
+
         <section className="pt-8 border-t text-xs text-muted-foreground space-y-1">
           <p>
             data:{" "}
             <a
-              href="https://pokeapi.co"
+              href="https://github.com/PokeAPI/pokeapi"
               target="_blank"
               rel="noopener noreferrer"
               className="underline hover:text-foreground"
             >
-              pokeapi.co
+              PokeAPI
+            </a>
+            {" & "}
+            <a
+              href="https://github.com/pkmn/ps"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-foreground"
+            >
+              pkmn/ps
             </a>
           </p>
           <p>pokemon is a trademark of nintendo</p>
