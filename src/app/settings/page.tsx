@@ -1,6 +1,7 @@
 "use client";
 
 import { useTheme } from "next-themes";
+import { BuiltBy } from "@/components/built-by";
 import {
   Select,
   SelectContent,
@@ -11,7 +12,6 @@ import {
 import { useFavorites } from "@/hooks/use-favorites";
 import { useSpritePreferences } from "@/hooks/use-sprite-preferences";
 import { cn } from "@/lib/utils";
-import { BuiltBy } from "@/components/built-by";
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();

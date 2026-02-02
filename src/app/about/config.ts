@@ -2,8 +2,8 @@ import type { LucideIcon } from "lucide-react";
 import {
   CloudSun,
   Database,
-  Github,
   GitCompareArrows,
+  Github,
   Heart,
   MapPin,
   Moon,
@@ -161,9 +161,21 @@ export const aboutConfig: AboutPageConfig = {
   contact: {
     title: "built by @linesofcode",
     links: [
-      { label: "GitHub", href: "https://github.com/TimMikeladze", icon: Github },
-      { label: "Twitter", href: "https://twitter.com/linesofcode", icon: Twitter },
-      { label: "Bluesky", href: "https://bsky.app/profile/linesofcode.bsky.social", icon: CloudSun },
+      {
+        label: "GitHub",
+        href: "https://github.com/TimMikeladze",
+        icon: Github,
+      },
+      {
+        label: "Twitter",
+        href: "https://twitter.com/linesofcode",
+        icon: Twitter,
+      },
+      {
+        label: "Bluesky",
+        href: "https://bsky.app/profile/linesofcode.bsky.social",
+        icon: CloudSun,
+      },
     ],
   },
 

@@ -2,8 +2,8 @@
 
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
-import type { DataSource, FeatureConfig, FooterLink } from "./config";
 import { BuiltBy } from "@/components/built-by";
+import type { DataSource, FeatureConfig, FooterLink } from "./config";
 import { aboutConfig } from "./config";
 
 function HeroSection() {

@@ -38,6 +38,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { useComparison } from "@/hooks/use-comparison";
 import { cn } from "@/lib/utils";
 import { useNav } from "./navigation/nav-provider";
 
@@ -93,6 +94,7 @@ interface AppShellProps {
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const { toggleSearch, moreOpen, setMoreOpen } = useNav();
+  const { comparison } = useComparison();
   const isPopStateNav = useRef(false);
   const mainRef = useRef<HTMLElement>(null);
   const prevPathname = useRef(pathname);
@@ -239,6 +241,9 @@ export function AppShell({ children }: AppShellProps) {
   const renderMoreMenuItem = (item: (typeof moreMenuItems)[0]) => {
     const isActive =
       item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+    const isComparison = item.href === "/comparison";
+    const showBadge = isComparison && comparison.length > 0;
+
     return (
       <Link
         key={item.href}
@@ -251,8 +256,20 @@ export function AppShell({ children }: AppShellProps) {
             : "text-muted-foreground hover:bg-muted hover:text-foreground",
         )}
       >
-        <item.icon className="size-5" strokeWidth={1.5} />
+        <div className="relative">
+          <item.icon className="size-5" strokeWidth={1.5} />
+          {showBadge && (
+            <span className="absolute -top-1 -right-1 size-3.5 rounded-full bg-primary text-primary-foreground text-[9px] font-medium flex items-center justify-center">
+              {comparison.length}
+            </span>
+          )}
+        </div>
         <span className="text-sm">{item.label}</span>
+        {showBadge && (
+          <span className="ml-auto text-xs text-muted-foreground">
+            {comparison.length} pokemon
+          </span>
+        )}
       </Link>
     );
   };
@@ -290,6 +307,9 @@ export function AppShell({ children }: AppShellProps) {
                       item.href === "/"
                         ? pathname === "/"
                         : pathname.startsWith(item.href);
+                    const isComparison = item.href === "/comparison";
+                    const showBadge = isComparison && comparison.length > 0;
+
                     return (
                       <DropdownMenuItem key={item.href} asChild>
                         <Link
@@ -299,8 +319,20 @@ export function AppShell({ children }: AppShellProps) {
                             isActive && "bg-muted",
                           )}
                         >
-                          <item.icon className="size-4" strokeWidth={1.5} />
+                          <div className="relative">
+                            <item.icon className="size-4" strokeWidth={1.5} />
+                            {showBadge && (
+                              <span className="absolute -top-1 -right-1 size-3 rounded-full bg-primary text-primary-foreground text-[8px] font-medium flex items-center justify-center">
+                                {comparison.length}
+                              </span>
+                            )}
+                          </div>
                           <span>{item.label}</span>
+                          {showBadge && (
+                            <span className="ml-auto text-xs text-muted-foreground">
+                              {comparison.length}
+                            </span>
+                          )}
                         </Link>
                       </DropdownMenuItem>
                     );
