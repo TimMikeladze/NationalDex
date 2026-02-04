@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 
 const STORAGE_KEY = "pokedex-comparison";
 const PANEL_STATE_KEY = "pokedex-comparison-panel";
-const MAX_COMPARISON_ITEMS = 6;
 
 export type ComparisonPanelState = "closed" | "minimized" | "expanded";
 
@@ -55,7 +54,6 @@ export function useComparison() {
   const addToComparison = useCallback((id: number) => {
     setComparison((prev) => {
       if (prev.includes(id)) return prev;
-      if (prev.length >= MAX_COMPARISON_ITEMS) return prev;
       return [...prev, id];
     });
   }, []);
@@ -69,7 +67,6 @@ export function useComparison() {
       if (prev.includes(id)) {
         return prev.filter((item) => item !== id);
       }
-      if (prev.length >= MAX_COMPARISON_ITEMS) return prev;
       return [...prev, id];
     });
   }, []);
@@ -103,8 +100,6 @@ export function useComparison() {
     });
   }, []);
 
-  const canAddMore = comparison.length < MAX_COMPARISON_ITEMS;
-
   return {
     comparison,
     isLoaded,
@@ -113,8 +108,6 @@ export function useComparison() {
     toggleComparison,
     isInComparison,
     clearComparison,
-    canAddMore,
-    maxItems: MAX_COMPARISON_ITEMS,
     // Panel state
     panelState,
     expandPanel,

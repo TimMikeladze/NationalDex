@@ -13,6 +13,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { AddToListDialog } from "@/components/add-to-list-dialog";
 import { useSecondaryToolbar } from "@/components/app-shell";
 import { PokemonImage } from "@/components/pokemon/pokemon-image";
@@ -448,7 +449,7 @@ export function PokemonPageClient({
   const router = useRouter();
   const { pokemon, species, isLoading } = usePokemonWithSpecies(id);
   const { isFavorite, toggleFavorite } = useFavorites();
-  const { isInComparison, toggleComparison, canAddMore } = useComparison();
+  const { isInComparison, toggleComparison, expandPanel } = useComparison();
   const setSecondaryToolbar = useSecondaryToolbar();
   const { defaultPokemonSpriteGen } = useSpritePreferences();
   const { data: moves, isLoading: movesLoading } = usePokemonMoves(id);
@@ -580,8 +581,18 @@ export function PokemonPageClient({
 
           <Button
             type="button"
-            onClick={() => toggleComparison(pokemon.id)}
-            disabled={!canAddMore && !isInComparison(pokemon.id)}
+            onClick={() => {
+              const wasInComparison = isInComparison(pokemon.id);
+              toggleComparison(pokemon.id);
+              if (!wasInComparison) {
+                toast.success(`${pokemon.name} added to comparison`, {
+                  action: {
+                    label: "View",
+                    onClick: () => expandPanel(),
+                  },
+                });
+              }
+            }}
             variant="ghost"
             size="sm"
             className={cn(
@@ -589,7 +600,6 @@ export function PokemonPageClient({
               isInComparison(pokemon.id)
                 ? "text-blue-500 hover:text-blue-500"
                 : "text-muted-foreground hover:text-foreground",
-              !canAddMore && !isInComparison(pokemon.id) && "opacity-50",
             )}
             title={
               isInComparison(pokemon.id)
@@ -668,7 +678,7 @@ export function PokemonPageClient({
     );
   }, [
     pokemon,
-    canAddMore,
+    expandPanel,
     handleRandomPokemon,
     isFavorite,
     isInComparison,

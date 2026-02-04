@@ -299,7 +299,7 @@ function PokemonCardContent({
   className?: string;
 }) {
   const { isFavorite, toggleFavorite } = useFavorites();
-  const { isInComparison, toggleComparison, canAddMore } = useComparison();
+  const { isInComparison, toggleComparison } = useComparison();
 
   const types = pokemon.types ?? [];
   const typeEffectiveness = useMemo(
@@ -337,7 +337,6 @@ function PokemonCardContent({
         onFavoriteClick={handleFavoriteClick}
         isInComparison={isInComparison(pokemon.id)}
         onCompareClick={handleCompareClick}
-        canAddMore={canAddMore}
         className={className}
       />
     );
@@ -352,7 +351,6 @@ function PokemonCardContent({
       onFavoriteClick={handleFavoriteClick}
       isInComparison={isInComparison(pokemon.id)}
       onCompareClick={handleCompareClick}
-      canAddMore={canAddMore}
       meta={meta}
       className={className}
     />
@@ -420,7 +418,6 @@ function DefaultCard({
   onFavoriteClick,
   isInComparison,
   onCompareClick,
-  canAddMore,
   meta,
   className,
 }: {
@@ -430,7 +427,6 @@ function DefaultCard({
   onFavoriteClick: (e: React.MouseEvent) => void;
   isInComparison: boolean;
   onCompareClick: (e: React.MouseEvent) => void;
-  canAddMore: boolean;
   meta?: React.ReactNode;
   className?: string;
 }) {
@@ -458,15 +454,11 @@ function DefaultCard({
             <button
               type="button"
               onClick={onCompareClick}
-              disabled={!canAddMore && !isInComparison}
               className={cn(
                 "transition-colors",
                 isInComparison
                   ? "text-blue-500"
                   : "text-muted-foreground hover:text-foreground",
-                !canAddMore &&
-                  !isInComparison &&
-                  "opacity-50 cursor-not-allowed",
               )}
               title={
                 isInComparison ? "Remove from comparison" : "Add to comparison"
@@ -532,7 +524,6 @@ function DetailCard({
   onFavoriteClick,
   isInComparison,
   onCompareClick,
-  canAddMore,
   className,
 }: {
   pokemon: Pokemon;
@@ -542,7 +533,6 @@ function DetailCard({
   onFavoriteClick: (e: React.MouseEvent) => void;
   isInComparison: boolean;
   onCompareClick: (e: React.MouseEvent) => void;
-  canAddMore: boolean;
   className?: string;
 }) {
   const href = `/pokemon/${toID(pokemon.name) || pokemon.id}`;
@@ -557,13 +547,11 @@ function DetailCard({
           <button
             type="button"
             onClick={onCompareClick}
-            disabled={!canAddMore && !isInComparison}
             className={cn(
               "transition-colors",
               isInComparison
                 ? "text-blue-500"
                 : "text-muted-foreground hover:text-foreground",
-              !canAddMore && !isInComparison && "opacity-50 cursor-not-allowed",
             )}
             title={
               isInComparison ? "Remove from comparison" : "Add to comparison"

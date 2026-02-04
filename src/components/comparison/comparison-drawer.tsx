@@ -126,9 +126,8 @@ export function ComparisonDrawer() {
           <div className="flex items-center gap-3">
             <GitCompareArrows className="size-4 text-muted-foreground" />
             <span className="text-sm font-medium">
-              comparing {comparison.length}
+              comparing {comparison.length} pokemon
             </span>
-            <span className="text-xs text-muted-foreground">(max 6)</span>
 
             {/* Preview sprites when minimized */}
             {!isExpanded && (

@@ -105,7 +105,6 @@ export default function ComparisonPage() {
           <h1 className="text-lg font-medium">
             comparing {comparison.length} pokemon
           </h1>
-          <span className="text-xs text-muted-foreground">(max 6)</span>
         </div>
         <div className="flex items-center gap-2">
           <Select
@@ -155,7 +154,7 @@ export default function ComparisonPage() {
                 sortBy={sortBy}
                 onRemove={removeFromComparison}
               />
-              {comparison.length < 6 && <AddMoreCard />}
+              <AddMoreCard />
             </div>
           </div>
         </TabsContent>
