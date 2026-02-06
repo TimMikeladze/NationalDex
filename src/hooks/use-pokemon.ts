@@ -699,6 +699,10 @@ import {
   type FormattedPokemonEncounter,
   getAllRegions,
   getFormattedPokemonEncounters,
+  getLocation,
+  getLocationArea,
+  type PokeAPILocation,
+  type PokeAPILocationArea,
   type RegionWithLocations,
 } from "@/lib/pokeapi";
 
@@ -719,5 +723,27 @@ export function usePokemonEncounters(pokemonId: number | string | null) {
     },
     enabled: pokemonId !== null,
     staleTime: 1000 * 60 * 60, // 1 hour
+  });
+}
+
+export function useLocation(name: string) {
+  return useQuery<PokeAPILocation | null>({
+    queryKey: ["location", name],
+    queryFn: () => getLocation(name),
+    staleTime: 1000 * 60 * 60 * 24, // 24 hours
+  });
+}
+
+export function useLocationAreas(areaNames: string[]) {
+  return useQuery<PokeAPILocationArea[]>({
+    queryKey: ["location-areas", areaNames],
+    queryFn: async () => {
+      const results = await Promise.all(
+        areaNames.map((name) => getLocationArea(name)),
+      );
+      return results.filter((a): a is PokeAPILocationArea => a !== null);
+    },
+    enabled: areaNames.length > 0,
+    staleTime: 1000 * 60 * 60 * 24, // 24 hours
   });
 }

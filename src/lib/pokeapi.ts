@@ -170,7 +170,7 @@ interface PokeAPINamedResource {
   url: string;
 }
 
-interface PokeAPILocation {
+export interface PokeAPILocation {
   id: number;
   name: string;
   region: PokeAPINamedResource | null;
@@ -182,7 +182,7 @@ interface PokeAPILocation {
   areas: PokeAPINamedResource[];
 }
 
-interface PokeAPILocationArea {
+export interface PokeAPILocationArea {
   id: number;
   name: string;
   game_index: number;
@@ -446,19 +446,19 @@ export async function getFormattedPokemonEncounters(
 
 // Helper functions
 
-function extractIdFromUrl(url: string): number {
+export function extractIdFromUrl(url: string): number {
   const match = url.match(/\/(\d+)\/?$/);
   return match ? Number.parseInt(match[1], 10) : 0;
 }
 
-function formatLocationName(name: string): string {
+export function formatLocationName(name: string): string {
   return name
     .split("-")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
 }
 
-function formatMethodName(method: string): string {
+export function formatMethodName(method: string): string {
   const methodMap: Record<string, string> = {
     walk: "Walking",
     "old-rod": "Old Rod",
@@ -488,7 +488,7 @@ function formatMethodName(method: string): string {
   return methodMap[method] ?? formatLocationName(method);
 }
 
-function formatConditionName(condition: string): string {
+export function formatConditionName(condition: string): string {
   const conditionMap: Record<string, string> = {
     "time-morning": "Morning",
     "time-day": "Day",
