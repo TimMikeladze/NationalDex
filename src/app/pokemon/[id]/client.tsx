@@ -447,7 +447,7 @@ export function PokemonPageClient({
   pokedexEntry,
 }: PokemonPageClientProps) {
   const router = useRouter();
-  const { pokemon, species, isLoading } = usePokemonWithSpecies(id);
+  const { pokemon, species, isLoading, error } = usePokemonWithSpecies(id);
   const { isFavorite, toggleFavorite } = useFavorites();
   const { isInComparison, toggleComparison, expandPanel } = useComparison();
   const setSecondaryToolbar = useSecondaryToolbar();
@@ -699,6 +699,29 @@ export function PokemonPageClient({
 
     return () => setSecondaryToolbar(null);
   }, [secondaryToolbarContent, setSecondaryToolbar]);
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] p-6 text-center">
+        <h2 className="text-lg font-medium mb-2">pokemon not found</h2>
+        <p className="text-sm text-muted-foreground mb-6">
+          Could not load data for &ldquo;{id}&rdquo;.
+        </p>
+        <div className="flex gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRandomPokemon}
+          >
+            try a random pokemon
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/">back to pokedex</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading || !pokemon) {
     return <PokemonPageSkeleton />;

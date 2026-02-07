@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface PokemonImageProps {
@@ -51,6 +51,17 @@ export function PokemonImage({
 }: PokemonImageProps) {
   const [imgSrc, setImgSrc] = useState(src);
   const [fallbackIndex, setFallbackIndex] = useState(0);
+  const prevSrc = useRef(src);
+
+  // Reset image state when the src prop changes (e.g., navigating between Pokemon)
+  useEffect(() => {
+    if (src !== prevSrc.current) {
+      prevSrc.current = src;
+      setImgSrc(src);
+      setFallbackIndex(0);
+    }
+  }, [src]);
+
   const fallbacks = getFallbackUrls(alt, pokemonId);
 
   const handleError = () => {
