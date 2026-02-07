@@ -322,6 +322,74 @@
   }
 }
 
+/* PWA loading screen - shown instantly before JS loads, only in standalone mode */
+.pwa-loading-screen {
+  display: none;
+}
+
+@media (display-mode: standalone) {
+  .pwa-loading-screen {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    background: #09090b;
+  }
+}
+
+.pwa-loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.pwa-loading-title {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 1.5rem;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  color: #e0e0e0;
+}
+
+.pwa-loading-bar {
+  width: 8rem;
+  height: 2px;
+  background: #333333;
+  overflow: hidden;
+}
+
+.pwa-loading-bar-fill {
+  height: 100%;
+  width: 40%;
+  background: #e0e0e0;
+  animation: pwa-loading-slide 1s ease-in-out infinite;
+}
+
+@keyframes pwa-loading-slide {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(350%);
+  }
+}
+
+.pwa-loading-fade-out {
+  animation: pwa-loading-fade 0.3s ease-out forwards;
+}
+
+@keyframes pwa-loading-fade {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
 /* Fix mobile fixed positioning issues during scroll */
 .fixed-bottom-stable {
   transform: translate3d(0, 0, 0);

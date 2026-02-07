@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono } from "next/font/google";
 import { Providers } from "@/components/providers";
+import { PwaLoadingScreen } from "@/components/pwa-loading-screen";
 import "./globals.css";
 
 const mono = JetBrains_Mono({
@@ -40,6 +41,19 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${mono.variable} font-mono antialiased`}>
+        <div
+          id="pwa-loading-screen"
+          className="pwa-loading-screen"
+          aria-hidden="true"
+        >
+          <div className="pwa-loading-content">
+            <div className="pwa-loading-title">nationaldex</div>
+            <div className="pwa-loading-bar">
+              <div className="pwa-loading-bar-fill" />
+            </div>
+          </div>
+        </div>
+        <PwaLoadingScreen />
         <Providers>{children}</Providers>
       </body>
     </html>
