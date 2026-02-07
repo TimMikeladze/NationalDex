@@ -2,6 +2,7 @@
 
 import { ThemeProvider } from "next-themes";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
+import { ComparisonProvider } from "@/hooks/use-comparison";
 import { QueryProvider } from "@/lib/query-provider";
 import { AppShell } from "./app-shell";
 import { NavProvider } from "./navigation/nav-provider";
@@ -17,10 +18,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
         disableTransitionOnChange
       >
         <QueryProvider>
-          <NavProvider>
-            <AppShell>{children}</AppShell>
-            <SearchOverlay />
-          </NavProvider>
+          <ComparisonProvider>
+            <NavProvider>
+              <AppShell>{children}</AppShell>
+              <SearchOverlay />
+            </NavProvider>
+          </ComparisonProvider>
         </QueryProvider>
       </ThemeProvider>
     </NuqsAdapter>

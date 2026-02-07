@@ -1,13 +1,41 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 const STORAGE_KEY = "pokedex-comparison";
 const PANEL_STATE_KEY = "pokedex-comparison-panel";
 
 export type ComparisonPanelState = "closed" | "minimized" | "expanded";
 
-export function useComparison() {
+type ComparisonContextValue = {
+  comparison: number[];
+  isLoaded: boolean;
+  addToComparison: (id: number) => void;
+  removeFromComparison: (id: number) => void;
+  toggleComparison: (id: number) => void;
+  isInComparison: (id: number) => boolean;
+  clearComparison: () => void;
+  panelState: ComparisonPanelState;
+  expandPanel: () => void;
+  minimizePanel: () => void;
+  closePanel: () => void;
+  togglePanel: () => void;
+};
+
+const ComparisonContext = createContext<ComparisonContextValue | null>(null);
+
+export function ComparisonProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [comparison, setComparison] = useState<number[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [panelState, setPanelState] = useState<ComparisonPanelState>("closed");
@@ -100,19 +128,48 @@ export function useComparison() {
     });
   }, []);
 
-  return {
-    comparison,
-    isLoaded,
-    addToComparison,
-    removeFromComparison,
-    toggleComparison,
-    isInComparison,
-    clearComparison,
-    // Panel state
-    panelState,
-    expandPanel,
-    minimizePanel,
-    closePanel,
-    togglePanel,
-  };
+  const value = useMemo<ComparisonContextValue>(
+    () => ({
+      comparison,
+      isLoaded,
+      addToComparison,
+      removeFromComparison,
+      toggleComparison,
+      isInComparison,
+      clearComparison,
+      panelState,
+      expandPanel,
+      minimizePanel,
+      closePanel,
+      togglePanel,
+    }),
+    [
+      comparison,
+      isLoaded,
+      addToComparison,
+      removeFromComparison,
+      toggleComparison,
+      isInComparison,
+      clearComparison,
+      panelState,
+      expandPanel,
+      minimizePanel,
+      closePanel,
+      togglePanel,
+    ],
+  );
+
+  return (
+    <ComparisonContext.Provider value={value}>
+      {children}
+    </ComparisonContext.Provider>
+  );
+}
+
+export function useComparison() {
+  const ctx = useContext(ComparisonContext);
+  if (!ctx) {
+    throw new Error("useComparison must be used within a ComparisonProvider");
+  }
+  return ctx;
 }
