@@ -93,20 +93,37 @@ const navItems = [
   { href: "#more", icon: MoreHorizontal, label: "more", action: true },
 ];
 
-const moreMenuItems = [
-  { href: "/lists", icon: ListPlus, label: "Lists" },
-  {
-    href: "/whos-that-pokemon",
-    icon: CircleHelp,
-    label: "Who's That Pokemon?",
-  },
-  { href: "/comparison", icon: GitCompareArrows, label: "Comparison" },
+// Items promoted to desktop navbar (still shown in mobile "more" sheet)
+const desktopExtraNavItems = [
+  { href: "/lists", icon: ListPlus, label: "lists" },
+  { href: "/whos-that-pokemon", icon: CircleHelp, label: "quiz" },
+  { href: "/comparison", icon: GitCompareArrows, label: "compare" },
+  { href: "/locations", icon: MapPin, label: "locations" },
+  { href: "/items", icon: Package, label: "items" },
+];
+
+// Items that stay in the "more" dropdown/sheet
+const desktopMoreMenuItems = [
   { href: "/settings", icon: Settings, label: "Settings" },
-  { href: "/locations", icon: MapPin, label: "Locations" },
-  { href: "/items", icon: Package, label: "Items" },
   { href: "/feedback", icon: MessageSquare, label: "Feedback" },
   { href: "/about", icon: Info, label: "About" },
   { href: "#shortcuts", icon: Keyboard, label: "Shortcuts", action: true },
+];
+
+// All items for the mobile "more" sheet
+const moreMenuItems = [
+  ...desktopExtraNavItems.map((item) => {
+    // Restore original labels for mobile sheet
+    const labelMap: Record<string, string> = {
+      lists: "Lists",
+      quiz: "Who's That Pokemon?",
+      compare: "Comparison",
+      locations: "Locations",
+      items: "Items",
+    };
+    return { ...item, label: labelMap[item.label] ?? item.label };
+  }),
+  ...desktopMoreMenuItems,
 ];
 
 interface AppShellProps {
@@ -205,8 +222,10 @@ export function AppShell({ children }: AppShellProps) {
     }
   };
 
-  const isMoreActive = moreMenuItems.some((item) =>
-    item.href === "/" ? pathname === "/" : pathname.startsWith(item.href),
+  const isMoreActive = desktopMoreMenuItems.some(
+    (item) =>
+      !item.action &&
+      (item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)),
   );
 
   const renderNavItem = (
@@ -352,7 +371,38 @@ export function AppShell({ children }: AppShellProps) {
             </Link>
             <nav className="flex items-center gap-1">
               {navItems.map((item) => renderNavItem(item, "desktop"))}
-              {/* Desktop More Dropdown */}
+              {desktopExtraNavItems.map((item) => {
+                const isActive =
+                  item.href === "/"
+                    ? pathname === "/"
+                    : pathname.startsWith(item.href);
+                const isComparison = item.href === "/comparison";
+                const showBadge = isComparison && comparison.length > 0;
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-muted transition-colors",
+                      isActive
+                        ? "text-foreground"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <div className="relative">
+                      <item.icon className="size-4" strokeWidth={1.5} />
+                      {showBadge && (
+                        <span className="absolute -top-1 -right-1 size-3 rounded-full bg-primary text-primary-foreground text-[8px] font-medium flex items-center justify-center">
+                          {comparison.length}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-xs">{item.label}</span>
+                  </Link>
+                );
+              })}
+              {/* Desktop More Dropdown (Settings, Feedback, About, Shortcuts) */}
               <DropdownMenu>
                 <DropdownMenuTrigger
                   className={cn(
@@ -366,8 +416,7 @@ export function AppShell({ children }: AppShellProps) {
                   <span className="text-xs">more</span>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  {moreMenuItems.map((item) => {
-                    // Handle action items (like shortcuts)
+                  {desktopMoreMenuItems.map((item) => {
                     if ("action" in item && item.action) {
                       return (
                         <DropdownMenuItem
@@ -389,8 +438,6 @@ export function AppShell({ children }: AppShellProps) {
                       item.href === "/"
                         ? pathname === "/"
                         : pathname.startsWith(item.href);
-                    const isComparison = item.href === "/comparison";
-                    const showBadge = isComparison && comparison.length > 0;
 
                     return (
                       <DropdownMenuItem key={item.href} asChild>
@@ -401,20 +448,8 @@ export function AppShell({ children }: AppShellProps) {
                             isActive && "bg-muted",
                           )}
                         >
-                          <div className="relative">
-                            <item.icon className="size-4" strokeWidth={1.5} />
-                            {showBadge && (
-                              <span className="absolute -top-1 -right-1 size-3 rounded-full bg-primary text-primary-foreground text-[8px] font-medium flex items-center justify-center">
-                                {comparison.length}
-                              </span>
-                            )}
-                          </div>
+                          <item.icon className="size-4" strokeWidth={1.5} />
                           <span>{item.label}</span>
-                          {showBadge && (
-                            <span className="ml-auto text-xs text-muted-foreground">
-                              {comparison.length}
-                            </span>
-                          )}
                         </Link>
                       </DropdownMenuItem>
                     );
