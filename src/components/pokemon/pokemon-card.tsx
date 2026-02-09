@@ -385,7 +385,7 @@ function CompactCard({
             <h3 className="text-xs font-medium truncate">
               {getBaseName(pokemon.name)}
             </h3>
-            <div className="flex gap-1 flex-wrap">
+            <div className="flex gap-1">
               {pokemon.types?.map((type) => (
                 <TypeBadge key={type} type={type} size="sm" />
               ))}
@@ -493,7 +493,7 @@ function DefaultCard({
           <h3 className="text-sm font-medium truncate">
             {getBaseName(pokemon.name)}
           </h3>
-          <div className="flex gap-1 flex-wrap">
+          <div className="flex gap-1">
             {pokemon.types?.map((type) => (
               <TypeBadge key={type} type={type} size="sm" />
             ))}
@@ -587,7 +587,7 @@ function DetailCard({
           <h3 className="text-lg font-medium mt-2">
             {getBaseName(pokemon.name)}
           </h3>
-          <div className="flex gap-2 mt-2 flex-wrap justify-center">
+          <div className="flex gap-2 mt-2 justify-center">
             {pokemon.types.map((type) => (
               <TypeBadge key={type} type={type} />
             ))}
