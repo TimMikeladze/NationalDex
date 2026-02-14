@@ -136,7 +136,7 @@ export const aboutConfig: AboutPageConfig = {
       icon: Zap,
       title: "Lightning Fast",
       description:
-        "Optimized for speed with instant navigation and offline support.",
+        "Optimized for speed with instant navigation.",
       accent: "#eab308",
     },
     {
