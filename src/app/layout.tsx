@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono } from "next/font/google";
 import { Providers } from "@/components/providers";
 import { PwaLoadingScreen } from "@/components/pwa-loading-screen";
+import { SITE_URL } from "@/lib/utils";
 import "./globals.css";
 
 const mono = JetBrains_Mono({
@@ -20,9 +21,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.nationaldex.app",
-  ),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "nationaldex",
     template: "%s | nationaldex",

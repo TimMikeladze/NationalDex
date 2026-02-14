@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getAllSpecies, getSpecies, toID } from "@/lib/pkmn";
 import { getPokedexEntry } from "@/lib/pokeapi";
+import { SITE_URL } from "@/lib/utils";
 import { PokemonPageClient } from "./client";
 
 export async function generateStaticParams() {
@@ -35,15 +36,39 @@ export async function generateMetadata({
     ? `${pokedexEntry.genus}. ${types} type. BST ${bst}. ${pokedexEntry.entries[0].flavorText}`
     : `${types} type Pokémon. Base stat total: ${bst}.`;
 
+  const ogImageUrl = `${SITE_URL}/pokemon/${id}/opengraph-image`;
+
   return {
     title: `${species.name} (#${dexNum})`,
     description,
     openGraph: {
       title: `${species.name} (#${dexNum})`,
       description,
+      url: `${SITE_URL}/pokemon/${id}`,
+      siteName: "nationaldex",
+      type: "article",
+      locale: "en_US",
+      images: [
+        {
+          url: ogImageUrl,
+          secureUrl: ogImageUrl,
+          width: 1200,
+          height: 630,
+          alt: `${species.name} stats`,
+          type: "image/png",
+        },
+      ],
     },
     twitter: {
       card: "summary_large_image",
+      images: [
+        {
+          url: ogImageUrl,
+          alt: `${species.name} stats`,
+          width: 1200,
+          height: 630,
+        },
+      ],
     },
   };
 }

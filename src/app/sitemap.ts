@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { SITE_URL } from "@/lib/utils";
 import {
   getAllAbilities,
   getAllItems,
@@ -9,8 +10,7 @@ import {
 } from "@/lib/pkmn";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl =
-    process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.nationaldex.app";
+  const baseUrl = SITE_URL;
 
   const staticPages: MetadataRoute.Sitemap = [
     {
