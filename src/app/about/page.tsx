@@ -49,34 +49,6 @@ function Hero() {
   );
 }
 
-function Stats() {
-  const stats = [
-    { value: "1025", label: "pokémon" },
-    { value: "937", label: "moves" },
-    { value: "307", label: "abilities" },
-    { value: "2161", label: "items" },
-  ];
-
-  return (
-    <section className="px-6 py-10 border-y border-foreground/[0.06]">
-      <div className="max-w-3xl mx-auto">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-          {stats.map((stat) => (
-            <div key={stat.label}>
-              <div className="text-3xl md:text-4xl font-semibold tracking-tighter">
-                {stat.value}
-              </div>
-              <div className="text-[10px] text-muted-foreground/50 uppercase tracking-[0.2em] mt-1">
-                {stat.label}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
 function FeatureCard({
   feature,
   isWide,
@@ -201,7 +173,6 @@ export default function AboutPage() {
   return (
     <div className="min-h-screen">
       <Hero />
-      <Stats />
       <Features />
       <Contact />
       <Footer />
