@@ -20,7 +20,7 @@ function Hero() {
     <section className="px-6 pt-20 pb-12 md:pt-28 md:pb-16">
       <div className="max-w-3xl mx-auto">
         <div className="text-[10px] text-muted-foreground/70 uppercase tracking-[0.3em] mb-8 font-medium">
-          v0.1.0
+          v{process.env.NEXT_PUBLIC_APP_VERSION}
         </div>
 
         <h1 className="text-5xl md:text-7xl font-semibold tracking-tighter mb-6">

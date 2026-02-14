@@ -288,6 +288,9 @@ export default function SettingsPage() {
         </section>
 
         <section className="pt-8 border-t text-xs text-muted-foreground space-y-1">
+          <p className="text-[10px] text-muted-foreground/70 uppercase tracking-wider mb-2">
+            v{process.env.NEXT_PUBLIC_APP_VERSION}
+          </p>
           <p>
             data:{" "}
             <a
