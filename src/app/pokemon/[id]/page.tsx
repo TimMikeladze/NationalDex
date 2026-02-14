@@ -14,6 +14,61 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
+const VARIANT_SUFFIXES = [
+  "Gmax",
+  "Mega",
+  "Mega-X",
+  "Mega-Y",
+  "Alola",
+  "Galar",
+  "Hisui",
+  "Paldea",
+];
+
+const VARIANT_DISPLAY_NAMES: Record<string, string> = {
+  Gmax: "Gigantamax",
+  Mega: "Mega",
+  "Mega-X": "Mega X",
+  "Mega-Y": "Mega Y",
+  Alola: "Alolan",
+  Galar: "Galarian",
+  Hisui: "Hisuian",
+  Paldea: "Paldean",
+};
+
+function getVariantFromName(name: string): string | null {
+  for (const suffix of VARIANT_SUFFIXES) {
+    if (name.endsWith(`-${suffix}`)) return suffix;
+  }
+  return null;
+}
+
+function getRegionFromDexNumber(
+  dexNumber: number,
+): string | null {
+  if (dexNumber >= 1 && dexNumber <= 151) return "Kanto";
+  if (dexNumber >= 152 && dexNumber <= 251) return "Johto";
+  if (dexNumber >= 252 && dexNumber <= 386) return "Hoenn";
+  if (dexNumber >= 387 && dexNumber <= 493) return "Sinnoh";
+  if (dexNumber >= 494 && dexNumber <= 649) return "Unova";
+  if (dexNumber >= 650 && dexNumber <= 721) return "Kalos";
+  if (dexNumber >= 722 && dexNumber <= 809) return "Alola";
+  if (dexNumber >= 810 && dexNumber <= 905) return "Galar";
+  if (dexNumber >= 906 && dexNumber <= 1025) return "Paldea";
+  return null;
+}
+
+const STAT_LABELS: Record<string, string> = {
+  hp: "HP",
+  atk: "ATK",
+  def: "DEF",
+  spa: "SPA",
+  spd: "SPD",
+  spe: "SPE",
+};
+
+const STAT_ORDER = ["hp", "atk", "def", "spa", "spd", "spe"] as const;
+
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
@@ -38,6 +93,18 @@ export async function generateMetadata({
 
   const ogImageUrl = `${SITE_URL}/pokemon/${id}/opengraph-image`;
 
+  // Build detailed alt text with all info rendered in the OG image
+  const variant = getVariantFromName(species.name);
+  const region = getRegionFromDexNumber(species.num);
+  const statsSummary = STAT_ORDER.map(
+    (key) => `${STAT_LABELS[key]} ${species.baseStats[key] ?? 0}`,
+  ).join(", ");
+  const badges: string[] = [];
+  if (variant) badges.push(VARIANT_DISPLAY_NAMES[variant] ?? variant);
+  if (region) badges.push(region);
+  const badgeText = badges.length > 0 ? ` ${badges.join(", ")}.` : "";
+  const imageAlt = `${species.name} #${dexNum}. ${types} type.${badgeText} Stats: ${statsSummary}. BST ${bst}.`;
+
   return {
     title: `${species.name} (#${dexNum})`,
     description,
@@ -54,7 +121,7 @@ export async function generateMetadata({
           secureUrl: ogImageUrl,
           width: 1200,
           height: 630,
-          alt: `${species.name} stats`,
+          alt: imageAlt,
           type: "image/png",
         },
       ],
@@ -64,7 +131,7 @@ export async function generateMetadata({
       images: [
         {
           url: ogImageUrl,
-          alt: `${species.name} stats`,
+          alt: imageAlt,
           width: 1200,
           height: 630,
         },

@@ -3,7 +3,7 @@ import { getAllSpecies, getSpecies, toID } from "@/lib/pkmn";
 import { pokemonDbSlug } from "@/lib/sprites";
 import { type PokemonType, TYPE_COLORS } from "@/types/pokemon";
 
-export const alt = "Pokémon stats";
+export const alt = "Pokémon stats and type information";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -168,7 +168,7 @@ export default async function OGImage({
         display: "flex",
         flexDirection: "column",
         padding: "48px 56px",
-        background: `linear-gradient(145deg, #0c0c0e 0%, #18181b 50%, ${darken(typeColor, 120)} 100%)`,
+        backgroundColor: "#000000",
         color: "#fff",
         fontFamily: "monospace",
         position: "relative",
@@ -404,11 +404,4 @@ export default async function OGImage({
     </div>,
     { ...size },
   );
-}
-
-function darken(hex: string, amount: number): string {
-  const r = Math.max(0, Number.parseInt(hex.slice(1, 3), 16) - amount);
-  const g = Math.max(0, Number.parseInt(hex.slice(3, 5), 16) - amount);
-  const b = Math.max(0, Number.parseInt(hex.slice(5, 7), 16) - amount);
-  return `rgb(${r}, ${g}, ${b})`;
 }
