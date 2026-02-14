@@ -103,10 +103,10 @@ const CATEGORY_LABELS: Record<DexCategory, string> = {
 };
 
 const CATEGORY_PLACEHOLDERS: Record<DexCategory, string> = {
-  pokemon: "Search Pokemon...",
-  moves: "Search Moves...",
-  abilities: "Search Abilities...",
-  items: "Search Items...",
+  pokemon: "Filter Pokemon...",
+  moves: "Filter Moves...",
+  abilities: "Filter Abilities...",
+  items: "Filter Items...",
 };
 
 export function DexFilter({
@@ -182,125 +182,128 @@ export function DexFilter({
 
   return (
     <div className="space-y-3">
-      {/* Category Chips - collapsible */}
-      <div
-        className={`grid transition-all duration-200 ease-in-out ${
-          collapsed
-            ? "grid-rows-[0fr] opacity-0"
-            : "grid-rows-[1fr] opacity-100"
-        }`}
-      >
-        <div className="overflow-hidden">
-          <div className="flex flex-wrap gap-2 pb-3">
-            {(["pokemon", "moves", "abilities", "items"] as const).map(
-              (cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => handleCategoryChange(cat)}
-                  className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-                    filter.category === cat
-                      ? "bg-foreground text-background"
-                      : "bg-muted text-muted-foreground hover:bg-muted/80"
-                  }`}
-                >
-                  {CATEGORY_LABELS[cat]}
-                </button>
-              ),
-            )}
+      {/* Category Tabs + Search Row */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
+        {/* Category Tabs - collapsible */}
+        <div
+          className={`grid transition-all duration-200 ease-in-out sm:flex sm:items-center sm:gap-1 sm:shrink-0 ${
+            collapsed
+              ? "grid-rows-[0fr] opacity-0 sm:grid-rows-[1fr] sm:opacity-100"
+              : "grid-rows-[1fr] opacity-100"
+          }`}
+        >
+          <div className="overflow-hidden">
+            <div className="flex gap-1">
+              {(["pokemon", "moves", "abilities", "items"] as const).map(
+                (cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => handleCategoryChange(cat)}
+                    className={`px-3 py-1.5 text-xs font-medium transition-colors border ${
+                      filter.category === cat
+                        ? "bg-foreground text-background border-foreground"
+                        : "bg-transparent text-muted-foreground border-transparent hover:text-foreground hover:border-border"
+                    }`}
+                  >
+                    {CATEGORY_LABELS[cat]}
+                  </button>
+                ),
+              )}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Search Input with embedded filter buttons */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          type="text"
-          placeholder={CATEGORY_PLACEHOLDERS[filter.category]}
-          value={filter.search}
-          onChange={(e) => handleSearchChange(e.target.value)}
-          className={`pl-9 ${filter.category === "pokemon" || filter.category === "moves" ? "pr-20" : "pr-14"}`}
-        />
-        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-          {filter.search && (
+        {/* Search Input */}
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder={CATEGORY_PLACEHOLDERS[filter.category]}
+            value={filter.search}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            className={`pl-8 h-8 text-xs ${filter.category === "pokemon" || filter.category === "moves" ? "pr-20" : "pr-14"}`}
+          />
+          <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+            {filter.search && (
+              <button
+                type="button"
+                onClick={() => handleSearchChange("")}
+                className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+            {filter.category === "pokemon" && (
+              <Popover open={genPopoverOpen} onOpenChange={setGenPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className={`relative p-1 transition-colors ${
+                      filter.generations.length > 0
+                        ? "text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <ListFilter className="h-3.5 w-3.5" />
+                    {filter.generations.length > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3 items-center justify-center bg-foreground text-[7px] font-medium text-background">
+                        {filter.generations.length}
+                      </span>
+                    )}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-2" align="end">
+                  <div className="space-y-1">
+                    {GEN_RANGES.map((gen) => (
+                      <label
+                        key={gen.id}
+                        htmlFor={`gen-filter-${gen.id}`}
+                        className="flex cursor-pointer items-center gap-2 px-2 py-1.5 text-sm hover:bg-accent"
+                      >
+                        <Checkbox
+                          id={`gen-filter-${gen.id}`}
+                          checked={filter.generations.includes(gen.id)}
+                          onCheckedChange={() => handleGenerationToggle(gen.id)}
+                        />
+                        <span>
+                          {gen.name}{" "}
+                          <span className="text-muted-foreground">
+                            ({gen.label})
+                          </span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                  {filter.generations.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="mt-2 h-7 w-full text-xs"
+                      onClick={() =>
+                        onFilterChange({ ...filter, generations: [] })
+                      }
+                    >
+                      Clear generations
+                    </Button>
+                  )}
+                </PopoverContent>
+              </Popover>
+            )}
             <button
               type="button"
-              onClick={() => handleSearchChange("")}
-              className="p-1 text-muted-foreground hover:text-foreground"
+              onClick={
+                filter.randomSeed ? handleClearRandomSort : handleRandomSort
+              }
+              className={`p-1 transition-colors ${
+                filter.randomSeed
+                  ? "text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
             >
-              <X className="h-4 w-4" />
+              <Shuffle className="h-3.5 w-3.5" />
             </button>
-          )}
-          {filter.category === "pokemon" && (
-            <Popover open={genPopoverOpen} onOpenChange={setGenPopoverOpen}>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  className={`relative p-1 transition-colors ${
-                    filter.generations.length > 0
-                      ? "text-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  <ListFilter className="h-4 w-4" />
-                  {filter.generations.length > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-foreground text-[8px] font-medium text-background">
-                      {filter.generations.length}
-                    </span>
-                  )}
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-56 p-2" align="end">
-                <div className="space-y-1">
-                  {GEN_RANGES.map((gen) => (
-                    <label
-                      key={gen.id}
-                      htmlFor={`gen-filter-${gen.id}`}
-                      className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
-                    >
-                      <Checkbox
-                        id={`gen-filter-${gen.id}`}
-                        checked={filter.generations.includes(gen.id)}
-                        onCheckedChange={() => handleGenerationToggle(gen.id)}
-                      />
-                      <span>
-                        {gen.name}{" "}
-                        <span className="text-muted-foreground">
-                          ({gen.label})
-                        </span>
-                      </span>
-                    </label>
-                  ))}
-                </div>
-                {filter.generations.length > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="mt-2 h-7 w-full text-xs"
-                    onClick={() =>
-                      onFilterChange({ ...filter, generations: [] })
-                    }
-                  >
-                    Clear generations
-                  </Button>
-                )}
-              </PopoverContent>
-            </Popover>
-          )}
-          <button
-            type="button"
-            onClick={
-              filter.randomSeed ? handleClearRandomSort : handleRandomSort
-            }
-            className={`p-1 transition-colors ${
-              filter.randomSeed
-                ? "text-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Shuffle className="h-4 w-4" />
-          </button>
+          </div>
         </div>
       </div>
 
@@ -323,7 +326,7 @@ export function DexFilter({
                   className={`transition-opacity ${
                     filter.types.length > 0 &&
                     !filter.types.includes(type as PokemonType)
-                      ? "opacity-40 hover:opacity-70"
+                      ? "opacity-30 hover:opacity-60"
                       : "opacity-100"
                   }`}
                 >
@@ -335,7 +338,7 @@ export function DexFilter({
         </div>
       )}
 
-      {/* Clear Filters - collapsible */}
+      {/* Active Filters Summary */}
       {hasActiveFilters && (
         <div
           className={`grid transition-all duration-200 ease-in-out ${
@@ -345,20 +348,24 @@ export function DexFilter({
           }`}
         >
           <div className="overflow-hidden">
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
                 onClick={handleClearFilters}
-                className="h-7 text-xs"
+                className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
               >
-                <X className="mr-1 h-3 w-3" />
-                Clear filters
-              </Button>
+                <X className="h-3 w-3" />
+                Clear
+              </button>
               {filter.types.length > 0 && (
-                <span className="text-xs text-muted-foreground">
-                  {filter.types.length} type{filter.types.length > 1 ? "s" : ""}{" "}
-                  selected
+                <span className="text-[10px] text-muted-foreground tabular-nums">
+                  {filter.types.length} type{filter.types.length > 1 ? "s" : ""}
+                </span>
+              )}
+              {filter.generations.length > 0 && (
+                <span className="text-[10px] text-muted-foreground tabular-nums">
+                  {filter.generations.length} gen
+                  {filter.generations.length > 1 ? "s" : ""}
                 </span>
               )}
             </div>
