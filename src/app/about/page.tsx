@@ -3,29 +3,45 @@
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { BuiltBy } from "@/components/built-by";
+import { cn } from "@/lib/utils";
 import type { DataSource, FeatureConfig, FooterLink } from "./config";
 import { aboutConfig } from "./config";
 
-function HeroSection() {
+const WIDE_INDICES = new Set([3, 6]);
+
+function Hero() {
   const { hero } = aboutConfig;
 
   return (
-    <section className="px-6 pt-16 pb-12">
-      <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-semibold tracking-tight mb-2">
+    <section className="px-6 pt-20 pb-12 md:pt-28 md:pb-16">
+      <div className="max-w-3xl mx-auto">
+        <div className="text-[10px] text-muted-foreground/40 uppercase tracking-[0.3em] mb-8 font-medium">
+          v0.1.0
+        </div>
+
+        <h1 className="text-5xl md:text-7xl font-semibold tracking-tighter mb-6">
           {hero.title}
         </h1>
-        <p className="text-muted-foreground mb-6">{hero.tagline}</p>
-        <p className="text-sm text-muted-foreground/80 mb-8 max-w-lg">
+
+        <div className="flex items-center gap-2 mb-6">
+          <span className="text-muted-foreground/30 select-none">{">"}</span>
+          <p className="text-lg md:text-xl text-muted-foreground">
+            {hero.tagline}
+            <span className="inline-block w-[2px] h-[1.1em] bg-foreground/50 ml-1 align-text-bottom animate-pulse" />
+          </p>
+        </div>
+
+        <p className="text-sm text-muted-foreground/60 max-w-md leading-relaxed mb-10">
           {hero.description}
         </p>
+
         {hero.cta && (
           <Link
             href={hero.cta.href}
-            className="group inline-flex items-center gap-2 text-sm font-medium hover:text-muted-foreground transition-colors"
+            className="group inline-flex items-center gap-3 bg-foreground text-background px-6 py-3 text-sm font-medium hover:opacity-90 transition-opacity"
           >
             {hero.cta.label}
-            <ArrowRight className="size-3.5 group-hover:translate-x-0.5 transition-transform" />
+            <ArrowRight className="size-4 group-hover:translate-x-0.5 transition-transform" />
           </Link>
         )}
       </div>
@@ -33,71 +49,109 @@ function HeroSection() {
   );
 }
 
-function FeatureItem({ feature }: { feature: FeatureConfig }) {
-  const Icon = feature.icon;
+function Stats() {
+  const stats = [
+    { value: "1025", label: "pokémon" },
+    { value: "937", label: "moves" },
+    { value: "307", label: "abilities" },
+    { value: "2161", label: "items" },
+  ];
 
   return (
-    <div className="group flex gap-3 py-3 border-b border-foreground/[0.04] last:border-0">
-      <Icon
-        className="size-4 mt-0.5 shrink-0"
-        style={{ color: feature.accent }}
-      />
-      <div className="min-w-0">
-        <h3 className="text-sm font-medium">{feature.title}</h3>
-        <p className="text-xs text-muted-foreground/70 mt-0.5 leading-relaxed">
-          {feature.description}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function FeaturesSection() {
-  const { features } = aboutConfig;
-  const mid = Math.ceil(features.length / 2);
-  const leftColumn = features.slice(0, mid);
-  const rightColumn = features.slice(mid);
-
-  return (
-    <section className="px-6 py-8">
-      <div className="max-w-2xl mx-auto">
-        <p className="text-[10px] text-muted-foreground/60 uppercase tracking-widest mb-4">
-          Features
-        </p>
-        <div className="grid md:grid-cols-2 gap-x-8">
-          <div>
-            {leftColumn.map((feature) => (
-              <FeatureItem key={feature.title} feature={feature} />
-            ))}
-          </div>
-          <div>
-            {rightColumn.map((feature) => (
-              <FeatureItem key={feature.title} feature={feature} />
-            ))}
-          </div>
+    <section className="px-6 py-10 border-y border-foreground/[0.06]">
+      <div className="max-w-3xl mx-auto">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+          {stats.map((stat) => (
+            <div key={stat.label}>
+              <div className="text-3xl md:text-4xl font-semibold tracking-tighter">
+                {stat.value}
+              </div>
+              <div className="text-[10px] text-muted-foreground/50 uppercase tracking-[0.2em] mt-1">
+                {stat.label}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </section>
   );
 }
 
-function ContactSection() {
+function FeatureCard({
+  feature,
+  isWide,
+}: {
+  feature: FeatureConfig;
+  isWide: boolean;
+}) {
+  const Icon = feature.icon;
+
+  return (
+    <div
+      className={cn(
+        "group relative border border-foreground/[0.06] bg-background p-5 md:p-6 transition-colors hover:border-foreground/[0.12] hover:bg-muted/20",
+        isWide && "md:col-span-2",
+      )}
+    >
+      <div
+        className="absolute left-0 top-0 w-[2px] h-full opacity-0 group-hover:opacity-100 transition-opacity"
+        style={{ backgroundColor: feature.accent }}
+      />
+      <div className="flex items-start gap-4">
+        <div className="shrink-0 mt-0.5" style={{ color: feature.accent }}>
+          <Icon className="size-4" />
+        </div>
+        <div>
+          <h3 className="text-sm font-medium mb-1.5">{feature.title}</h3>
+          <p className="text-xs text-muted-foreground/60 leading-relaxed">
+            {feature.description}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Features() {
+  const { features } = aboutConfig;
+
+  return (
+    <section className="px-6 py-12 md:py-16">
+      <div className="max-w-3xl mx-auto">
+        <div className="text-[10px] text-muted-foreground/40 uppercase tracking-[0.3em] mb-8 font-medium">
+          Features
+        </div>
+        <div className="grid md:grid-cols-3 gap-3">
+          {features.map((feature, i) => (
+            <FeatureCard
+              key={feature.title}
+              feature={feature}
+              isWide={WIDE_INDICES.has(i)}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Contact() {
   return (
     <section className="px-6 py-8">
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-3xl mx-auto">
         <BuiltBy />
       </div>
     </section>
   );
 }
 
-function FooterSection() {
+function Footer() {
   const { footerLinks, attribution } = aboutConfig;
 
   return (
-    <footer className="px-6 py-8 mt-4">
-      <div className="max-w-2xl mx-auto">
-        <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted-foreground/60 mb-6">
+    <footer className="px-6 py-10 mt-4">
+      <div className="max-w-3xl mx-auto">
+        <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted-foreground/50 mb-8">
           {footerLinks.map((link: FooterLink) =>
             link.external ? (
               <a
@@ -105,7 +159,7 @@ function FooterSection() {
                 href={link.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hover:text-muted-foreground transition-colors"
+                className="hover:text-foreground transition-colors"
               >
                 {link.label}
               </a>
@@ -113,14 +167,14 @@ function FooterSection() {
               <Link
                 key={link.label}
                 href={link.href}
-                className="hover:text-muted-foreground transition-colors"
+                className="hover:text-foreground transition-colors"
               >
                 {link.label}
               </Link>
             ),
           )}
         </div>
-        <p className="text-[10px] text-muted-foreground/50">
+        <p className="text-[10px] text-muted-foreground/40 leading-relaxed">
           data via{" "}
           {attribution.dataSources.map((source: DataSource, index: number) => (
             <span key={source.label}>
@@ -146,10 +200,11 @@ function FooterSection() {
 export default function AboutPage() {
   return (
     <div className="min-h-screen">
-      <HeroSection />
-      <FeaturesSection />
-      <ContactSection />
-      <FooterSection />
+      <Hero />
+      <Stats />
+      <Features />
+      <Contact />
+      <Footer />
     </div>
   );
 }
