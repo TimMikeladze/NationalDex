@@ -1,6 +1,5 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  CloudSun,
   Database,
   GitCompareArrows,
   Github,
@@ -14,6 +13,12 @@ import {
   Users,
   Zap,
 } from "lucide-react";
+import type { ComponentType, SVGProps } from "react";
+import { Butterfly } from "@/components/icons/bluesky";
+
+type IconComponent =
+  | LucideIcon
+  | ComponentType<SVGProps<SVGSVGElement> & { className?: string }>;
 
 export interface HeroConfig {
   title: string;
@@ -26,7 +31,7 @@ export interface HeroConfig {
 }
 
 export interface FeatureConfig {
-  icon: LucideIcon;
+  icon: IconComponent;
   title: string;
   description: string;
   accent?: string;
@@ -47,7 +52,7 @@ export interface DataSource {
 export interface ContactLink {
   label: string;
   href: string;
-  icon: LucideIcon;
+  icon: IconComponent;
 }
 
 export interface AboutPageConfig {
@@ -174,7 +179,7 @@ export const aboutConfig: AboutPageConfig = {
       {
         label: "Bluesky",
         href: "https://bsky.app/profile/linesofcode.bsky.social",
-        icon: CloudSun,
+        icon: Butterfly,
       },
     ],
   },
