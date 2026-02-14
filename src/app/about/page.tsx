@@ -2,9 +2,13 @@
 
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
-import { BuiltBy } from "@/components/built-by";
 import { cn } from "@/lib/utils";
-import type { DataSource, FeatureConfig, FooterLink } from "./config";
+import type {
+  ContactLink,
+  DataSource,
+  FeatureConfig,
+  FooterLink,
+} from "./config";
 import { aboutConfig } from "./config";
 
 const WIDE_INDICES = new Set([3, 6]);
@@ -107,46 +111,60 @@ function Features() {
   );
 }
 
-function Contact() {
-  return (
-    <section className="px-6 py-8">
-      <div className="max-w-3xl mx-auto">
-        <BuiltBy />
-      </div>
-    </section>
-  );
-}
-
 function Footer() {
-  const { footerLinks, attribution } = aboutConfig;
+  const { footerLinks, attribution, contact } = aboutConfig;
 
   return (
-    <footer className="px-6 py-10 mt-4">
-      <div className="max-w-3xl mx-auto">
-        <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted-foreground/50 mb-8">
-          {footerLinks.map((link: FooterLink) =>
-            link.external ? (
-              <a
-                key={link.label}
-                href={link.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-foreground transition-colors"
-              >
-                {link.label}
-              </a>
-            ) : (
-              <Link
-                key={link.label}
-                href={link.href}
-                className="hover:text-foreground transition-colors"
-              >
-                {link.label}
-              </Link>
-            ),
-          )}
+    <footer className="px-6 py-12 mt-4 border-t border-foreground/[0.06]">
+      <div className="max-w-3xl mx-auto space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <span className="text-xs text-muted-foreground/50">
+              {contact.title}
+            </span>
+            <div className="flex items-center gap-3">
+              {contact.links.map((link: ContactLink) => {
+                const Icon = link.icon;
+                return (
+                  <a
+                    key={link.label}
+                    href={link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-muted-foreground/40 hover:text-foreground transition-colors"
+                    aria-label={link.label}
+                  >
+                    <Icon className="size-3.5" />
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground/50">
+            {footerLinks.map((link: FooterLink) =>
+              link.external ? (
+                <a
+                  key={link.label}
+                  href={link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-foreground transition-colors"
+                >
+                  {link.label}
+                </a>
+              ) : (
+                <Link
+                  key={link.label}
+                  href={link.href}
+                  className="hover:text-foreground transition-colors"
+                >
+                  {link.label}
+                </Link>
+              ),
+            )}
+          </div>
         </div>
-        <p className="text-[10px] text-muted-foreground/40 leading-relaxed">
+        <p className="text-[10px] text-muted-foreground/30 leading-relaxed">
           data via{" "}
           {attribution.dataSources.map((source: DataSource, index: number) => (
             <span key={source.label}>
@@ -154,7 +172,7 @@ function Footer() {
                 href={source.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="underline underline-offset-2 hover:text-muted-foreground/70"
+                className="underline underline-offset-2 hover:text-muted-foreground/60"
               >
                 {source.label}
               </a>
@@ -174,7 +192,6 @@ export default function AboutPage() {
     <div className="min-h-screen">
       <Hero />
       <Features />
-      <Contact />
       <Footer />
     </div>
   );
