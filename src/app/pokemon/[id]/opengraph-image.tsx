@@ -1,5 +1,6 @@
 import { ImageResponse } from "@vercel/og";
 import { getAllSpecies, getSpecies, toID } from "@/lib/pkmn";
+import { pokemonDbSlug } from "@/lib/sprites";
 import { type PokemonType, TYPE_COLORS } from "@/types/pokemon";
 
 export const alt = "Pokémon stats";
@@ -67,7 +68,7 @@ export default async function OGImage({
   const bst = stats.reduce((sum, s) => sum + s.value, 0);
 
   // Build sprite URL (PokemonDB Home sprites)
-  const slug = name.toLowerCase().replace(/[^a-z0-9-]/g, "");
+  const slug = pokemonDbSlug(name);
   const spriteUrl = `https://img.pokemondb.net/sprites/home/normal/${slug}.png`;
 
   // Fetch sprite as base64 for embedding

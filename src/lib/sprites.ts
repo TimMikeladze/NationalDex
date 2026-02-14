@@ -3,6 +3,28 @@ import { toID } from "./pkmn";
 
 export type SpriteGen = "gen5" | "ani" | "home";
 
+const REGION_ADJECTIVES: Record<string, string> = {
+  alola: "alolan",
+  galar: "galarian",
+  hisui: "hisuian",
+  paldea: "paldean",
+};
+
+/**
+ * Convert a @pkmn/dex species name to a PokemonDB-compatible slug.
+ * Handles regional form suffixes (Alola→Alolan, Galar→Galarian, etc.).
+ */
+export function pokemonDbSlug(name: string): string {
+  let slug = name.toLowerCase().replace(/[^a-z0-9-]/g, "");
+  for (const [region, adjective] of Object.entries(REGION_ADJECTIVES)) {
+    slug = slug.replace(
+      new RegExp(`-${region}($|-)`),
+      `-${adjective}$1`,
+    );
+  }
+  return slug;
+}
+
 /**
  * Get the primary Pokemon sprite URL.
  * Uses PokemonDB Home sprites by default which have excellent form coverage.
@@ -17,8 +39,7 @@ export function pokemonSprite(
     side?: "front" | "back";
   },
 ) {
-  // Convert to slug format (lowercase, keep dashes for forms)
-  const slug = name.toLowerCase().replace(/[^a-z0-9-]/g, "");
+  const slug = pokemonDbSlug(name);
 
   // For female or back sprites, use Pokemon Showdown (PokemonDB doesn't have these)
   if (options?.female || options?.side === "back") {
