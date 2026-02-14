@@ -397,9 +397,3 @@
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 }
-
-/* Selection color */
-::selection {
-  background: var(--foreground);
-  color: var(--background);
-}
