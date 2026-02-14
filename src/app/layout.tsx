@@ -20,9 +20,23 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "nationaldex",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://nationaldex.vercel.app",
+  ),
+  title: {
+    default: "nationaldex",
+    template: "%s | nationaldex",
+  },
   description: "minimal pokédex",
   manifest: "/manifest.json",
+  openGraph: {
+    siteName: "nationaldex",
+    type: "website",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

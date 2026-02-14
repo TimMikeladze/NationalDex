@@ -1,4 +1,5 @@
-import { getAllSpecies, toID } from "@/lib/pkmn";
+import type { Metadata } from "next";
+import { getAllSpecies, getSpecies, toID } from "@/lib/pkmn";
 import { getPokedexEntry } from "@/lib/pokeapi";
 import { PokemonPageClient } from "./client";
 
@@ -12,11 +13,67 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
+  const { id } = await params;
+  const species = getSpecies(id);
+
+  if (!species) {
+    return { title: "Pokémon not found" };
+  }
+
+  const pokedexEntry = await getPokedexEntry(species.num);
+  const dexNum = String(species.num).padStart(3, "0");
+  const types = [species.types[0], species.types[1]].filter(Boolean).join("/");
+  const bst = Object.values(species.baseStats).reduce(
+    (sum: number, v) => sum + (v as number),
+    0,
+  );
+
+  const description = pokedexEntry?.entries[0]?.flavorText
+    ? `${pokedexEntry.genus}. ${types} type. BST ${bst}. ${pokedexEntry.entries[0].flavorText}`
+    : `${types} type Pokémon. Base stat total: ${bst}.`;
+
+  return {
+    title: `${species.name} (#${dexNum})`,
+    description,
+    openGraph: {
+      title: `${species.name} (#${dexNum})`,
+      description,
+    },
+    twitter: {
+      card: "summary_large_image",
+    },
+  };
+}
+
 export default async function PokemonPage({ params }: PageProps) {
   const { id } = await params;
-
-  // Fetch Pokedex entry server-side (cached by Next.js for 24h)
+  const species = getSpecies(id);
   const pokedexEntry = await getPokedexEntry(id);
 
-  return <PokemonPageClient id={id} pokedexEntry={pokedexEntry} />;
+  const jsonLd = species
+    ? {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        name: species.name,
+        description: `${species.types.join("/")} type Pokémon #${species.num}`,
+        mainEntity: {
+          "@type": "Thing",
+          name: species.name,
+          identifier: `#${String(species.num).padStart(3, "0")}`,
+          additionalType: "Pokémon",
+        },
+      }
+    : null;
+
+  return (
+    <>
+      {jsonLd && (
+        <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
+      )}
+      <PokemonPageClient id={id} pokedexEntry={pokedexEntry} />
+    </>
+  );
 }

@@ -708,11 +708,7 @@ export function PokemonPageClient({
           Could not load data for &ldquo;{id}&rdquo;.
         </p>
         <div className="flex gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRandomPokemon}
-          >
+          <Button variant="outline" size="sm" onClick={handleRandomPokemon}>
             try a random pokemon
           </Button>
           <Button asChild variant="outline" size="sm">
