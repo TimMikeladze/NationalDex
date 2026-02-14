@@ -61,6 +61,8 @@ export interface AboutPageConfig {
   footerLinks: FooterLink[];
   contact: {
     title: string;
+    handle: string;
+    handleHref: string;
     links: ContactLink[];
   };
   attribution: {
@@ -164,7 +166,9 @@ export const aboutConfig: AboutPageConfig = {
   ],
 
   contact: {
-    title: "built by @linesofcode",
+    title: "built by",
+    handle: "@linesofcode",
+    handleHref: "https://linesofcode.dev",
     links: [
       {
         label: "GitHub",

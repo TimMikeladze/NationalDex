@@ -120,7 +120,15 @@ function Footer() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-4">
             <span className="text-xs text-muted-foreground/50">
-              {contact.title}
+              {contact.title}{" "}
+              <a
+                href={contact.handleHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-foreground transition-colors"
+              >
+                {contact.handle}
+              </a>
             </span>
             <div className="flex items-center gap-3">
               {contact.links.map((link: ContactLink) => {
