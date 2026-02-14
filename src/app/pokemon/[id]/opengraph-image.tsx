@@ -1,4 +1,4 @@
-import { ImageResponse } from "@vercel/og";
+import { ImageResponse } from "next/og";
 import { getAllSpecies, getSpecies, toID } from "@/lib/pkmn";
 import { pokemonDbSlug } from "@/lib/sprites";
 import { type PokemonType, TYPE_COLORS } from "@/types/pokemon";
@@ -67,9 +67,9 @@ export default async function OGImage({
   }));
   const bst = stats.reduce((sum, s) => sum + s.value, 0);
 
-  // Build sprite URL (PokemonDB Home sprites)
+  // Use Pokemon Showdown gen5 sprites (static PNGs, reliable GitHub-hosted CDN)
   const slug = pokemonDbSlug(name);
-  const spriteUrl = `https://img.pokemondb.net/sprites/home/normal/${slug}.png`;
+  const spriteUrl = `https://play.pokemonshowdown.com/sprites/gen5/${slug}.png`;
 
   // Fetch sprite as base64 for embedding
   let spriteBase64: string | null = null;
@@ -128,7 +128,7 @@ export default async function OGImage({
               width={160}
               height={160}
               alt=""
-              style={{ objectFit: "contain" }}
+              style={{ objectFit: "contain", imageRendering: "pixelated" }}
             />
           </div>
         ) : (
