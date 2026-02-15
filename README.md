@@ -16,17 +16,6 @@ nationaldex is a modern web-based Pokedex covering the full National Dex across 
 - **PWA support** — installable on any device for a native-like experience
 - **Dark mode** with automatic theme detection
 
-## Tech stack
-
-- [Next.js](https://nextjs.org) (App Router) + [React](https://react.dev) 19
-- [TypeScript](https://www.typescriptlang.org)
-- [Tailwind CSS](https://tailwindcss.com) + [shadcn/ui](https://ui.shadcn.com) (Radix primitives)
-- [@pkmn/dex](https://github.com/pkmn/ps) for Pokemon data
-- [PokeAPI](https://pokeapi.co) for supplemental game data
-- [TanStack Query](https://tanstack.com/query) for data fetching
-- [Fuse.js](https://www.fusejs.io) for fuzzy search
-- [Biome](https://biomejs.dev) for linting and formatting
-
 ## Running locally
 
 ### Prerequisites
