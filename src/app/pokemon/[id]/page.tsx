@@ -43,9 +43,7 @@ function getVariantFromName(name: string): string | null {
   return null;
 }
 
-function getRegionFromDexNumber(
-  dexNumber: number,
-): string | null {
+function getRegionFromDexNumber(dexNumber: number): string | null {
   if (dexNumber >= 1 && dexNumber <= 151) return "Kanto";
   if (dexNumber >= 152 && dexNumber <= 251) return "Johto";
   if (dexNumber >= 252 && dexNumber <= 386) return "Hoenn";
@@ -86,8 +84,6 @@ export async function generateMetadata({
     0,
   );
 
-  const ogImageUrl = `${SITE_URL}/pokemon/${id}/opengraph-image`;
-
   // Build detailed description with all info rendered in the OG image
   const variant = getVariantFromName(species.name);
   const region = getRegionFromDexNumber(species.num);
@@ -110,27 +106,9 @@ export async function generateMetadata({
       siteName: "nationaldex",
       type: "article",
       locale: "en_US",
-      images: [
-        {
-          url: ogImageUrl,
-          secureUrl: ogImageUrl,
-          width: 1200,
-          height: 630,
-          alt: description,
-          type: "image/png",
-        },
-      ],
     },
     twitter: {
       card: "summary_large_image",
-      images: [
-        {
-          url: ogImageUrl,
-          alt: description,
-          width: 1200,
-          height: 630,
-        },
-      ],
     },
   };
 }

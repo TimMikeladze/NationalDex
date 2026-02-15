@@ -17,10 +17,7 @@ const REGION_ADJECTIVES: Record<string, string> = {
 export function pokemonDbSlug(name: string): string {
   let slug = name.toLowerCase().replace(/[^a-z0-9-]/g, "");
   for (const [region, adjective] of Object.entries(REGION_ADJECTIVES)) {
-    slug = slug.replace(
-      new RegExp(`-${region}($|-)`),
-      `-${adjective}$1`,
-    );
+    slug = slug.replace(new RegExp(`-${region}($|-)`), `-${adjective}$1`);
   }
   return slug;
 }

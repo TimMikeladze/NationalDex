@@ -1,5 +1,4 @@
 import type { MetadataRoute } from "next";
-import { SITE_URL } from "@/lib/utils";
 import {
   getAllAbilities,
   getAllItems,
@@ -8,6 +7,7 @@ import {
   getAllTypes,
   toID,
 } from "@/lib/pkmn";
+import { SITE_URL } from "@/lib/utils";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = SITE_URL;
