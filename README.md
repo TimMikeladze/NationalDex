@@ -1,36 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# nationaldex
 
-## Getting Started
+A fast, beautiful, and feature-rich Pokedex built for trainers who want instant access to everything Pokemon.
 
-First, run the development server:
+## What is this?
+
+nationaldex is a modern web-based Pokedex covering the full National Dex across all generations. It goes beyond a simple lookup tool — you can search for any Pokemon, move, ability, or item instantly, build and manage teams with type coverage analysis, compare Pokemon side by side, track favorites, and create custom lists. It works offline as a PWA and supports dark mode.
+
+### Key features
+
+- **Instant search** across Pokemon, moves, abilities, and items
+- **Team builder** with type coverage analysis and Showdown import/export
+- **Pokemon comparison** with side-by-side stat breakdowns
+- **Favorites and custom lists** persisted in local storage
+- **Location finder** for Pokemon across all regions and games
+- **PWA support** — installable on any device for a native-like experience
+- **Dark mode** with automatic theme detection
+
+## Tech stack
+
+- [Next.js](https://nextjs.org) (App Router) + [React](https://react.dev) 19
+- [TypeScript](https://www.typescriptlang.org)
+- [Tailwind CSS](https://tailwindcss.com) + [shadcn/ui](https://ui.shadcn.com) (Radix primitives)
+- [@pkmn/dex](https://github.com/pkmn/ps) for Pokemon data
+- [PokeAPI](https://pokeapi.co) for supplemental game data
+- [TanStack Query](https://tanstack.com/query) for data fetching
+- [Fuse.js](https://www.fusejs.io) for fuzzy search
+- [Biome](https://biomejs.dev) for linting and formatting
+
+## Running locally
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org) (v18+)
+- [Yarn](https://yarnpkg.com), npm, or [Bun](https://bun.sh)
+
+### Setup
 
 ```bash
-npm run dev
-# or
+# Clone the repo
+git clone https://github.com/TimMikeladze/nationaldex.git
+cd nationaldex
+
+# Install dependencies
+yarn install
+
+# Start the dev server
 yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+No database or environment variables are required. All Pokemon data is bundled at build time or fetched from public APIs. User data (favorites, teams, lists) is stored in the browser's local storage.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Available scripts
 
-## Learn More
+| Command | Description |
+|---|---|
+| `yarn dev` | Start the development server |
+| `yarn build` | Build for production |
+| `yarn start` | Start the production server |
+| `yarn lint` | Run linting and format checks |
+| `yarn lint:fix` | Auto-fix linting issues |
 
-To learn more about Next.js, take a look at the following resources:
+## Contributing
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Fork the repo and create your branch from `main`
+2. Run `yarn install` to set up dependencies
+3. Make your changes and verify they pass `yarn lint` and `yarn build`
+4. Open a pull request
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Data attribution
 
-## Deploy on Vercel
+- [PokeAPI](https://pokeapi.co) — Pokemon data and game information
+- [pkmn/ps](https://github.com/pkmn/ps) — Sprites and competitive data
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Pokemon is a trademark of Nintendo / Creatures Inc. / GAME FREAK Inc. This project is not affiliated with or endorsed by any of these companies.
