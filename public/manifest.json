@@ -1,7 +1,7 @@
 {
   "name": "nationaldex",
   "short_name": "nationaldex",
-  "description": "Your Modern Pokedex Companion",
+  "description": "The Pokedex App",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#09090b",

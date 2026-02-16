@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     default: "nationaldex",
     template: "%s | nationaldex",
   },
-  description: "Your Modern Pokedex Companion",
+  description: "The Pokedex App",
   manifest: "/manifest.json",
   openGraph: {
     siteName: "nationaldex",
