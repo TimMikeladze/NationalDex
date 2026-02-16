@@ -37,7 +37,7 @@ export default function FeedbackPage() {
             </a>
 
             <a
-              href="mailto:feedback@example.com"
+              href="mailto:Tim.Mikeladze@gmail.com"
               className="flex items-center gap-3 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
             >
               <Mail className="size-5 text-muted-foreground shrink-0" />

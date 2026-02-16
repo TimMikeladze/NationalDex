@@ -2,7 +2,7 @@
 
 import { FlaskConical, Loader2, Sparkles, Swords, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNav } from "@/components/navigation/nav-provider";
 import {
   CommandDialog,
@@ -37,18 +37,6 @@ export function SearchOverlay() {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const { search, isLoading, isReady, totalItems } = useSearchIndex();
-
-  useEffect(() => {
-    const down = (e: KeyboardEvent) => {
-      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        setSearchOpen(!searchOpen);
-      }
-    };
-
-    document.addEventListener("keydown", down);
-    return () => document.removeEventListener("keydown", down);
-  }, [searchOpen, setSearchOpen]);
 
   // Search results
   const results = useMemo(() => {
