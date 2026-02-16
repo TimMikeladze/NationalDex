@@ -11,7 +11,7 @@ import type {
 } from "./config";
 import { aboutConfig } from "./config";
 
-const WIDE_INDICES = new Set([3, 6]);
+const WIDE_INDICES = new Set([13]);
 
 function Hero() {
   const { hero } = aboutConfig;
