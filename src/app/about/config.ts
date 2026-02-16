@@ -1,12 +1,16 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Database,
+  Download,
   GitCompareArrows,
   Github,
   Heart,
+  HelpCircle,
+  ListChecks,
   MapPin,
   Moon,
   Search,
+  Shield,
   Smartphone,
   Sparkles,
   Twitter,
@@ -102,7 +106,7 @@ export const aboutConfig: AboutPageConfig = {
       icon: Users,
       title: "Team Builder",
       description:
-        "Build and manage your dream teams with type coverage analysis.",
+        "Build and manage your dream teams with type coverage analysis and Showdown import/export.",
       accent: "#14b8a6",
     },
     {
@@ -144,6 +148,34 @@ export const aboutConfig: AboutPageConfig = {
       description:
         "Toggle between static and animated sprites for every Pokemon.",
       accent: "#f43f5e",
+    },
+    {
+      icon: HelpCircle,
+      title: "Who's That Pokemon?",
+      description:
+        "Test your knowledge with a silhouette quiz featuring difficulty levels, streaks, and scoring.",
+      accent: "#a855f7",
+    },
+    {
+      icon: ListChecks,
+      title: "Custom Lists",
+      description:
+        "Create and organize themed Pokemon lists beyond just favorites.",
+      accent: "#0ea5e9",
+    },
+    {
+      icon: Shield,
+      title: "Type Chart",
+      description:
+        "Explore type effectiveness matchups and find Pokemon or moves by type.",
+      accent: "#ef4444",
+    },
+    {
+      icon: Download,
+      title: "Data Backup",
+      description:
+        "Export and import all your data — favorites, teams, lists, and settings.",
+      accent: "#10b981",
     },
     {
       icon: Database,
