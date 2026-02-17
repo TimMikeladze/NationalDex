@@ -10,7 +10,8 @@
     "lint:fix": "bun biome check --unsafe --write . && bun biome format --write .",
     "lint:errors": "bun biome check --diagnostic-level error --unsafe .",
     "check": "if [ \"$CI\" = \"true\" ]; then bun run lint && bun run tsc; else bun run lint:fix && bun run tsc; fi",
-    "prepare": "simple-git-hooks"
+    "prepare": "simple-git-hooks",
+    "release": "release-it --no-npm"
   },
   "simple-git-hooks": {
     "pre-commit": "bun run check && git add ."
@@ -79,6 +80,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "babel-plugin-react-compiler": "1.0.0",
+    "release-it": "^19.2.4",
     "simple-git-hooks": "^2.13.1",
     "tailwindcss": "^4.1.18",
     "tw-animate-css": "^1.4.0",
