@@ -3,6 +3,7 @@
 import {
   CircleHelp,
   GitCompareArrows,
+  Github,
   Grid3X3,
   Heart,
   Info,
@@ -87,6 +88,12 @@ const desktopMoreMenuItems = [
   { href: "/settings", icon: Settings, label: "Settings" },
   { href: "/feedback", icon: MessageSquare, label: "Feedback" },
   { href: "/about", icon: Info, label: "About" },
+  {
+    href: "https://github.com/TimMikeladze/NationalDex",
+    icon: Github,
+    label: "Get the Code",
+    external: true,
+  },
 ];
 
 // All items for the mobile "more" sheet
@@ -258,23 +265,22 @@ export function AppShell({ children }: AppShellProps) {
   };
 
   const renderMoreMenuItem = (item: (typeof moreMenuItems)[0]) => {
+    const isExternal = "external" in item && item.external;
     const isActive =
-      item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+      !isExternal &&
+      (item.href === "/" ? pathname === "/" : pathname.startsWith(item.href));
     const isComparison = item.href === "/comparison";
     const showBadge = isComparison && comparison.length > 0;
 
-    return (
-      <Link
-        key={item.href}
-        href={item.href}
-        onClick={() => setMoreOpen(false)}
-        className={cn(
-          "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors",
-          isActive
-            ? "bg-muted text-foreground"
-            : "text-muted-foreground hover:bg-muted hover:text-foreground",
-        )}
-      >
+    const className = cn(
+      "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors",
+      isActive
+        ? "bg-muted text-foreground"
+        : "text-muted-foreground hover:bg-muted hover:text-foreground",
+    );
+
+    const content = (
+      <>
         <div className="relative">
           <item.icon className="size-5" strokeWidth={1.5} />
           {showBadge && (
@@ -289,6 +295,32 @@ export function AppShell({ children }: AppShellProps) {
             {comparison.length} pokemon
           </span>
         )}
+      </>
+    );
+
+    if (isExternal) {
+      return (
+        <a
+          key={item.href}
+          href={item.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => setMoreOpen(false)}
+          className={className}
+        >
+          {content}
+        </a>
+      );
+    }
+
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        onClick={() => setMoreOpen(false)}
+        className={className}
+      >
+        {content}
       </Link>
     );
   };
@@ -353,10 +385,28 @@ export function AppShell({ children }: AppShellProps) {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   {desktopMoreMenuItems.map((item) => {
+                    const isExternal = "external" in item && item.external;
                     const isActive =
-                      item.href === "/"
+                      !isExternal &&
+                      (item.href === "/"
                         ? pathname === "/"
-                        : pathname.startsWith(item.href);
+                        : pathname.startsWith(item.href));
+
+                    if (isExternal) {
+                      return (
+                        <DropdownMenuItem key={item.href} asChild>
+                          <a
+                            href={item.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 cursor-pointer"
+                          >
+                            <item.icon className="size-4" strokeWidth={1.5} />
+                            <span>{item.label}</span>
+                          </a>
+                        </DropdownMenuItem>
+                      );
+                    }
 
                     return (
                       <DropdownMenuItem key={item.href} asChild>
