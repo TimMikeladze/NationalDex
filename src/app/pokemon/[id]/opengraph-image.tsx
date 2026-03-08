@@ -150,7 +150,9 @@ export default async function OGImage({
   let quote: string | null = null;
   if (pokedexEntry && pokedexEntry.entries.length > 0) {
     const MAX_QUOTE_LENGTH = 120;
-    const uniqueTexts = [...new Set(pokedexEntry.entries.map((e) => e.flavorText))];
+    const uniqueTexts = [
+      ...new Set(pokedexEntry.entries.map((e) => e.flavorText)),
+    ];
     // Prefer the longest entry that still fits within the limit
     const fitting = uniqueTexts
       .filter((t) => t.length <= MAX_QUOTE_LENGTH)
@@ -159,7 +161,7 @@ export default async function OGImage({
     // If nothing fits, truncate the shortest available entry
     if (!quote) {
       const shortest = uniqueTexts.sort((a, b) => a.length - b.length)[0];
-      quote = shortest.slice(0, MAX_QUOTE_LENGTH - 1) + "…";
+      quote = `${shortest.slice(0, MAX_QUOTE_LENGTH - 1)}…`;
     }
   }
 
