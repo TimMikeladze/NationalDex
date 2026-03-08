@@ -152,6 +152,10 @@ export default async function OGImage({
     const idx = Math.floor(Math.random() * pokedexEntry.entries.length);
     quote = pokedexEntry.entries[idx].flavorText;
   }
+  // Cap length so the quote stays within 2 lines and doesn't overlap stats
+  if (quote && quote.length > 150) {
+    quote = quote.slice(0, 147) + "…";
+  }
 
   // Sprite
   const slug = pokemonDbSlug(name);
@@ -307,7 +311,6 @@ export default async function OGImage({
           flexDirection: "column",
           gap: "12px",
           marginTop: "36px",
-          flex: 1,
         }}
       >
         {stats.map((s) => (
@@ -397,12 +400,15 @@ export default async function OGImage({
         </div>
       </div>
 
-      {/* Pokédex quote */}
+      {/* Pokédex quote — absolutely positioned to avoid overlapping stats or branding */}
       {quote && (
         <div
           style={{
+            position: "absolute",
+            bottom: "64px",
+            left: "56px",
+            right: "56px",
             display: "flex",
-            marginTop: "24px",
             padding: "16px 20px",
             borderRadius: "12px",
             backgroundColor: "rgba(255,255,255,0.05)",
@@ -411,7 +417,6 @@ export default async function OGImage({
             fontStyle: "italic",
             lineHeight: "1.5",
             color: "rgba(255,255,255,0.7)",
-            maxWidth: "100%",
           }}
         >
           {quote}
