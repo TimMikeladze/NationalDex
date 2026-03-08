@@ -420,7 +420,7 @@ export default async function OGImage({
             padding: "14px 18px",
             borderRadius: "12px",
             backgroundColor: "rgba(255,255,255,0.05)",
-            borderLeft: `3px solid ${typeColor}`,
+            border: `1px solid rgba(255,255,255,0.12)`,
             fontSize: "17px",
             fontStyle: "italic",
             lineHeight: "1.5",
