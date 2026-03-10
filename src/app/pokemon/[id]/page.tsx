@@ -95,7 +95,25 @@ export async function generateMetadata({
   if (variant) badges.push(VARIANT_DISPLAY_NAMES[variant] ?? variant);
   if (region) badges.push(region);
   const badgeText = badges.length > 0 ? ` ${badges.join(", ")}.` : "";
-  const description = `${types} type.${badgeText} Stats: ${statsSummary}. BST ${bst}.`;
+
+  // Include the same Pokédex blurb shown in the OG image
+  const pokedexEntry = await getPokedexEntry(species.num);
+  let blurb = "";
+  if (pokedexEntry && pokedexEntry.entries.length > 0) {
+    const MAX_QUOTE_LENGTH = 120;
+    const uniqueTexts = [
+      ...new Set(pokedexEntry.entries.map((e) => e.flavorText)),
+    ];
+    const fitting = uniqueTexts
+      .filter((t) => t.length <= MAX_QUOTE_LENGTH)
+      .sort((a, b) => b.length - a.length);
+    const quote =
+      fitting[0] ??
+      `${uniqueTexts.sort((a, b) => a.length - b.length)[0].slice(0, MAX_QUOTE_LENGTH - 1)}…`;
+    blurb = ` "${quote}"`;
+  }
+
+  const description = `${types} type.${badgeText}${blurb} Stats: ${statsSummary}. BST ${bst}.`;
 
   return {
     title: `${species.name} (#${dexNum})`,
