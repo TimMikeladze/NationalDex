@@ -407,8 +407,17 @@ export function AppShell({ children }: AppShellProps) {
             // In PWA mode, pwa-main-height and pwa-pt-safe handle safe areas.
             "flex-1 min-h-0 pwa-pt-safe pwa-main-height",
             "overflow-y-auto overflow-x-hidden",
-            "h-[calc(100dvh-var(--app-top-offset)-var(--app-bottom-offset)-env(safe-area-inset-bottom,0px))]",
-            "max-h-[calc(100dvh-var(--app-top-offset)-var(--app-bottom-offset)-env(safe-area-inset-bottom,0px))]",
+            // On mobile the box is anchored at top:0 and clears the fixed
+            // toolbar with padding-top, so the top offset lives *inside* the
+            // height — it must NOT be subtracted again or the box would end
+            // short of the bottom nav, leaving a gap equal to the top offset.
+            "h-[calc(100dvh-var(--app-bottom-offset)-env(safe-area-inset-bottom,0px))]",
+            "max-h-[calc(100dvh-var(--app-bottom-offset)-env(safe-area-inset-bottom,0px))]",
+            // On desktop (lg+) the box uses margin-top to start below the
+            // header, so the top offset is outside the height and must be
+            // subtracted here.
+            "lg:h-[calc(100dvh-var(--app-top-offset)-var(--app-bottom-offset)-env(safe-area-inset-bottom,0px))]",
+            "lg:max-h-[calc(100dvh-var(--app-top-offset)-var(--app-bottom-offset)-env(safe-area-inset-bottom,0px))]",
             // On mobile: use padding-top for offset (pwa-pt-safe overrides in PWA mode)
             // On desktop (lg+): use margin-top so scroll container starts below header
             "pt-(--app-top-offset) lg:pt-0 lg:mt-(--app-top-offset)",
