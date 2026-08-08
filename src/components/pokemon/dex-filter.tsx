@@ -1,6 +1,15 @@
 "use client";
 
-import { ListFilter, Search, Shuffle, X } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ListFilter,
+  Minus,
+  Plus,
+  Search,
+  Shuffle,
+  X,
+} from "lucide-react";
 import {
   parseAsArrayOf,
   parseAsInteger,
@@ -17,7 +26,17 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { getDexPokemonList } from "@/lib/dex-pokemon";
+import { Slider } from "@/components/ui/slider";
+import {
+  type DexPokemonListItem,
+  getDexPokemonList,
+  getStatBounds,
+  RANGE_STAT_KEYS,
+  type RangeStatKey,
+  REGULATIONS,
+  STAT_LABELS,
+  toRegulationMask,
+} from "@/lib/dex-pokemon";
 import {
   ALL_TYPES,
   GEN_RANGES,
@@ -31,12 +50,114 @@ import type { PokemonType } from "@/types/pokemon";
 
 export type DexCategory = "pokemon" | "moves" | "abilities" | "items";
 
+export type DexSortKey = "dex" | "name" | RangeStatKey;
+export type DexSortDirection = "asc" | "desc";
+
+/** Boolean traits that can be required (+) or excluded (-). */
+export type DexTag =
+  | "baby"
+  | "legendary"
+  | "mythical"
+  | "paradox"
+  | "ultrabeast"
+  | "mega"
+  | "fullyevolved"
+  | "restricted";
+
+export type DexTagMode = "include" | "exclude";
+
+export const DEX_TAGS: { id: DexTag; label: string }[] = [
+  { id: "fullyevolved", label: "Fully Evolved" },
+  { id: "baby", label: "Baby" },
+  { id: "legendary", label: "Legendary" },
+  { id: "mythical", label: "Mythical" },
+  { id: "paradox", label: "Paradox" },
+  { id: "ultrabeast", label: "Ultra Beast" },
+  { id: "mega", label: "Mega" },
+  { id: "restricted", label: "Restricted" },
+];
+
+const TAG_PREDICATES: Record<DexTag, (p: DexPokemonListItem) => boolean> = {
+  baby: (p) => p.isBaby,
+  legendary: (p) => p.isLegendary,
+  mythical: (p) => p.isMythical,
+  paradox: (p) => p.isParadox,
+  ultrabeast: (p) => p.isUltraBeast,
+  mega: (p) => p.isMega,
+  fullyevolved: (p) => p.isFullyEvolved,
+  restricted: (p) => p.isRestricted,
+};
+
+export const DEX_SORT_OPTIONS: { id: DexSortKey; label: string }[] = [
+  { id: "dex", label: "Dex #" },
+  { id: "name", label: "Name" },
+  ...RANGE_STAT_KEYS.map((key) => ({
+    id: key as DexSortKey,
+    label: STAT_LABELS[key],
+  })),
+];
+
+export type StatRanges = Partial<Record<RangeStatKey, [number, number]>>;
+export type DexTagState = Partial<Record<DexTag, DexTagMode>>;
+
 export interface DexFilterState {
   search: string;
   types: PokemonType[];
   generations: string[];
   category: DexCategory;
   randomSeed: number | null;
+  /** Showdown format ids; a Pokemon matches if legal in any of them */
+  regulations: string[];
+  sort: DexSortKey;
+  sortDirection: DexSortDirection;
+  /** Inclusive [min, max] per stat; absent keys are unconstrained */
+  stats: StatRanges;
+  tags: DexTagState;
+}
+
+const RANGE_STAT_KEY_SET = new Set<string>(RANGE_STAT_KEYS);
+const DEX_TAG_SET = new Set<string>(DEX_TAGS.map((t) => t.id));
+const SORT_KEY_SET = new Set<string>(DEX_SORT_OPTIONS.map((s) => s.id));
+const REGULATION_ID_SET = new Set<string>(REGULATIONS.map((r) => r.id));
+
+/** "hp:50-120,spe:0-100" <-> { hp: [50, 120], spe: [0, 100] } */
+function parseStatRanges(raw: string): StatRanges {
+  const result: StatRanges = {};
+  for (const entry of raw.split(",")) {
+    const [key, range] = entry.split(":");
+    if (!key || !range || !RANGE_STAT_KEY_SET.has(key)) continue;
+    const [min, max] = range.split("-").map((n) => Number.parseInt(n, 10));
+    if (Number.isNaN(min) || Number.isNaN(max)) continue;
+    result[key as RangeStatKey] = [min, max];
+  }
+  return result;
+}
+
+function serializeStatRanges(stats: StatRanges): string | null {
+  const entries = RANGE_STAT_KEYS.filter((key) => stats[key]).map((key) => {
+    const [min, max] = stats[key] as [number, number];
+    return `${key}:${min}-${max}`;
+  });
+  return entries.length > 0 ? entries.join(",") : null;
+}
+
+/** ["+mega", "-baby"] <-> { mega: "include", baby: "exclude" } */
+function parseTags(raw: string[]): DexTagState {
+  const result: DexTagState = {};
+  for (const entry of raw) {
+    const mode = entry.startsWith("-") ? "exclude" : "include";
+    const id = entry.replace(/^[+-]/, "");
+    if (!DEX_TAG_SET.has(id)) continue;
+    result[id as DexTag] = mode;
+  }
+  return result;
+}
+
+function serializeTags(tags: DexTagState): string[] | null {
+  const entries = DEX_TAGS.filter((t) => tags[t.id]).map(
+    (t) => `${tags[t.id] === "exclude" ? "-" : "+"}${t.id}`,
+  );
+  return entries.length > 0 ? entries : null;
 }
 
 const dexFilterParsers = {
@@ -45,6 +166,11 @@ const dexFilterParsers = {
   generations: parseAsArrayOf(parseAsString).withDefault([]),
   category: parseAsString.withDefault("pokemon"),
   randomSeed: parseAsInteger,
+  regulations: parseAsArrayOf(parseAsString).withDefault([]),
+  sort: parseAsString.withDefault("dex"),
+  sortDirection: parseAsString.withDefault("asc"),
+  stats: parseAsString.withDefault(""),
+  tags: parseAsArrayOf(parseAsString).withDefault([]),
 };
 
 const dexFilterUrlKeys = {
@@ -53,6 +179,11 @@ const dexFilterUrlKeys = {
   generations: "g",
   category: "c",
   randomSeed: "r",
+  regulations: "reg",
+  sort: "s",
+  sortDirection: "d",
+  stats: "st",
+  tags: "tg",
 };
 
 export function useDexFilter() {
@@ -68,6 +199,15 @@ export function useDexFilter() {
       generations: queryState.generations,
       category: queryState.category as DexCategory,
       randomSeed: queryState.randomSeed,
+      regulations: queryState.regulations.filter((id) =>
+        REGULATION_ID_SET.has(id),
+      ),
+      sort: SORT_KEY_SET.has(queryState.sort)
+        ? (queryState.sort as DexSortKey)
+        : "dex",
+      sortDirection: queryState.sortDirection === "desc" ? "desc" : "asc",
+      stats: parseStatRanges(queryState.stats),
+      tags: parseTags(queryState.tags),
     }),
     [queryState],
   );
@@ -81,12 +221,25 @@ export function useDexFilter() {
           newFilter.generations.length > 0 ? newFilter.generations : null,
         category: newFilter.category === "pokemon" ? null : newFilter.category,
         randomSeed: newFilter.randomSeed,
+        regulations:
+          newFilter.regulations.length > 0 ? newFilter.regulations : null,
+        sort: newFilter.sort === "dex" ? null : newFilter.sort,
+        sortDirection: newFilter.sortDirection === "asc" ? null : "desc",
+        stats: serializeStatRanges(newFilter.stats),
+        tags: serializeTags(newFilter.tags),
       });
     },
     [setQueryState],
   );
 
   return [filter, setFilter] as const;
+}
+
+/** Cycles a trait chip: off -> include -> exclude -> off. */
+function nextTagMode(current: DexTagMode | undefined): DexTagMode | undefined {
+  if (!current) return "include";
+  if (current === "include") return "exclude";
+  return undefined;
 }
 
 interface DexFilterProps {
@@ -103,7 +256,7 @@ const CATEGORY_LABELS: Record<DexCategory, string> = {
 };
 
 const CATEGORY_PLACEHOLDERS: Record<DexCategory, string> = {
-  pokemon: "Search Pokemon...",
+  pokemon: "Search Pokemon or ability...",
   moves: "Search Moves...",
   abilities: "Search Abilities...",
   items: "Search Items...",
@@ -114,6 +267,8 @@ export function DexFilter({
   filter,
   collapsed = false,
 }: DexFilterProps) {
+  const statBounds = useMemo(() => getStatBounds(), []);
+
   const handleSearchChange = useCallback(
     (value: string) => {
       onFilterChange({ ...filter, search: value });
@@ -130,6 +285,11 @@ export function DexFilter({
         types: [],
         generations: [],
         randomSeed: null,
+        regulations: [],
+        sort: "dex",
+        sortDirection: "asc",
+        stats: {},
+        tags: {},
       });
     },
     [filter, onFilterChange],
@@ -155,6 +315,58 @@ export function DexFilter({
     [filter, onFilterChange],
   );
 
+  const handleRegulationToggle = useCallback(
+    (regulationId: string) => {
+      const newRegulations = filter.regulations.includes(regulationId)
+        ? filter.regulations.filter((r) => r !== regulationId)
+        : [...filter.regulations, regulationId];
+      onFilterChange({ ...filter, regulations: newRegulations });
+    },
+    [filter, onFilterChange],
+  );
+
+  const handleTagCycle = useCallback(
+    (tag: DexTag) => {
+      const newTags = { ...filter.tags };
+      const next = nextTagMode(newTags[tag]);
+      if (next) newTags[tag] = next;
+      else delete newTags[tag];
+      onFilterChange({ ...filter, tags: newTags });
+    },
+    [filter, onFilterChange],
+  );
+
+  const handleStatRangeChange = useCallback(
+    (stat: RangeStatKey, range: [number, number]) => {
+      const [boundMin, boundMax] = statBounds[stat];
+      const newStats = { ...filter.stats };
+      if (range[0] <= boundMin && range[1] >= boundMax) delete newStats[stat];
+      else newStats[stat] = range;
+      onFilterChange({ ...filter, stats: newStats });
+    },
+    [filter, onFilterChange, statBounds],
+  );
+
+  const handleSortChange = useCallback(
+    (sort: DexSortKey) => {
+      // Re-picking the active key flips direction instead of doing nothing.
+      if (sort === filter.sort) {
+        onFilterChange({
+          ...filter,
+          sortDirection: filter.sortDirection === "asc" ? "desc" : "asc",
+        });
+        return;
+      }
+      onFilterChange({
+        ...filter,
+        sort,
+        // Stats read best highest-first; dex number and name read best A→Z.
+        sortDirection: sort === "dex" || sort === "name" ? "asc" : "desc",
+      });
+    },
+    [filter, onFilterChange],
+  );
+
   const handleClearFilters = useCallback(() => {
     onFilterChange({
       ...filter,
@@ -162,6 +374,11 @@ export function DexFilter({
       types: [],
       generations: [],
       randomSeed: null,
+      regulations: [],
+      sort: "dex",
+      sortDirection: "asc",
+      stats: {},
+      tags: {},
     });
   }, [filter, onFilterChange]);
 
@@ -173,10 +390,24 @@ export function DexFilter({
     onFilterChange({ ...filter, randomSeed: null });
   }, [filter, onFilterChange]);
 
+  const statFilterCount = Object.keys(filter.stats).length;
+  const tagFilterCount = Object.keys(filter.tags).length;
+
   const hasActiveFilters =
     filter.search.length > 0 ||
     filter.types.length > 0 ||
-    filter.generations.length > 0;
+    filter.generations.length > 0 ||
+    filter.regulations.length > 0 ||
+    statFilterCount > 0 ||
+    tagFilterCount > 0 ||
+    filter.sort !== "dex";
+
+  const advancedFilterCount =
+    filter.generations.length +
+    filter.regulations.length +
+    statFilterCount +
+    tagFilterCount +
+    (filter.sort === "dex" ? 0 : 1);
 
   const [genPopoverOpen, setGenPopoverOpen] = useState(false);
 
@@ -238,51 +469,199 @@ export function DexFilter({
                 <button
                   type="button"
                   className={`relative p-1 transition-colors ${
-                    filter.generations.length > 0
+                    advancedFilterCount > 0
                       ? "text-foreground"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   <ListFilter className="h-4 w-4" />
-                  {filter.generations.length > 0 && (
+                  {advancedFilterCount > 0 && (
                     <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-foreground text-[8px] font-medium text-background">
-                      {filter.generations.length}
+                      {advancedFilterCount}
                     </span>
                   )}
                 </button>
               </PopoverTrigger>
-              <PopoverContent className="w-56 p-2" align="end">
-                <div className="space-y-1">
-                  {GEN_RANGES.map((gen) => (
-                    <label
-                      key={gen.id}
-                      htmlFor={`gen-filter-${gen.id}`}
-                      className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
-                    >
-                      <Checkbox
-                        id={`gen-filter-${gen.id}`}
-                        checked={filter.generations.includes(gen.id)}
-                        onCheckedChange={() => handleGenerationToggle(gen.id)}
-                      />
-                      <span>
-                        {gen.name}{" "}
-                        <span className="text-muted-foreground">
-                          ({gen.label})
-                        </span>
+              <PopoverContent
+                className="w-72 max-h-[70vh] overflow-y-auto p-3"
+                align="end"
+              >
+                <div className="space-y-4">
+                  <section className="space-y-1">
+                    <h4 className="px-1 text-xs font-medium text-muted-foreground">
+                      Sort by
+                    </h4>
+                    <div className="flex flex-wrap gap-1">
+                      {DEX_SORT_OPTIONS.map((option) => {
+                        const active = filter.sort === option.id;
+                        return (
+                          <button
+                            key={option.id}
+                            type="button"
+                            onClick={() => handleSortChange(option.id)}
+                            className={`flex items-center gap-0.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                              active
+                                ? "bg-foreground text-background"
+                                : "bg-muted text-muted-foreground hover:bg-muted/80"
+                            }`}
+                          >
+                            {option.label}
+                            {active &&
+                              (filter.sortDirection === "asc" ? (
+                                <ArrowUp className="h-3 w-3" />
+                              ) : (
+                                <ArrowDown className="h-3 w-3" />
+                              ))}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </section>
+
+                  <section className="space-y-1">
+                    <h4 className="px-1 text-xs font-medium text-muted-foreground">
+                      Traits{" "}
+                      <span className="font-normal">
+                        (tap to require, again to exclude)
                       </span>
-                    </label>
-                  ))}
+                    </h4>
+                    <div className="flex flex-wrap gap-1">
+                      {DEX_TAGS.map((tag) => {
+                        const mode = filter.tags[tag.id];
+                        return (
+                          <button
+                            key={tag.id}
+                            type="button"
+                            onClick={() => handleTagCycle(tag.id)}
+                            className={`flex items-center gap-0.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                              mode === "include"
+                                ? "bg-emerald-600 text-white"
+                                : mode === "exclude"
+                                  ? "bg-red-600 text-white"
+                                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+                            }`}
+                          >
+                            {mode === "include" && <Plus className="h-3 w-3" />}
+                            {mode === "exclude" && (
+                              <Minus className="h-3 w-3" />
+                            )}
+                            {tag.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </section>
+
+                  <section className="space-y-2">
+                    <h4 className="px-1 text-xs font-medium text-muted-foreground">
+                      Base stats
+                    </h4>
+                    {RANGE_STAT_KEYS.map((stat) => {
+                      const [boundMin, boundMax] = statBounds[stat];
+                      const [min, max] = filter.stats[stat] ?? [
+                        boundMin,
+                        boundMax,
+                      ];
+                      return (
+                        <div key={stat} className="px-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <span
+                              className={
+                                filter.stats[stat]
+                                  ? "font-medium"
+                                  : "text-muted-foreground"
+                              }
+                            >
+                              {STAT_LABELS[stat]}
+                            </span>
+                            <span className="tabular-nums text-muted-foreground">
+                              {min} – {max}
+                            </span>
+                          </div>
+                          <Slider
+                            className="mt-1.5"
+                            min={boundMin}
+                            max={boundMax}
+                            step={1}
+                            value={[min, max]}
+                            onValueChange={(value) =>
+                              handleStatRangeChange(stat, [
+                                value[0],
+                                value[1] ?? boundMax,
+                              ])
+                            }
+                          />
+                        </div>
+                      );
+                    })}
+                  </section>
+
+                  <section className="space-y-1">
+                    <h4 className="px-1 text-xs font-medium text-muted-foreground">
+                      Regulation
+                    </h4>
+                    {REGULATIONS.map((regulation) => (
+                      <label
+                        key={regulation.id}
+                        htmlFor={`reg-filter-${regulation.id}`}
+                        className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+                      >
+                        <Checkbox
+                          id={`reg-filter-${regulation.id}`}
+                          checked={filter.regulations.includes(regulation.id)}
+                          onCheckedChange={() =>
+                            handleRegulationToggle(regulation.id)
+                          }
+                        />
+                        <span>{regulation.name}</span>
+                      </label>
+                    ))}
+                  </section>
+
+                  <section className="space-y-1">
+                    <h4 className="px-1 text-xs font-medium text-muted-foreground">
+                      Generation
+                    </h4>
+                    {GEN_RANGES.map((gen) => (
+                      <label
+                        key={gen.id}
+                        htmlFor={`gen-filter-${gen.id}`}
+                        className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+                      >
+                        <Checkbox
+                          id={`gen-filter-${gen.id}`}
+                          checked={filter.generations.includes(gen.id)}
+                          onCheckedChange={() => handleGenerationToggle(gen.id)}
+                        />
+                        <span>
+                          {gen.name}{" "}
+                          <span className="text-muted-foreground">
+                            ({gen.label})
+                          </span>
+                        </span>
+                      </label>
+                    ))}
+                  </section>
                 </div>
-                {filter.generations.length > 0 && (
+
+                {advancedFilterCount > 0 && (
                   <Button
                     variant="ghost"
                     size="sm"
                     className="mt-2 h-7 w-full text-xs"
                     onClick={() =>
-                      onFilterChange({ ...filter, generations: [] })
+                      onFilterChange({
+                        ...filter,
+                        generations: [],
+                        regulations: [],
+                        stats: {},
+                        tags: {},
+                        sort: "dex",
+                        sortDirection: "asc",
+                      })
                     }
                   >
-                    Clear generations
+                    Reset filters
                   </Button>
                 )}
               </PopoverContent>
@@ -390,62 +769,124 @@ function seededShuffle<T>(array: T[], seed: number): T[] {
   return shuffled;
 }
 
+function matchesSearch(pokemon: DexPokemonListItem, searchLower: string) {
+  if (pokemon.name.toLowerCase().includes(searchLower)) return true;
+  // Ability names are searchable too, so "blaze" surfaces every Blaze user.
+  return pokemon.abilities.some((a) => a.toLowerCase().includes(searchLower));
+}
+
+function comparePokemon(
+  a: DexPokemonListItem,
+  b: DexPokemonListItem,
+  sort: DexSortKey,
+) {
+  if (sort === "name") return a.name.localeCompare(b.name);
+  if (sort === "dex") return a.id - b.id || a.name.localeCompare(b.name);
+  // Ties on a stat fall back to dex order so the grid stays stable.
+  return a.stats[sort] - b.stats[sort] || a.id - b.id;
+}
+
 // Hook to get filtered Pokemon based on filter state
 export function useFilteredPokemon(filter: DexFilterState) {
   const allPokemon = useMemo(
-    () =>
-      getDexPokemonList(9, { forms: "distinct-sprites" }).map((p) => ({
-        name: p.name,
-        id: p.id,
-        types: p.types,
-        baseId: p.baseId,
-      })),
+    () => getDexPokemonList(9, { forms: "distinct-sprites" }),
     [],
+  );
+
+  const activeTags = useMemo(
+    () =>
+      DEX_TAGS.filter((t) => filter.tags[t.id]).map((t) => ({
+        predicate: TAG_PREDICATES[t.id],
+        wanted: filter.tags[t.id] === "include",
+      })),
+    [filter.tags],
+  );
+
+  const activeStats = useMemo(
+    () =>
+      RANGE_STAT_KEYS.filter((key) => filter.stats[key]).map((key) => ({
+        key,
+        range: filter.stats[key] as [number, number],
+      })),
+    [filter.stats],
+  );
+
+  const regulationMask = useMemo(
+    () => toRegulationMask(filter.regulations),
+    [filter.regulations],
   );
 
   const hasActiveFilters =
     filter.search.length > 0 ||
     filter.types.length > 0 ||
-    filter.generations.length > 0;
+    filter.generations.length > 0 ||
+    regulationMask !== 0 ||
+    activeTags.length > 0 ||
+    activeStats.length > 0 ||
+    filter.sort !== "dex";
 
   const filteredPokemon = useMemo(() => {
     if (!hasActiveFilters && !filter.randomSeed) return null;
 
-    let result = allPokemon;
+    const searchLower = filter.search.toLowerCase();
 
-    // Apply filters if any
-    if (hasActiveFilters) {
-      const searchLower = filter.search.toLowerCase();
-      result = allPokemon.filter((pokemon) => {
-        if (searchLower && !pokemon.name.toLowerCase().includes(searchLower)) {
+    let result = allPokemon.filter((pokemon) => {
+      if (searchLower && !matchesSearch(pokemon, searchLower)) return false;
+
+      if (filter.types.length > 0) {
+        const hasType = filter.types.some((t) => pokemon.types.includes(t));
+        if (!hasType) return false;
+      }
+
+      if (filter.generations.length > 0) {
+        const pokemonGen = getGenerationByPokemonId(pokemon.baseId);
+        if (!pokemonGen || !filter.generations.includes(pokemonGen)) {
           return false;
         }
-        if (filter.types.length > 0) {
-          const hasType = filter.types.some((t) => pokemon.types.includes(t));
-          if (!hasType) return false;
-        }
-        if (filter.generations.length > 0) {
-          const pokemonGen = getGenerationByPokemonId(pokemon.baseId);
-          if (!pokemonGen || !filter.generations.includes(pokemonGen)) {
-            return false;
-          }
-        }
-        return true;
-      });
-    }
+      }
 
-    // Apply random shuffle if seed is set
+      // Legal in at least one of the selected regulations.
+      if (
+        regulationMask !== 0 &&
+        (pokemon.regulationMask & regulationMask) === 0
+      ) {
+        return false;
+      }
+
+      for (const { predicate, wanted } of activeTags) {
+        if (predicate(pokemon) !== wanted) return false;
+      }
+
+      for (const { key, range } of activeStats) {
+        const value = pokemon.stats[key];
+        if (value < range[0] || value > range[1]) return false;
+      }
+
+      return true;
+    });
+
+    // A random shuffle deliberately overrides any chosen sort order.
     if (filter.randomSeed) {
       result = seededShuffle(result, filter.randomSeed);
+    } else if (filter.sort !== "dex" || filter.sortDirection !== "asc") {
+      const direction = filter.sortDirection === "desc" ? -1 : 1;
+      result = [...result].sort(
+        (a, b) => comparePokemon(a, b, filter.sort) * direction,
+      );
     }
 
-    return result;
+    return result.map((p) => ({ name: p.name, id: p.id }));
   }, [
     allPokemon,
     filter.search,
     filter.types,
     filter.generations,
     filter.randomSeed,
+    filter.sort,
+    filter.sortDirection,
+    regulationMask,
+    activeTags,
+    activeStats,
     hasActiveFilters,
   ]);
 

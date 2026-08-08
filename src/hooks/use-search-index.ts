@@ -22,7 +22,12 @@ import type {
 } from "@/types/search";
 
 const FUSE_OPTIONS: IFuseOptions<SearchResult> = {
-  keys: [{ name: "name", weight: 1 }],
+  // Abilities are weighted low so a Pokemon's own name always wins, but
+  // searching an ability ("blaze") still surfaces the Pokemon that have it.
+  keys: [
+    { name: "name", weight: 1 },
+    { name: "abilities", weight: 0.2 },
+  ],
   threshold: 0.3,
   distance: 100,
   includeScore: true,
@@ -43,6 +48,7 @@ export function useSearchIndex() {
         url: `/pokemon/${p.slug}`,
         pokemonId: p.id,
         sprite: pokemonSprite(p.name) || pokemonSpriteById(p.id),
+        abilities: p.abilities,
       } as PokemonSearchResult);
     }
 

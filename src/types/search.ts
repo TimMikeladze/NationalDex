@@ -14,6 +14,8 @@ export interface PokemonSearchResult extends SearchResultBase {
   pokemonId: number;
   sprite: string;
   types?: PokemonType[];
+  /** Ability names, indexed so ability queries match the Pokemon */
+  abilities?: string[];
 }
 
 export interface MoveSearchResult extends SearchResultBase {
