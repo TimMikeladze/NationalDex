@@ -223,7 +223,12 @@ function ComparisonCard({
   // Filter teams where this Pokemon can be added
   const availableTeams = teams.filter((team) => {
     if (team.members.length >= 6) return false;
-    if (team.members.some((m) => m.name === pokemon.name)) return false;
+    // Keyed on dex id (not name) to match addMember's dedup key in
+    // use-teams.ts, which also dedupes by id. Comparing by name here would
+    // let a team show as "available" for a form (e.g. Charizard-Mega-X)
+    // whose base species (Charizard) is already on the team, only for
+    // addMember to silently reject it afterward.
+    if (team.members.some((m) => m.id === pokemon.id)) return false;
     // For simplicity, allow any Pokemon since the generation system is complex
     return true;
   });
