@@ -10,6 +10,7 @@
     "lint:fix": "bun biome check --diagnostic-level=error --unsafe --write . && bun biome format --write .",
     "lint:errors": "bun biome check --diagnostic-level error --unsafe .",
     "check": "if [ \"$CI\" = \"true\" ]; then bun run lint && bun run tsc; else bun run lint:fix && bun run tsc; fi",
+    "generate:regulations": "bun run scripts/generate-regulations.ts",
     "prepare": "simple-git-hooks",
     "release": "release-it"
   },
@@ -75,6 +76,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.15",
+    "@pkmn/sim": "^0.10.11",
     "@tailwindcss/postcss": "^4.1.18",
     "@types/node": "^25.2.3",
     "@types/react": "^19.2.14",
