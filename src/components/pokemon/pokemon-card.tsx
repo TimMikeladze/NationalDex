@@ -318,7 +318,7 @@ function PokemonCardContent({
   const handleCompareClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    toggleComparison(pokemon.id);
+    toggleComparison(pokemon.name);
   };
 
   if (variant === "compact") {
@@ -337,7 +337,7 @@ function PokemonCardContent({
         showFavorite={showFavorite}
         isFavorite={isFavorite(pokemon.id)}
         onFavoriteClick={handleFavoriteClick}
-        isInComparison={isInComparison(pokemon.id)}
+        isInComparison={isInComparison(pokemon.name)}
         onCompareClick={handleCompareClick}
         className={className}
       />
@@ -351,7 +351,7 @@ function PokemonCardContent({
       showFavorite={showFavorite}
       isFavorite={isFavorite(pokemon.id)}
       onFavoriteClick={handleFavoriteClick}
-      isInComparison={isInComparison(pokemon.id)}
+      isInComparison={isInComparison(pokemon.name)}
       onCompareClick={handleCompareClick}
       meta={meta}
       className={className}

@@ -9,18 +9,22 @@ import {
   useState,
 } from "react";
 
-const STORAGE_KEY = "pokedex-comparison";
+// Bumped from "pokedex-comparison": entries are now Pokemon names (so forms
+// like "Venusaur-Mega" are distinguishable from their base species) instead
+// of bare National Dex numbers, which couldn't tell forms apart and didn't
+// resolve to a valid route on their own.
+const STORAGE_KEY = "pokedex-comparison-v2";
 const PANEL_STATE_KEY = "pokedex-comparison-panel";
 
 export type ComparisonPanelState = "closed" | "minimized" | "expanded";
 
 type ComparisonContextValue = {
-  comparison: number[];
+  comparison: string[];
   isLoaded: boolean;
-  addToComparison: (id: number) => void;
-  removeFromComparison: (id: number) => void;
-  toggleComparison: (id: number) => void;
-  isInComparison: (id: number) => boolean;
+  addToComparison: (name: string) => void;
+  removeFromComparison: (name: string) => void;
+  toggleComparison: (name: string) => void;
+  isInComparison: (name: string) => boolean;
   clearComparison: () => void;
   panelState: ComparisonPanelState;
   expandPanel: () => void;
@@ -36,7 +40,7 @@ export function ComparisonProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const [comparison, setComparison] = useState<number[]>([]);
+  const [comparison, setComparison] = useState<string[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [panelState, setPanelState] = useState<ComparisonPanelState>("closed");
 
@@ -79,28 +83,28 @@ export function ComparisonProvider({
     }
   }, [panelState, isLoaded]);
 
-  const addToComparison = useCallback((id: number) => {
+  const addToComparison = useCallback((name: string) => {
     setComparison((prev) => {
-      if (prev.includes(id)) return prev;
-      return [...prev, id];
+      if (prev.includes(name)) return prev;
+      return [...prev, name];
     });
   }, []);
 
-  const removeFromComparison = useCallback((id: number) => {
-    setComparison((prev) => prev.filter((item) => item !== id));
+  const removeFromComparison = useCallback((name: string) => {
+    setComparison((prev) => prev.filter((item) => item !== name));
   }, []);
 
-  const toggleComparison = useCallback((id: number) => {
+  const toggleComparison = useCallback((name: string) => {
     setComparison((prev) => {
-      if (prev.includes(id)) {
-        return prev.filter((item) => item !== id);
+      if (prev.includes(name)) {
+        return prev.filter((item) => item !== name);
       }
-      return [...prev, id];
+      return [...prev, name];
     });
   }, []);
 
   const isInComparison = useCallback(
-    (id: number) => comparison.includes(id),
+    (name: string) => comparison.includes(name),
     [comparison],
   );
 

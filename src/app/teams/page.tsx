@@ -65,8 +65,8 @@ export default function TeamsPage() {
 
   const handleCompareTeam = (team: Team) => {
     for (const member of team.members) {
-      if (!isInComparison(member.id)) {
-        addToComparison(member.id);
+      if (!isInComparison(member.name)) {
+        addToComparison(member.name);
       }
     }
     router.push("/comparison");

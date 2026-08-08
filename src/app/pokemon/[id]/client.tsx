@@ -601,8 +601,8 @@ export function PokemonPageClient({
           <Button
             type="button"
             onClick={() => {
-              const wasInComparison = isInComparison(pokemon.id);
-              toggleComparison(pokemon.id);
+              const wasInComparison = isInComparison(pokemon.name);
+              toggleComparison(pokemon.name);
               if (!wasInComparison) {
                 toast.success(`${pokemon.name} added to comparison`, {
                   action: {
@@ -616,19 +616,19 @@ export function PokemonPageClient({
             size="sm"
             className={cn(
               "h-8 px-2 gap-1.5 transition-colors",
-              isInComparison(pokemon.id)
+              isInComparison(pokemon.name)
                 ? "text-blue-500 hover:text-blue-500"
                 : "text-muted-foreground hover:text-foreground",
             )}
             title={
-              isInComparison(pokemon.id)
+              isInComparison(pokemon.name)
                 ? "Remove from comparison"
                 : "Add to comparison"
             }
           >
             <GitCompareArrows className="size-4" />
             <span className="hidden sm:inline text-xs">
-              {isInComparison(pokemon.id) ? "compared" : "compare"}
+              {isInComparison(pokemon.name) ? "compared" : "compare"}
             </span>
           </Button>
 

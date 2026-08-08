@@ -82,8 +82,8 @@ export default function TeamDetailPage() {
   const handleCompareTeam = useCallback(() => {
     if (!team) return;
     for (const member of team.members) {
-      if (!isInComparison(member.id)) {
-        addToComparison(member.id);
+      if (!isInComparison(member.name)) {
+        addToComparison(member.name);
       }
     }
     router.push("/comparison");
@@ -311,15 +311,15 @@ function TeamMemberCard({
   const { addToComparison, isInComparison, removeFromComparison } =
     useComparison();
 
-  const inComparison = isInComparison(member.id);
+  const inComparison = isInComparison(member.name);
 
   const handleToggleComparison = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (inComparison) {
-      removeFromComparison(member.id);
+      removeFromComparison(member.name);
     } else {
-      addToComparison(member.id);
+      addToComparison(member.name);
     }
   };
 
