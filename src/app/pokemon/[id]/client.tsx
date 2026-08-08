@@ -50,7 +50,10 @@ import {
   usePokemonWithSpecies,
 } from "@/hooks/use-pokemon";
 import { useSpritePreferences } from "@/hooks/use-sprite-preferences";
-import { getDexPokemonVariationsByDexNumber } from "@/lib/dex-pokemon";
+import {
+  getDexPokemonList,
+  getDexPokemonVariationsByDexNumber,
+} from "@/lib/dex-pokemon";
 import { getOffensiveTypeMatchups, toID } from "@/lib/pkmn";
 import type { FormattedPokemonEncounter, PokedexEntry } from "@/lib/pokeapi";
 import { pokemonSprite, type SpriteGen } from "@/lib/sprites";
@@ -61,8 +64,6 @@ import type {
   PokemonMove,
   PokemonSpecies,
 } from "@/types/pokemon";
-
-const MAX_POKEMON_ID = 1025;
 
 const _isAnimatedSprite = (src: string) => src.toLowerCase().endsWith(".gif");
 
@@ -467,10 +468,26 @@ export function PokemonPageClient({
   const [spriteBack, setSpriteBack] = useState(false);
   const [spriteFemale, setSpriteFemale] = useState(false);
 
+  // Base species only, ordered by National Dex number, each with a unique
+  // routable slug. Forms/formes share their base species' dex number, so
+  // prev/next/random navigate between base species rather than individual
+  // forms.
+  const dexOrder = useMemo(() => getDexPokemonList(9, { forms: "none" }), []);
+  const dexIndex = useMemo(() => {
+    if (!pokemon) return -1;
+    return dexOrder.findIndex((p) => p.id === pokemon.id);
+  }, [dexOrder, pokemon]);
+  const prevDexPokemon = dexIndex > 0 ? dexOrder[dexIndex - 1] : null;
+  const nextDexPokemon =
+    dexIndex >= 0 && dexIndex < dexOrder.length - 1
+      ? dexOrder[dexIndex + 1]
+      : null;
+
   const handleRandomPokemon = useCallback(() => {
-    const randomId = Math.floor(Math.random() * MAX_POKEMON_ID) + 1;
-    router.push(`/pokemon/${randomId}`);
-  }, [router]);
+    if (dexOrder.length === 0) return;
+    const randomPokemon = dexOrder[Math.floor(Math.random() * dexOrder.length)];
+    router.push(`/pokemon/${randomPokemon.slug}`);
+  }, [router, dexOrder]);
 
   const typeEffectiveness = useMemo(() => {
     if (!pokemon) return null;
@@ -483,7 +500,7 @@ export function PokemonPageClient({
     return (
       <>
         <div className="flex items-center gap-3 min-w-0 flex-1">
-          {pokemon.id > 1 ? (
+          {prevDexPokemon ? (
             <Button
               asChild
               type="button"
@@ -492,7 +509,7 @@ export function PokemonPageClient({
               className="h-8 px-2 gap-1.5 text-muted-foreground hover:text-foreground"
               title="Previous Pokemon"
             >
-              <Link href={`/pokemon/${pokemon.id - 1}`}>
+              <Link href={`/pokemon/${prevDexPokemon.slug}`}>
                 <ChevronLeft className="size-4" />
                 <span className="hidden sm:inline text-xs">prev</span>
               </Link>
@@ -658,7 +675,7 @@ export function PokemonPageClient({
               </Button>
             }
           />
-          {pokemon.id < MAX_POKEMON_ID ? (
+          {nextDexPokemon ? (
             <Button
               asChild
               type="button"
@@ -667,7 +684,7 @@ export function PokemonPageClient({
               className="h-8 px-2 gap-1.5 text-muted-foreground hover:text-foreground"
               title="Next Pokemon"
             >
-              <Link href={`/pokemon/${pokemon.id + 1}`}>
+              <Link href={`/pokemon/${nextDexPokemon.slug}`}>
                 <span className="hidden sm:inline text-xs">next</span>
                 <ChevronRight className="size-4" />
               </Link>
@@ -680,6 +697,8 @@ export function PokemonPageClient({
     );
   }, [
     pokemon,
+    prevDexPokemon,
+    nextDexPokemon,
     expandPanel,
     handleRandomPokemon,
     isFavorite,
