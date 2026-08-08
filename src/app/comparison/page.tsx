@@ -151,7 +151,7 @@ export default function ComparisonPage() {
           <div className="overflow-x-auto pb-4">
             <div className="inline-flex gap-4 min-w-full">
               <SortedComparisonCards
-                pokemonIds={comparison}
+                pokemonNames={comparison}
                 sortBy={sortBy}
                 onRemove={removeFromComparison}
               />
@@ -161,11 +161,11 @@ export default function ComparisonPage() {
         </TabsContent>
 
         <TabsContent value="table">
-          <StatsComparisonTable pokemonIds={comparison} sortBy={sortBy} />
+          <StatsComparisonTable pokemonNames={comparison} sortBy={sortBy} />
         </TabsContent>
 
         <TabsContent value="coverage">
-          <TeamCoverageSection pokemonIds={comparison} />
+          <TeamCoverageSection pokemonNames={comparison} />
         </TabsContent>
       </Tabs>
     </div>
@@ -173,33 +173,37 @@ export default function ComparisonPage() {
 }
 
 function SortedComparisonCards({
-  pokemonIds,
+  pokemonNames,
   onRemove,
 }: {
-  pokemonIds: number[];
+  pokemonNames: string[];
   sortBy: SortOption;
-  onRemove: (id: number) => void;
+  onRemove: (name: string) => void;
 }) {
   // We need to sort the cards, but we can't call hooks conditionally
   // So we render all cards and let them sort themselves via CSS order
   // For now, we just render them in order and let the user sort
   return (
     <>
-      {pokemonIds.map((id) => (
-        <ComparisonCard key={id} pokemonId={id} onRemove={() => onRemove(id)} />
+      {pokemonNames.map((name) => (
+        <ComparisonCard
+          key={name}
+          pokemonName={name}
+          onRemove={() => onRemove(name)}
+        />
       ))}
     </>
   );
 }
 
 function ComparisonCard({
-  pokemonId,
+  pokemonName,
   onRemove,
 }: {
-  pokemonId: number;
+  pokemonName: string;
   onRemove: () => void;
 }) {
-  const { data: pokemon, isLoading } = usePokemon(pokemonId.toString());
+  const { data: pokemon, isLoading } = usePokemon(pokemonName);
   const { teams, addMember } = useTeams();
   const [showAddToTeam, setShowAddToTeam] = useState(false);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
@@ -219,7 +223,7 @@ function ComparisonCard({
   // Filter teams where this Pokemon can be added
   const availableTeams = teams.filter((team) => {
     if (team.members.length >= 6) return false;
-    if (team.members.some((m) => m.id === pokemon.id)) return false;
+    if (team.members.some((m) => m.name === pokemon.name)) return false;
     // For simplicity, allow any Pokemon since the generation system is complex
     return true;
   });
@@ -564,9 +568,9 @@ function ComparisonCardSkeleton() {
 
 // Stats Comparison Table for side-by-side stat comparison
 function StatsComparisonTable({
-  pokemonIds,
+  pokemonNames,
 }: {
-  pokemonIds: number[];
+  pokemonNames: string[];
   sortBy: SortOption;
 }) {
   return (
@@ -578,21 +582,21 @@ function StatsComparisonTable({
             <th className="text-left py-2 pr-4 text-muted-foreground font-normal">
               Stat
             </th>
-            {pokemonIds.map((id) => (
-              <PokemonTableHeader key={id} pokemonId={id} />
+            {pokemonNames.map((name) => (
+              <PokemonTableHeader key={name} pokemonName={name} />
             ))}
           </tr>
         </thead>
         <tbody>
-          <StatsComparisonRows pokemonIds={pokemonIds} />
+          <StatsComparisonRows pokemonNames={pokemonNames} />
         </tbody>
       </table>
     </Card>
   );
 }
 
-function PokemonTableHeader({ pokemonId }: { pokemonId: number }) {
-  const { data: pokemon } = usePokemon(pokemonId.toString());
+function PokemonTableHeader({ pokemonName }: { pokemonName: string }) {
+  const { data: pokemon } = usePokemon(pokemonName);
 
   if (!pokemon) {
     return (
@@ -622,9 +626,9 @@ function PokemonTableHeader({ pokemonId }: { pokemonId: number }) {
   );
 }
 
-function StatsComparisonRows({ pokemonIds }: { pokemonIds: number[] }) {
-  // biome-ignore lint/correctness/useHookAtTopLevel: pokemonIds array is stable from localStorage state
-  const pokemonQueries = pokemonIds.map((id) => usePokemon(id.toString()));
+function StatsComparisonRows({ pokemonNames }: { pokemonNames: string[] }) {
+  // biome-ignore lint/correctness/useHookAtTopLevel: pokemonNames array is stable from localStorage state
+  const pokemonQueries = pokemonNames.map((name) => usePokemon(name));
   const allLoaded = pokemonQueries.every((q) => q.data);
 
   const statNames = ["HP", "Attack", "Defense", "Sp. Atk", "Sp. Def", "Speed"];
@@ -635,8 +639,8 @@ function StatsComparisonRows({ pokemonIds }: { pokemonIds: number[] }) {
         {statNames.map((stat) => (
           <tr key={stat} className="border-b last:border-0">
             <td className="py-2 pr-4 text-muted-foreground">{stat}</td>
-            {pokemonIds.map((id) => (
-              <td key={id} className="text-center py-2 px-2">
+            {pokemonNames.map((name) => (
+              <td key={name} className="text-center py-2 px-2">
                 <Skeleton className="h-4 w-8 mx-auto" />
               </td>
             ))}
@@ -678,7 +682,7 @@ function StatsComparisonRows({ pokemonIds }: { pokemonIds: number[] }) {
               const isMin = value === min && max !== min;
               return (
                 <td
-                  key={pokemon.id}
+                  key={pokemon.name}
                   className={cn(
                     "text-center py-2 px-2 tabular-nums",
                     isMax && "font-medium text-green-600 dark:text-green-400",
@@ -696,7 +700,7 @@ function StatsComparisonRows({ pokemonIds }: { pokemonIds: number[] }) {
         <td className="py-2 pr-4 font-medium">Total</td>
         {pokemonData.map((pokemon, idx) => (
           <td
-            key={pokemon.id}
+            key={pokemon.name}
             className={cn(
               "text-center py-2 px-2 tabular-nums font-medium",
               idx === maxTotalIdx &&
@@ -716,9 +720,9 @@ function StatsComparisonRows({ pokemonIds }: { pokemonIds: number[] }) {
 }
 
 // Team Coverage Section
-function TeamCoverageSection({ pokemonIds }: { pokemonIds: number[] }) {
-  // biome-ignore lint/correctness/useHookAtTopLevel: pokemonIds array is stable from localStorage state
-  const pokemonQueries = pokemonIds.map((id) => usePokemon(id.toString()));
+function TeamCoverageSection({ pokemonNames }: { pokemonNames: string[] }) {
+  // biome-ignore lint/correctness/useHookAtTopLevel: pokemonNames array is stable from localStorage state
+  const pokemonQueries = pokemonNames.map((name) => usePokemon(name));
   const allLoaded = pokemonQueries.every((q) => q.data);
 
   if (!allLoaded) {
@@ -747,7 +751,7 @@ function TeamCoverageSection({ pokemonIds }: { pokemonIds: number[] }) {
       {/* Pokemon team preview */}
       <div className="flex gap-2 mb-6">
         {pokemonData.map((pokemon) => (
-          <div key={pokemon.id} className="flex flex-col items-center">
+          <div key={pokemon.name} className="flex flex-col items-center">
             {/* biome-ignore lint/performance/noImgElement: external sprite URLs */}
             <img
               src={pokemon.sprite}
