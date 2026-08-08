@@ -42,6 +42,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useComparison } from "@/hooks/use-comparison";
 import { calculateTypeEffectiveness, usePokemon } from "@/hooks/use-pokemon";
 import { useTeams } from "@/hooks/use-teams";
+import { toID } from "@/lib/pkmn";
 import { pokemonSpriteById } from "@/lib/sprites";
 import { cn } from "@/lib/utils";
 import type { PokemonStat } from "@/types/pokemon";
@@ -336,7 +337,7 @@ function ComparisonCard({
           </DropdownMenu>
         </div>
 
-        <Link href={`/pokemon/${pokemon.id}`} className="block">
+        <Link href={`/pokemon/${toID(pokemon.name)}`} className="block">
           <div className="flex flex-col items-center mb-3">
             <span className="text-[10px] text-muted-foreground tabular-nums">
               #{pokemon.id.toString().padStart(3, "0")}

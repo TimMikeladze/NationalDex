@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useLists } from "@/hooks/use-lists";
+import { toID } from "@/lib/pkmn";
 import { pokemonSpriteById } from "@/lib/sprites";
 import { cn } from "@/lib/utils";
 import type { ListItem, ListItemType } from "@/types/list";
@@ -89,7 +90,7 @@ export default function ListDetailPage({ params }: PageProps) {
   const getItemLink = (item: ListItem): string => {
     switch (item.type) {
       case "pokemon":
-        return `/pokemon/${item.id}`;
+        return `/pokemon/${toID(item.name)}`;
       case "move":
         return `/moves/${item.id}`;
       case "ability":

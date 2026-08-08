@@ -28,7 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { usePokemon } from "@/hooks/use-pokemon";
-import { GEN_RANGES } from "@/lib/pkmn";
+import { GEN_RANGES, toID } from "@/lib/pkmn";
 import { cn } from "@/lib/utils";
 
 type Difficulty = "easy" | "normal" | "hard";
@@ -343,7 +343,7 @@ export default function WhosThatPokemonPage() {
       {revealed && pokemon && (
         <div className="text-center mb-4">
           <Link
-            href={`/pokemon/${pokemon.id}`}
+            href={`/pokemon/${toID(pokemon.name)}`}
             className="text-xl font-bold hover:text-primary transition-colors"
           >
             {pokemon.name}
