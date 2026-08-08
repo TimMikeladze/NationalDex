@@ -26,6 +26,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useComparison } from "@/hooks/use-comparison";
 import { usePokemon } from "@/hooks/use-pokemon";
 import { useTeams } from "@/hooks/use-teams";
+import { toID } from "@/lib/pkmn";
 import { pokemonSpriteById } from "@/lib/sprites";
 import { cn } from "@/lib/utils";
 import type { TeamMember } from "@/types/team";
@@ -324,7 +325,7 @@ function TeamMemberCard({
 
   return (
     <Card className="relative group overflow-hidden">
-      <Link href={`/pokemon/${member.id}`} className="block p-4">
+      <Link href={`/pokemon/${toID(member.name)}`} className="block p-4">
         <div className="flex flex-col items-center">
           <span className="text-xs text-muted-foreground tabular-nums">
             #{member.id.toString().padStart(3, "0")}
