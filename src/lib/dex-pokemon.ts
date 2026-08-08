@@ -103,8 +103,10 @@ export function getDexPokemonList(
     if (formsMode === "none") continue;
 
     for (const form of group.forms) {
-      // Skip certain nonstandard forms that shouldn't appear in the main list
-      const skipNonstandard = ["Future", "CAP", "LGPE"];
+      // Skip certain nonstandard forms that shouldn't appear in the main list.
+      // "Future" is intentionally NOT skipped: it is how @pkmn/dex marks the
+      // newest Mega forms, which do belong in the dex.
+      const skipNonstandard = ["CAP", "LGPE"];
       if (
         form.isNonstandard &&
         skipNonstandard.includes(form.isNonstandard as string)
