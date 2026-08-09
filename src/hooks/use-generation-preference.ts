@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { LATEST_GEN } from "@/lib/pkmn";
 
 const STORAGE_KEY = "pokedex-generation-preference";
@@ -8,10 +8,13 @@ const STORAGE_KEY = "pokedex-generation-preference";
 type GenerationPreference = {
   /** Generation to view Pokemon data in; null means "use the latest data". */
   preferredGeneration: number | null;
+  /** False until the stored value has been read, to keep hydration stable. */
+  isLoaded: boolean;
 };
 
 const DEFAULT_PREFERENCE: GenerationPreference = {
   preferredGeneration: null,
+  isLoaded: false,
 };
 
 function normalizeGeneration(value: unknown): number | null {
@@ -20,53 +23,94 @@ function normalizeGeneration(value: unknown): number | null {
   return value;
 }
 
-function parsePreference(value: string | null): GenerationPreference | null {
+function parsePreference(value: string | null): number | null {
   if (!value) return null;
   try {
     const parsed = JSON.parse(value) as Partial<GenerationPreference>;
-    return {
-      preferredGeneration: normalizeGeneration(parsed.preferredGeneration),
-    };
+    return normalizeGeneration(parsed.preferredGeneration);
   } catch {
     return null;
   }
 }
 
+// The preference is read all over the app — the app header, the dex grid, every
+// detail page — and they all have to move together the moment it changes, so it
+// lives in one store rather than in each hook's own state.
+let state: GenerationPreference = DEFAULT_PREFERENCE;
+const listeners = new Set<() => void>();
+
+function emit() {
+  for (const listener of listeners) listener();
+}
+
+function setState(next: GenerationPreference) {
+  state = next;
+  emit();
+}
+
+function readFromStorage() {
+  setState({
+    preferredGeneration: parsePreference(localStorage.getItem(STORAGE_KEY)),
+    isLoaded: true,
+  });
+}
+
+function subscribe(onStoreChange: () => void) {
+  if (!state.isLoaded) readFromStorage();
+  listeners.add(onStoreChange);
+
+  // Keep other tabs in step.
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === STORAGE_KEY) readFromStorage();
+  };
+  window.addEventListener("storage", onStorage);
+
+  return () => {
+    listeners.delete(onStoreChange);
+    window.removeEventListener("storage", onStorage);
+  };
+}
+
+const getSnapshot = () => state;
+const getServerSnapshot = () => DEFAULT_PREFERENCE;
+
 /**
- * Which generation's games Pokemon data (learnsets, stats, types, abilities)
- * is shown relative to. Persisted so it carries across the whole dex.
+ * Which generation's games the dex is read as — learnsets, stats, types,
+ * abilities, items, matchups and search all follow it. Persisted, shared by
+ * every component, and null for the National Dex.
  */
 export function useGenerationPreference() {
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [preference, setPreference] =
-    useState<GenerationPreference>(DEFAULT_PREFERENCE);
-
-  useEffect(() => {
-    const stored = parsePreference(localStorage.getItem(STORAGE_KEY));
-    if (stored) setPreference(stored);
-    setIsLoaded(true);
-  }, []);
-
-  useEffect(() => {
-    if (!isLoaded) return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(preference));
-  }, [isLoaded, preference]);
+  const { preferredGeneration, isLoaded } = useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getServerSnapshot,
+  );
 
   const setPreferredGeneration = useCallback((generation: number | null) => {
-    setPreference({ preferredGeneration: normalizeGeneration(generation) });
+    const next = normalizeGeneration(generation);
+    setState({ preferredGeneration: next, isLoaded: true });
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ preferredGeneration: next }),
+    );
   }, []);
 
   const resetGenerationPreference = useCallback(() => {
-    setPreference(DEFAULT_PREFERENCE);
-  }, []);
+    setPreferredGeneration(null);
+  }, [setPreferredGeneration]);
 
   return useMemo(
     () => ({
-      ...preference,
+      preferredGeneration,
       isLoaded,
       setPreferredGeneration,
       resetGenerationPreference,
     }),
-    [preference, isLoaded, setPreferredGeneration, resetGenerationPreference],
+    [
+      preferredGeneration,
+      isLoaded,
+      setPreferredGeneration,
+      resetGenerationPreference,
+    ],
   );
 }

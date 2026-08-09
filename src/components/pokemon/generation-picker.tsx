@@ -57,7 +57,9 @@ export function GenerationPicker({
         title="View the dex as a specific generation's games"
       >
         <Gamepad2 className="size-4" strokeWidth={1.5} />
-        <span className="text-xs lowercase whitespace-nowrap">
+        {/* On narrow screens the icon stands alone, like the toolbar's other
+            actions — the active generation is still named on the page itself. */}
+        <span className="hidden sm:inline text-xs lowercase whitespace-nowrap">
           {preferredGeneration !== null
             ? getGenerationName(preferredGeneration)
             : "national"}
