@@ -139,6 +139,7 @@ export interface MovePokemon {
   id: number;
   name: string;
   sprite: string;
+  types: PokemonType[];
   learnMethods: {
     method: LearnMethod;
     levelLearnedAt: number;
@@ -153,6 +154,7 @@ export interface AbilityPokemon {
   id: number;
   name: string;
   sprite: string;
+  types: PokemonType[];
   isHidden: boolean;
 }
 
@@ -173,6 +175,7 @@ export interface TypePokemon {
   id: number;
   name: string;
   sprite: string;
+  types: PokemonType[];
   slot: 1 | 2;
 }
 

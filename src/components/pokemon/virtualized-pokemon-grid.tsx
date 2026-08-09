@@ -2,11 +2,20 @@
 
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSpritePreferences } from "@/hooks/use-sprite-preferences";
+import { pokemonSprite, pokemonSpriteById } from "@/lib/sprites";
+import type { PokemonType } from "@/types/pokemon";
 import { PokemonCard } from "./pokemon-card";
 
 interface PokemonItem {
   id: number;
   name: string;
+  /**
+   * When the caller already knows the types, the card renders straight from
+   * them instead of firing a query per card — a grid of hundreds of cards
+   * would otherwise open hundreds of subscriptions at once.
+   */
+  types?: PokemonType[];
 }
 
 interface VirtualizedPokemonGridProps {
@@ -105,7 +114,7 @@ export function VirtualizedPokemonGrid({
       <div ref={containerRef} className={className}>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 md:gap-3 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
           {pokemon.slice(0, 16).map((p) => (
-            <PokemonCard key={`${p.id}-${p.name}`} name={p.name} id={p.id} />
+            <GridCard key={`${p.id}-${p.name}`} pokemon={p} />
           ))}
         </div>
       </div>
@@ -144,10 +153,9 @@ export function VirtualizedPokemonGrid({
                 }}
               >
                 {row.map((pokemon) => (
-                  <PokemonCard
+                  <GridCard
                     key={`${pokemon.id}-${pokemon.name}`}
-                    name={pokemon.name}
-                    id={pokemon.id}
+                    pokemon={pokemon}
                   />
                 ))}
               </div>
@@ -156,5 +164,30 @@ export function VirtualizedPokemonGrid({
         })}
       </div>
     </div>
+  );
+}
+
+/**
+ * One grid cell. Uses the data the list already has when it is complete, and
+ * only falls back to fetching when the caller passed name/id alone.
+ */
+function GridCard({ pokemon }: { pokemon: PokemonItem }) {
+  const { defaultPokemonSpriteGen } = useSpritePreferences();
+
+  if (!pokemon.types) {
+    return <PokemonCard name={pokemon.name} id={pokemon.id} />;
+  }
+
+  return (
+    <PokemonCard
+      pokemon={{
+        id: pokemon.id,
+        name: pokemon.name,
+        sprite:
+          pokemonSprite(pokemon.name, { gen: defaultPokemonSpriteGen }) ||
+          pokemonSpriteById(pokemon.id),
+        types: pokemon.types,
+      }}
+    />
   );
 }

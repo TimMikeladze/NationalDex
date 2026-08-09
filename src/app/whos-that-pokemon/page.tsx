@@ -27,8 +27,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useGenerationPreference } from "@/hooks/use-generation-preference";
 import { usePokemon } from "@/hooks/use-pokemon";
-import { GEN_RANGES, toID } from "@/lib/pkmn";
+import { GEN_RANGES, getSpeciesForView, toID } from "@/lib/pkmn";
 import { cn } from "@/lib/utils";
 
 type Difficulty = "easy" | "normal" | "hard";
@@ -43,16 +44,29 @@ const DIFFICULTY_INFO: Record<
   hard: { label: "Hard", description: "Zoomed in, no hints" },
 };
 
-function getRandomPokemonIdForGen(gen: Generation): number {
-  if (gen === "all") {
-    return Math.floor(Math.random() * 1025) + 1;
+/**
+ * Picks a Pokemon from the chosen region, limited to the ones that existed in
+ * the generation being viewed so the quiz never asks about a Pokemon the
+ * player's games never had.
+ */
+function getRandomPokemonIdForGen(
+  gen: Generation,
+  viewGeneration: number | null,
+): number {
+  const genRange = gen === "all" ? null : GEN_RANGES.find((g) => g.id === gen);
+
+  const candidates = getSpeciesForView(viewGeneration)
+    .map((s) => s.num)
+    .filter((num) => !genRange || (num >= genRange.min && num <= genRange.max));
+
+  if (candidates.length === 0) {
+    // Nothing in this region existed in that generation; fall back to its dex.
+    const range = genRange ? genRange.max - genRange.min + 1 : 1025;
+    const min = genRange ? genRange.min : 1;
+    return Math.floor(Math.random() * range) + min;
   }
-  const genRange = GEN_RANGES.find((g) => g.id === gen);
-  if (!genRange) {
-    return Math.floor(Math.random() * 1025) + 1;
-  }
-  const range = genRange.max - genRange.min + 1;
-  return Math.floor(Math.random() * range) + genRange.min;
+
+  return candidates[Math.floor(Math.random() * candidates.length)];
 }
 
 function normalizeGuess(guess: string): string {
@@ -69,8 +83,9 @@ function normalizePokemonName(name: string): string {
 export default function WhosThatPokemonPage() {
   const [difficulty, setDifficulty] = useState<Difficulty>("normal");
   const [generation, setGeneration] = useState<Generation>("all");
+  const { preferredGeneration } = useGenerationPreference();
   const [pokemonId, setPokemonId] = useState<number>(() =>
-    getRandomPokemonIdForGen("all"),
+    getRandomPokemonIdForGen("all", null),
   );
   const [guess, setGuess] = useState("");
   const [revealed, setRevealed] = useState(false);
@@ -83,7 +98,10 @@ export default function WhosThatPokemonPage() {
   const [showFirstLetter, setShowFirstLetter] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const { data: pokemon, isLoading } = usePokemon(pokemonId);
+  const { data: pokemon, isLoading } = usePokemon(
+    pokemonId,
+    preferredGeneration,
+  );
 
   // Load best streak from localStorage
   useEffect(() => {
@@ -140,7 +158,7 @@ export default function WhosThatPokemonPage() {
   }, []);
 
   const handleNext = useCallback(() => {
-    setPokemonId(getRandomPokemonIdForGen(generation));
+    setPokemonId(getRandomPokemonIdForGen(generation, preferredGeneration));
     setGuess("");
     setRevealed(false);
     setIsCorrect(false);
@@ -148,7 +166,7 @@ export default function WhosThatPokemonPage() {
     setShowFirstLetter(false);
     setHintsUsed(0);
     setTimeout(() => inputRef.current?.focus(), 100);
-  }, [generation]);
+  }, [generation, preferredGeneration]);
 
   const handleUseHint = useCallback(() => {
     if (!showFirstLetter && pokemon) {
@@ -174,17 +192,20 @@ export default function WhosThatPokemonPage() {
     setDifficulty(newDifficulty);
   }, []);
 
-  const handleGenerationChange = useCallback((newGen: Generation) => {
-    setGeneration(newGen);
-    // Get a new Pokemon from the selected generation
-    setPokemonId(getRandomPokemonIdForGen(newGen));
-    setGuess("");
-    setRevealed(false);
-    setIsCorrect(false);
-    setHonorSystem(false);
-    setShowFirstLetter(false);
-    setHintsUsed(0);
-  }, []);
+  const handleGenerationChange = useCallback(
+    (newGen: Generation) => {
+      setGeneration(newGen);
+      // Get a new Pokemon from the selected generation
+      setPokemonId(getRandomPokemonIdForGen(newGen, preferredGeneration));
+      setGuess("");
+      setRevealed(false);
+      setIsCorrect(false);
+      setHonorSystem(false);
+      setShowFirstLetter(false);
+      setHintsUsed(0);
+    },
+    [preferredGeneration],
+  );
 
   const firstLetterHint = useMemo(() => {
     if (!pokemon || !showFirstLetter) return null;

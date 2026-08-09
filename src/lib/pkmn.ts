@@ -43,8 +43,49 @@ export function getAllItems(genNum = 9) {
   );
 }
 
+/**
+ * Types a Pokemon or move can have in a generation. `???` (Gen II-IV) and
+ * `Stellar` (Gen IX Tera type) are internal entries with no dex presence, so
+ * they are left out.
+ */
 export function getAllTypes(genNum = 9) {
-  return Array.from(gens.get(genNum).types).filter((t) => t.exists);
+  return Array.from(gens.get(genNum).types).filter(
+    (t) => t.exists && t.name !== "???" && t.name !== "Stellar",
+  );
+}
+
+/**
+ * Species present in a generation's games. Unlike {@link getAllSpecies}, which
+ * always returns the full National Dex, this drops Pokemon the generation never
+ * had — no Tyranitar in Gen I, no Kakuna in Gen IX.
+ */
+export function getGenSpecies(
+  genNum: number,
+  options?: {
+    includeFormes?: boolean;
+  },
+) {
+  const includeFormes = options?.includeFormes ?? false;
+  return Array.from(gens.get(genNum).species).filter((s) => {
+    if (!s.exists || s.num <= 0) return false;
+    if (!includeFormes && s.forme) return false;
+    return true;
+  });
+}
+
+/**
+ * Species for a view: the whole National Dex when no generation is selected,
+ * otherwise just the ones that generation's games had.
+ */
+export function getSpeciesForView(
+  genNum: number | null,
+  options?: {
+    includeFormes?: boolean;
+  },
+) {
+  return genNum === null
+    ? getAllSpecies(LATEST_GEN, options)
+    : getGenSpecies(genNum, options);
 }
 
 export function getAllNatures() {
@@ -99,6 +140,45 @@ export function resolveSpecies(nameOrId: string | number) {
   return undefined;
 }
 
+const generationsCache = new Map<string, number[]>();
+
+function generationsWhere(
+  cacheKey: string,
+  existsInGen: (genNum: number) => boolean,
+): number[] {
+  const cached = generationsCache.get(cacheKey);
+  if (cached) return cached;
+
+  const result = GENERATIONS.map((g) => g.num).filter(existsInGen);
+  generationsCache.set(cacheKey, result);
+  return result;
+}
+
+/** Generations whose games had this move / ability / item / type. */
+export function getMoveGenerations(name: string): number[] {
+  return generationsWhere(`move:${toID(name)}`, (g) =>
+    Boolean(getMove(name, g)),
+  );
+}
+
+export function getAbilityGenerations(name: string): number[] {
+  return generationsWhere(`ability:${toID(name)}`, (g) =>
+    Boolean(getAbility(name, g)),
+  );
+}
+
+export function getItemGenerations(name: string): number[] {
+  return generationsWhere(`item:${toID(name)}`, (g) =>
+    Boolean(getItem(name, g)),
+  );
+}
+
+export function getTypeGenerations(name: string): number[] {
+  return generationsWhere(`type:${toID(name)}`, (g) =>
+    getAllTypes(g).some((t) => t.name.toLowerCase() === name.toLowerCase()),
+  );
+}
+
 const speciesGenerationsCache = new Map<string, number[]>();
 
 /**
@@ -144,8 +224,7 @@ export function getTypeMatchups(types: string[], genNum = 9) {
   const resistances: { type: string; multiplier: number }[] = [];
   const immunities: string[] = [];
 
-  for (const type of gen.types) {
-    if (!type.exists) continue;
+  for (const type of getAllTypes(genNum)) {
     // biome-ignore lint/suspicious/noExplicitAny: library typing for totalEffectiveness is too strict here
     const eff = gen.types.totalEffectiveness(type.name, types as any);
     if (eff > 1) weaknesses.push({ type: type.name, multiplier: eff });
@@ -166,8 +245,7 @@ export function getOffensiveTypeMatchups(attackingType: string, genNum = 9) {
   const notVeryEffective: string[] = [];
   const noEffect: string[] = [];
 
-  for (const defendingType of gen.types) {
-    if (!defendingType.exists) continue;
+  for (const defendingType of getAllTypes(genNum)) {
     // biome-ignore lint/suspicious/noExplicitAny: library typing
     const eff = gen.types.totalEffectiveness(
       attackingType as any,
@@ -270,6 +348,9 @@ export const LATEST_GEN = 9;
 
 /** Abilities were introduced in Gen III. */
 export const FIRST_ABILITY_GEN = 3;
+
+/** Breeding, eggs and genders arrived in Gen II. */
+export const FIRST_BREEDING_GEN = 2;
 
 /** Gen I used a single Special stat instead of Sp. Atk / Sp. Def. */
 export const COMBINED_SPECIAL_GEN = 1;

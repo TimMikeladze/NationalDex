@@ -5,11 +5,17 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { AddToListDialog } from "@/components/add-to-list-dialog";
 import {
+  GenerationScope,
+  resolveGenerationScope,
+} from "@/components/pokemon/generation-scope";
+import {
   PokemonCard,
   PokemonCardSkeleton,
 } from "@/components/pokemon/pokemon-card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useGenerationPreference } from "@/hooks/use-generation-preference";
 import { useFullTypeDetail } from "@/hooks/use-pokemon";
+import { getTypeGenerations } from "@/lib/pkmn";
 import { cn } from "@/lib/utils";
 import type { PokemonType, TypePokemon } from "@/types/pokemon";
 import { TYPE_COLORS } from "@/types/pokemon";
@@ -37,7 +43,17 @@ function getGeneration(pokemonId: number): string | null {
 }
 
 export function TypeDetailClient({ name }: { name: string }) {
-  const { data: type, isLoading, error } = useFullTypeDetail(name);
+  const { preferredGeneration } = useGenerationPreference();
+  const availableGenerations = useMemo(() => getTypeGenerations(name), [name]);
+  const { activeGeneration, unavailableGeneration } = resolveGenerationScope(
+    preferredGeneration,
+    availableGenerations,
+  );
+  const {
+    data: type,
+    isLoading,
+    error,
+  } = useFullTypeDetail(name, activeGeneration);
 
   if (isLoading) {
     return <TypeDetailSkeleton />;
@@ -60,7 +76,7 @@ export function TypeDetailClient({ name }: { name: string }) {
       <div className="space-y-6">
         {/* Header */}
         <section className="space-y-3">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <span
               className="text-sm px-3 py-1.5 uppercase tracking-wider rounded font-medium"
               style={{ backgroundColor: color, color: "#fff" }}
@@ -72,10 +88,19 @@ export function TypeDetailClient({ name }: { name: string }) {
               itemId={name}
               itemName={type.name}
             />
+            <GenerationScope
+              activeGeneration={activeGeneration}
+              subject={`${type.name} type`}
+            />
           </div>
           <p className="text-sm text-muted-foreground">
             Introduced in {type.generation}
           </p>
+          <GenerationScope
+            activeGeneration={null}
+            unavailableGeneration={unavailableGeneration}
+            subject={`The ${name} type`}
+          />
         </section>
 
         {/* Damage Relations */}
@@ -355,13 +380,12 @@ function PokemonSection({
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 md:gap-3 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
           {sortedPokemon.map((poke) => (
             <PokemonCard
-              key={poke.id}
+              key={poke.name}
               className={cn(
                 poke.slot === 2 &&
                   "border border-dashed border-muted-foreground/30",
               )}
-              id={poke.id}
-              name={poke.name}
+              pokemon={poke}
             />
           ))}
         </div>

@@ -10,8 +10,15 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useGenerationPreference } from "@/hooks/use-generation-preference";
 import { useAllTypes } from "@/hooks/use-pokemon";
-import { ALL_TYPES, getOffensiveTypeMatchups } from "@/lib/pkmn";
+import {
+  getAllTypes,
+  getGenerationGames,
+  getGenerationName,
+  getOffensiveTypeMatchups,
+  LATEST_GEN,
+} from "@/lib/pkmn";
 import { cn } from "@/lib/utils";
 import type { PokemonType, TypeDetail } from "@/types/pokemon";
 import { TYPE_COLORS } from "@/types/pokemon";
@@ -19,7 +26,8 @@ import { TYPE_COLORS } from "@/types/pokemon";
 type ViewMode = "cards" | "matrix";
 
 export default function TypesPage() {
-  const { data: types, isLoading } = useAllTypes();
+  const { preferredGeneration } = useGenerationPreference();
+  const { data: types, isLoading } = useAllTypes(preferredGeneration);
   const [viewMode, setViewMode] = useState<ViewMode>("cards");
 
   return (
@@ -29,7 +37,9 @@ export default function TypesPage() {
           <div className="space-y-2">
             <h1 className="text-xl font-medium">Types</h1>
             <p className="text-sm text-muted-foreground">
-              All 18 Pokemon types with their damage relations
+              {preferredGeneration === null
+                ? `All ${types?.length ?? 18} Pokemon types with their damage relations`
+                : `The ${types?.length ?? 0} types of ${getGenerationName(preferredGeneration)} (${getGenerationGames(preferredGeneration)}) with that generation's damage relations`}
             </p>
           </div>
           <div className="flex gap-1">
@@ -61,15 +71,21 @@ export default function TypesPage() {
             ))}
           </div>
         ) : (
-          <TypeEffectivenessMatrix />
+          <TypeEffectivenessMatrix generation={preferredGeneration} />
         )}
       </div>
     </div>
   );
 }
 
-function TypeEffectivenessMatrix() {
-  const typeNames = [...ALL_TYPES] as PokemonType[];
+function TypeEffectivenessMatrix({
+  generation,
+}: {
+  generation: number | null;
+}) {
+  const typeNames = getAllTypes(generation ?? LATEST_GEN).map(
+    (t) => t.name as PokemonType,
+  );
 
   return (
     <div className="space-y-4">
@@ -119,7 +135,10 @@ function TypeEffectivenessMatrix() {
                   </Tooltip>
                 </td>
                 {typeNames.map((defendingType) => {
-                  const matchups = getOffensiveTypeMatchups(attackingType);
+                  const matchups = getOffensiveTypeMatchups(
+                    attackingType,
+                    generation ?? LATEST_GEN,
+                  );
                   let multiplier = 1;
 
                   if (matchups.superEffective.includes(defendingType)) {

@@ -7,8 +7,9 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useComparison } from "@/hooks/use-comparison";
 import { useFavorites } from "@/hooks/use-favorites";
+import { useGenerationPreference } from "@/hooks/use-generation-preference";
 import { calculateTypeEffectiveness, usePokemon } from "@/hooks/use-pokemon";
-import { toID } from "@/lib/pkmn";
+import { LATEST_GEN, toID } from "@/lib/pkmn";
 import { cn } from "@/lib/utils";
 import type { Pokemon, PokemonType, TypeEffectiveness } from "@/types/pokemon";
 import { PokemonImage } from "./pokemon-image";
@@ -266,7 +267,8 @@ function PokemonCardFetcher({
   // Prefer slug lookups so formes resolve correctly.
   // (Dex numbers are shared across many formes, so ID-only fetches lose the variant.)
   const lookup = toID(name) || id;
-  const { data: pokemon, isLoading } = usePokemon(lookup);
+  const { preferredGeneration } = useGenerationPreference();
+  const { data: pokemon, isLoading } = usePokemon(lookup, preferredGeneration);
 
   if (isLoading || !pokemon) {
     return <PokemonCardSkeleton variant={variant} />;
@@ -302,11 +304,12 @@ function PokemonCardContent({
 }) {
   const { isFavorite, toggleFavorite } = useFavorites();
   const { isInComparison, toggleComparison } = useComparison();
+  const { preferredGeneration } = useGenerationPreference();
 
   const types = pokemon.types ?? [];
   const typeEffectiveness = useMemo(
-    () => calculateTypeEffectiveness(types),
-    [types],
+    () => calculateTypeEffectiveness(types, preferredGeneration ?? LATEST_GEN),
+    [types, preferredGeneration],
   );
 
   const handleFavoriteClick = (e: React.MouseEvent) => {

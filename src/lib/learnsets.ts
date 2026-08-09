@@ -1,5 +1,5 @@
 import type { Learnset } from "@pkmn/data";
-import { gens, LATEST_GEN, toID } from "./pkmn";
+import { gens, getSpeciesForView, LATEST_GEN, toID } from "./pkmn";
 
 const cache: Map<string, Learnset | undefined> = new Map();
 const preloaded = new Set<number>();
@@ -217,4 +217,64 @@ export async function getPokemonMoves(
   }
 
   return moves;
+}
+
+export interface SpeciesLearningMove {
+  num: number;
+  name: string;
+  methods: LearnMethod[];
+  /** Lowest level it is learned at, 0 when it isn't a level-up move. */
+  level: number;
+}
+
+const learnedByCache = new Map<string, SpeciesLearningMove[]>();
+
+/**
+ * Every Pokemon that can learn a move, with how it learns it. Scoped to a
+ * generation's games when one is given, otherwise the whole National Dex using
+ * each Pokemon's most recent learnset.
+ */
+export async function getSpeciesLearningMove(
+  moveName: string,
+  genNum: number | null = null,
+): Promise<SpeciesLearningMove[]> {
+  const moveId = toID(moveName);
+  const cacheKey = `${genNum ?? "national"}:${moveId}`;
+  const cached = learnedByCache.get(cacheKey);
+  if (cached) return cached;
+
+  const gen = genNum ?? LATEST_GEN;
+  const result: SpeciesLearningMove[] = [];
+
+  for (const species of getSpeciesForView(genNum, { includeFormes: true })) {
+    const learnset = await getLearnset(species.name, gen, {
+      exact: genNum !== null,
+    });
+    // Formes without their own learnset data are covered by their base species.
+    if (!learnset?.learnset?.[moveId]) continue;
+
+    const levelByMethod = new Map<LearnMethod, number>();
+    for (const source of learnset.learnset[moveId]) {
+      if (isTransferSource(source)) continue;
+      const sourceGen = sourceGeneration(source);
+      if (genNum !== null ? sourceGen !== genNum : sourceGen > gen) continue;
+      const { method, level } = parseLearnMethod(source);
+      const existing = levelByMethod.get(method);
+      if (existing === undefined || level < existing) {
+        levelByMethod.set(method, level);
+      }
+    }
+    if (levelByMethod.size === 0) continue;
+
+    result.push({
+      num: species.num,
+      name: species.name,
+      methods: [...levelByMethod.keys()],
+      level: levelByMethod.get("level-up") ?? 0,
+    });
+  }
+
+  result.sort((a, b) => a.num - b.num || a.name.localeCompare(b.name));
+  learnedByCache.set(cacheKey, result);
+  return result;
 }

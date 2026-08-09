@@ -27,6 +27,7 @@ import {
   useState,
 } from "react";
 import { ComparisonDrawer } from "@/components/comparison/comparison-drawer";
+import { GenerationPicker } from "@/components/pokemon/generation-picker";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -375,6 +376,8 @@ export function AppShell({ children }: AppShellProps) {
                   })}
                 </DropdownMenuContent>
               </DropdownMenu>
+              <span className="mx-1 h-5 w-px bg-border" />
+              <GenerationPicker />
             </nav>
           </div>
         </header>
@@ -430,6 +433,15 @@ export function AppShell({ children }: AppShellProps) {
             <SheetHeader>
               <SheetTitle>More</SheetTitle>
             </SheetHeader>
+            <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
+              <div>
+                <p className="text-sm">view as</p>
+                <p className="text-xs text-muted-foreground">
+                  Read the dex as a generation&rsquo;s games
+                </p>
+              </div>
+              <GenerationPicker align="end" />
+            </div>
             <nav className="flex flex-col gap-1 py-2">
               {moreMenuItems.map(renderMoreMenuItem)}
             </nav>

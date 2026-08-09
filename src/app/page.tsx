@@ -15,6 +15,7 @@ import { ItemImage } from "@/components/pokemon/item-image";
 import { PokemonCardSkeleton } from "@/components/pokemon/pokemon-card";
 import { TypeBadge } from "@/components/pokemon/type-badge";
 import { VirtualizedPokemonGrid } from "@/components/pokemon/virtualized-pokemon-grid";
+import { useGenerationPreference } from "@/hooks/use-generation-preference";
 import { getDexPokemonList } from "@/lib/dex-pokemon";
 import { toID } from "@/lib/pkmn";
 import type { PokemonType } from "@/types/pokemon";
@@ -26,6 +27,7 @@ function HomeContent() {
   const { ref: abilitiesRef, inView: abilitiesInView } = useInView();
   const { ref: itemsRef, inView: itemsInView } = useInView();
   const [filter, setFilter] = useDexFilter();
+  const { preferredGeneration } = useGenerationPreference();
   const [movesDisplayCount, setMovesDisplayCount] = useState(ITEMS_PER_PAGE);
   const [abilitiesDisplayCount, setAbilitiesDisplayCount] =
     useState(ITEMS_PER_PAGE);
@@ -82,11 +84,14 @@ function HomeContent() {
   ]);
 
   const allPokemon = useMemo(() => {
-    return getDexPokemonList(9, { forms: "distinct-sprites" }).map((p) => ({
+    return getDexPokemonList(preferredGeneration, {
+      forms: "distinct-sprites",
+    }).map((p) => ({
       name: p.name,
       id: p.id,
+      types: p.types,
     }));
-  }, []);
+  }, [preferredGeneration]);
 
   const { filteredPokemon, hasActiveFilters: hasPokemonFilters } =
     useFilteredPokemon(filter);
@@ -197,7 +202,7 @@ function HomeContent() {
                 <div className="divide-y">
                   {filteredMoves?.slice(0, movesDisplayCount).map((move) => (
                     <Link
-                      key={move.id}
+                      key={move.name}
                       href={`/moves/${toID(move.name)}`}
                       className="grid grid-cols-[1fr_auto] gap-2 items-center px-3 py-2.5 text-sm transition-colors hover:bg-accent sm:grid-cols-[1fr_80px_60px_60px_50px_70px]"
                     >
@@ -283,7 +288,7 @@ function HomeContent() {
                   ?.slice(0, abilitiesDisplayCount)
                   .map((ability) => (
                     <Link
-                      key={ability.id}
+                      key={ability.name}
                       href={`/abilities/${toID(ability.name)}`}
                       className="block px-3 py-3 transition-colors hover:bg-accent"
                     >
@@ -338,7 +343,7 @@ function HomeContent() {
               <div className="rounded-lg border bg-card divide-y">
                 {filteredItems?.slice(0, itemsDisplayCount).map((item) => (
                   <Link
-                    key={item.id}
+                    key={item.name}
                     href={`/items/${toID(item.name)}`}
                     className="flex items-center gap-3 px-3 py-2.5 transition-colors hover:bg-accent"
                   >

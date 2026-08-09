@@ -5,7 +5,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Dices,
-  Gamepad2,
   GitCompareArrows,
   Heart,
   ListPlus,
@@ -17,6 +16,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AddToListDialog } from "@/components/add-to-list-dialog";
 import { useSecondaryToolbar } from "@/components/app-shell";
+import { GenerationPicker } from "@/components/pokemon/generation-picker";
+import { GenerationScope } from "@/components/pokemon/generation-scope";
 import { PokemonImage } from "@/components/pokemon/pokemon-image";
 import { StatBar } from "@/components/pokemon/stat-bar";
 import { TypeBadge } from "@/components/pokemon/type-badge";
@@ -58,7 +59,7 @@ import {
 } from "@/lib/dex-pokemon";
 import {
   FIRST_ABILITY_GEN,
-  GENERATIONS,
+  FIRST_BREEDING_GEN,
   getGenerationGames,
   getGenerationName,
   getOffensiveTypeMatchups,
@@ -461,8 +462,7 @@ export function PokemonPageClient({
   pokedexEntry,
 }: PokemonPageClientProps) {
   const router = useRouter();
-  const { preferredGeneration, setPreferredGeneration } =
-    useGenerationPreference();
+  const { preferredGeneration } = useGenerationPreference();
 
   // Generations whose games this Pokemon actually appears in. A preference for
   // a generation it missed (Kakuna in Gen IX, say) falls back to latest data.
@@ -502,8 +502,12 @@ export function PokemonPageClient({
   // Base species only, ordered by National Dex number, each with a unique
   // routable slug. Forms/formes share their base species' dex number, so
   // prev/next/random navigate between base species rather than individual
-  // forms.
-  const dexOrder = useMemo(() => getDexPokemonList(9, { forms: "none" }), []);
+  // forms. Scoped to the generation being viewed, so prev/next walk that
+  // generation's dex.
+  const dexOrder = useMemo(
+    () => getDexPokemonList(activeGeneration, { forms: "none" }),
+    [activeGeneration],
+  );
   const dexIndex = useMemo(() => {
     if (!pokemon) return -1;
     return dexOrder.findIndex((p) => p.id === pokemon.id);
@@ -554,73 +558,10 @@ export function PokemonPageClient({
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className={cn(
-                  "h-8 px-2 gap-1.5",
-                  preferredGeneration !== null
-                    ? "text-foreground"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-                title="View data relative to a game"
-              >
-                <Gamepad2 className="size-4" />
-                <span className="hidden sm:inline text-xs lowercase">
-                  {preferredGeneration !== null
-                    ? getGenerationName(preferredGeneration)
-                    : "game"}
-                </span>
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent align="end" className="w-80 p-3">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                    game
-                  </span>
-                  <Select
-                    value={
-                      preferredGeneration !== null
-                        ? String(preferredGeneration)
-                        : "latest"
-                    }
-                    onValueChange={(value) =>
-                      setPreferredGeneration(
-                        value === "latest" ? null : Number.parseInt(value, 10),
-                      )
-                    }
-                  >
-                    <SelectTrigger className="h-8 w-52">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent align="end">
-                      <SelectItem value="latest">Latest data</SelectItem>
-                      {GENERATIONS.map((generation) => (
-                        <SelectItem
-                          key={generation.num}
-                          value={String(generation.num)}
-                          disabled={
-                            !availableGenerations.includes(generation.num)
-                          }
-                        >
-                          {generation.name} ({generation.label})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Shows the learnset, base stats, types, abilities and matchups
-                  as they were in that generation&rsquo;s games. Generations
-                  this Pokemon is absent from are disabled.
-                </p>
-              </div>
-            </PopoverContent>
-          </Popover>
+          <GenerationPicker
+            availableGenerations={availableGenerations}
+            size="compact"
+          />
 
           <Popover>
             <PopoverTrigger asChild>
@@ -806,8 +747,6 @@ export function PokemonPageClient({
     handleRandomPokemon,
     isFavorite,
     isInComparison,
-    preferredGeneration,
-    setPreferredGeneration,
     spriteBack,
     spriteFemale,
     spriteGenOverride,
@@ -899,18 +838,21 @@ export function PokemonPageClient({
                 </div>
               </div>
 
-              <GenerationNotice
+              <GenerationScope
                 activeGeneration={activeGeneration}
-                pokemonName={getBaseName(pokemon.name)}
-                preferredGeneration={
+                unavailableGeneration={
                   missingFromPreferredGeneration ? preferredGeneration : null
                 }
+                subject={getBaseName(pokemon.name)}
               />
             </div>
 
             {/* Pokedex Entries */}
             {pokedexEntry?.entries && pokedexEntry.entries.length > 0 && (
-              <PokedexEntriesSection entries={pokedexEntry.entries} />
+              <PokedexEntriesSection
+                entries={pokedexEntry.entries}
+                activeGeneration={activeGeneration}
+              />
             )}
           </section>
 
@@ -994,7 +936,11 @@ export function PokemonPageClient({
             generation={activeGeneration}
           />
 
-          <DetailsSection pokemon={pokemon} species={species} />
+          <DetailsSection
+            pokemon={pokemon}
+            species={species}
+            activeGeneration={activeGeneration}
+          />
         </div>
 
         {/* Main content column */}
@@ -1010,6 +956,7 @@ export function PokemonPageClient({
           <LocationsSection
             encounters={encounters}
             isLoading={encountersLoading}
+            activeGeneration={activeGeneration}
           />
         </div>
       </div>
@@ -1031,15 +978,26 @@ function Label({ children }: { children: React.ReactNode }) {
 
 function PokedexEntriesSection({
   entries,
+  activeGeneration,
 }: {
   entries: { version: string; flavorText: string }[];
+  activeGeneration: number | null;
 }) {
   const { preferredGameVersion, setPreferredGameVersion, isLoaded } =
     usePokedexPreference();
   const [showAllVersions, setShowAllVersions] = useState(false);
 
-  // Group entries with identical flavor text
-  const groupedEntries = useMemo(() => groupEntriesByText(entries), [entries]);
+  // Group entries with identical flavor text, keeping only the games of the
+  // generation being viewed when one is selected.
+  const groupedEntries = useMemo(() => {
+    const scoped =
+      activeGeneration === null
+        ? entries
+        : entries.filter(
+            (e) => getVersionGeneration(e.version) === activeGeneration,
+          );
+    return groupEntriesByText(scoped.length > 0 ? scoped : entries);
+  }, [entries, activeGeneration]);
 
   // Find the group to display - prefer user's selection, fall back to most recent
   const selectedGroup = useMemo(() => {
@@ -1175,35 +1133,6 @@ function PokedexEntriesSection({
         </div>
       )}
     </div>
-  );
-}
-
-function GenerationNotice({
-  activeGeneration,
-  pokemonName,
-  preferredGeneration,
-}: {
-  activeGeneration: number | null;
-  pokemonName: string;
-  preferredGeneration: number | null;
-}) {
-  if (preferredGeneration !== null) {
-    return (
-      <p className="text-xs text-muted-foreground text-center">
-        {pokemonName} is not in {getGenerationName(preferredGeneration)} (
-        {getGenerationGames(preferredGeneration)}) — showing the latest data.
-      </p>
-    );
-  }
-
-  if (activeGeneration === null) return null;
-
-  return (
-    <span className="inline-flex items-center gap-1.5 font-medium rounded border border-border bg-muted text-muted-foreground px-2 py-0.5 text-xs">
-      <Gamepad2 className="size-3" />
-      {getGenerationName(activeGeneration)} data (
-      {getGenerationGames(activeGeneration)})
-    </span>
   );
 }
 
@@ -1632,62 +1561,75 @@ const VERSION_DISPLAY: Record<string, string> = {
 };
 
 // Group versions by generation for better organization
-const VERSION_GENERATIONS: Record<string, string> = {
-  red: "Gen I",
-  blue: "Gen I",
-  yellow: "Gen I",
-  gold: "Gen II",
-  silver: "Gen II",
-  crystal: "Gen II",
-  ruby: "Gen III",
-  sapphire: "Gen III",
-  emerald: "Gen III",
-  firered: "Gen III",
-  leafgreen: "Gen III",
-  diamond: "Gen IV",
-  pearl: "Gen IV",
-  platinum: "Gen IV",
-  heartgold: "Gen IV",
-  soulsilver: "Gen IV",
-  black: "Gen V",
-  white: "Gen V",
-  "black-2": "Gen V",
-  "white-2": "Gen V",
-  x: "Gen VI",
-  y: "Gen VI",
-  "omega-ruby": "Gen VI",
-  "alpha-sapphire": "Gen VI",
-  sun: "Gen VII",
-  moon: "Gen VII",
-  "ultra-sun": "Gen VII",
-  "ultra-moon": "Gen VII",
-  "lets-go-pikachu": "Gen VII",
-  "lets-go-eevee": "Gen VII",
-  sword: "Gen VIII",
-  shield: "Gen VIII",
-  "brilliant-diamond": "Gen VIII",
-  "shining-pearl": "Gen VIII",
-  "legends-arceus": "Gen VIII",
-  scarlet: "Gen IX",
-  violet: "Gen IX",
+const VERSION_GENERATIONS: Record<string, number> = {
+  red: 1,
+  blue: 1,
+  yellow: 1,
+  gold: 2,
+  silver: 2,
+  crystal: 2,
+  ruby: 3,
+  sapphire: 3,
+  emerald: 3,
+  firered: 3,
+  leafgreen: 3,
+  diamond: 4,
+  pearl: 4,
+  platinum: 4,
+  heartgold: 4,
+  soulsilver: 4,
+  black: 5,
+  white: 5,
+  "black-2": 5,
+  "white-2": 5,
+  x: 6,
+  y: 6,
+  "omega-ruby": 6,
+  "alpha-sapphire": 6,
+  sun: 7,
+  moon: 7,
+  "ultra-sun": 7,
+  "ultra-moon": 7,
+  "lets-go-pikachu": 7,
+  "lets-go-eevee": 7,
+  sword: 8,
+  shield: 8,
+  "brilliant-diamond": 8,
+  "shining-pearl": 8,
+  "legends-arceus": 8,
+  scarlet: 9,
+  violet: 9,
 };
+
+/** Generation a game version belongs to, 0 when it isn't a main-series game. */
+const getVersionGeneration = (version: string) =>
+  VERSION_GENERATIONS[version] ?? 0;
 
 function LocationsSection({
   encounters,
   isLoading,
+  activeGeneration,
 }: {
   encounters?: FormattedPokemonEncounter[];
   isLoading: boolean;
+  activeGeneration: number | null;
 }) {
   const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
   const [showAllVersions, setShowAllVersions] = useState(false);
 
-  // Get all unique versions from encounters, organized by generation
+  // Get all unique versions from encounters, organized by generation. While a
+  // generation is selected only its own games are offered.
   const versionsByGen = useMemo(() => {
     if (!encounters) return new Map<string, string[]>();
     const versions = new Set<string>();
     for (const enc of encounters) {
       for (const v of enc.versions) {
+        if (
+          activeGeneration !== null &&
+          getVersionGeneration(v.name) !== activeGeneration
+        ) {
+          continue;
+        }
         versions.add(v.name);
       }
     }
@@ -1700,12 +1642,13 @@ function LocationsSection({
     // Group by generation
     const byGen = new Map<string, string[]>();
     for (const v of sorted) {
-      const gen = VERSION_GENERATIONS[v] ?? "Other";
+      const genNum = getVersionGeneration(v);
+      const gen = genNum > 0 ? getGenerationName(genNum) : "Other";
       if (!byGen.has(gen)) byGen.set(gen, []);
       byGen.get(gen)?.push(v);
     }
     return byGen;
-  }, [encounters]);
+  }, [encounters, activeGeneration]);
 
   const availableVersions = useMemo(() => {
     return Array.from(versionsByGen.values()).flat();
@@ -1726,12 +1669,12 @@ function LocationsSection({
   // Get location count for the current selection
   const locationCount = filteredEncounters.length;
 
-  // Set default version when data loads
+  // Default to the most recent version on offer, and re-pick when switching
+  // generation drops the current one.
   useEffect(() => {
-    if (availableVersions.length > 0 && !selectedVersion) {
-      // Default to most recent version
-      setSelectedVersion(availableVersions[availableVersions.length - 1]);
-    }
+    if (availableVersions.length === 0) return;
+    if (selectedVersion && availableVersions.includes(selectedVersion)) return;
+    setSelectedVersion(availableVersions[availableVersions.length - 1]);
   }, [availableVersions, selectedVersion]);
 
   if (isLoading) {
@@ -1745,12 +1688,18 @@ function LocationsSection({
     );
   }
 
-  if (!encounters || encounters.length === 0) {
+  if (
+    !encounters ||
+    encounters.length === 0 ||
+    availableVersions.length === 0
+  ) {
     return (
       <section className="space-y-3">
         <Label>locations</Label>
         <p className="text-sm text-muted-foreground">
-          No wild encounter data available for this Pokemon.
+          {activeGeneration === null
+            ? "No wild encounter data available for this Pokemon."
+            : `No wild encounter data for ${getGenerationName(activeGeneration)} (${getGenerationGames(activeGeneration)}).`}
         </p>
       </section>
     );
@@ -2101,15 +2050,10 @@ function EvolutionNode({
 
   // Get all variations for this Pokemon, limited to the forms that existed in
   // the generation being viewed (the current Pokemon always stays listed).
-  const variations = useMemo(() => {
-    const all = getDexPokemonVariationsByDexNumber(9, pokemon.id);
-    if (generation === null) return all;
-    return all.filter(
-      (v) =>
-        v.slug === currentSlug ||
-        getSpeciesGenerations(v.name).includes(generation),
-    );
-  }, [pokemon.id, currentSlug, generation]);
+  const variations = useMemo(
+    () => getDexPokemonVariationsByDexNumber(generation, pokemon.id),
+    [pokemon.id, generation],
+  );
 
   // Check if this node contains the current Pokemon (either base or a variation)
   const currentVariation = variations.find((v) => v.slug === currentSlug);
@@ -2288,10 +2232,13 @@ function formatEvolutionMethod(
 function DetailsSection({
   pokemon,
   species,
+  activeGeneration,
 }: {
   pokemon: Pokemon;
   species?: PokemonSpecies;
+  activeGeneration: number | null;
 }) {
+  const hasBreeding = (activeGeneration ?? LATEST_GEN) >= FIRST_BREEDING_GEN;
   const genderDisplay = species
     ? species.genderRate === -1
       ? "Genderless"
@@ -2311,17 +2258,24 @@ function DetailsSection({
       {/* Breeding */}
       <div className="space-y-2">
         <Label>breeding</Label>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
-          <DetailRow
-            label="Egg Groups"
-            value={species?.eggGroups.join(", ") ?? "—"}
-          />
-          <DetailRow label="Gender" value={genderDisplay} />
-          <DetailRow
-            label="Hatch Time"
-            value={species ? `~${hatchSteps} steps` : "—"}
-          />
-        </div>
+        {hasBreeding ? (
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+            <DetailRow
+              label="Egg Groups"
+              value={species?.eggGroups.join(", ") ?? "—"}
+            />
+            <DetailRow label="Gender" value={genderDisplay} />
+            <DetailRow
+              label="Hatch Time"
+              value={species ? `~${hatchSteps} steps` : "—"}
+            />
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Breeding and genders arrived in{" "}
+            {getGenerationName(FIRST_BREEDING_GEN)}.
+          </p>
+        )}
       </div>
 
       {/* Training */}

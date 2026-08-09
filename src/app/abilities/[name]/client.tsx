@@ -4,17 +4,39 @@ import { Search, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AddToListDialog } from "@/components/add-to-list-dialog";
 import {
+  GenerationScope,
+  resolveGenerationScope,
+} from "@/components/pokemon/generation-scope";
+import {
   PokemonCard,
   PokemonCardSkeleton,
 } from "@/components/pokemon/pokemon-card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useGenerationPreference } from "@/hooks/use-generation-preference";
 import { useFullAbilityDetail } from "@/hooks/use-pokemon";
-import { GEN_RANGES, getGenerationByPokemonId } from "@/lib/pkmn";
+import {
+  GEN_RANGES,
+  getAbilityGenerations,
+  getGenerationByPokemonId,
+} from "@/lib/pkmn";
 import { cn } from "@/lib/utils";
 import type { AbilityPokemon } from "@/types/pokemon";
 
 export function AbilityDetailClient({ name }: { name: string }) {
-  const { data: ability, isLoading, error } = useFullAbilityDetail(name);
+  const { preferredGeneration } = useGenerationPreference();
+  const availableGenerations = useMemo(
+    () => getAbilityGenerations(name),
+    [name],
+  );
+  const { activeGeneration, unavailableGeneration } = resolveGenerationScope(
+    preferredGeneration,
+    availableGenerations,
+  );
+  const {
+    data: ability,
+    isLoading,
+    error,
+  } = useFullAbilityDetail(name, activeGeneration);
 
   if (isLoading) {
     return <AbilityDetailSkeleton />;
@@ -35,14 +57,23 @@ export function AbilityDetailClient({ name }: { name: string }) {
       <div className="space-y-6">
         {/* Header */}
         <section className="space-y-3">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-xl font-medium">{ability.name}</h1>
             <AddToListDialog
               itemType="ability"
               itemId={name}
               itemName={ability.name}
             />
+            <GenerationScope
+              activeGeneration={activeGeneration}
+              subject={ability.name}
+            />
           </div>
+          <GenerationScope
+            activeGeneration={null}
+            unavailableGeneration={unavailableGeneration}
+            subject={ability.name}
+          />
           <p className="text-sm leading-relaxed">{ability.shortDescription}</p>
         </section>
 
@@ -283,13 +314,12 @@ function PokemonSection({
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 md:gap-3 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
           {sortedPokemon.map((poke) => (
             <PokemonCard
-              key={poke.id}
+              key={poke.name}
               className={cn(
                 poke.isHidden &&
                   "border border-dashed border-muted-foreground/30",
               )}
-              id={poke.id}
-              name={poke.name}
+              pokemon={poke}
             />
           ))}
         </div>

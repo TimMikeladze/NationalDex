@@ -4,7 +4,8 @@ import { Filter, Search, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { GENERATIONS, getAllItems, toID } from "@/lib/pkmn";
+import { useGenerationPreference } from "@/hooks/use-generation-preference";
+import { GENERATIONS, getAllItems, LATEST_GEN, toID } from "@/lib/pkmn";
 import { cn } from "@/lib/utils";
 import type { ItemListItem, ItemPocket } from "@/types/pokemon";
 import { ITEM_POCKET_COLORS, ITEM_POCKET_LABELS } from "@/types/pokemon";
@@ -86,9 +87,11 @@ export default function ItemsPage() {
   const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  // Get all items synchronously with proper categorization
+  const { preferredGeneration } = useGenerationPreference();
+
+  // Items as they exist in the generation being viewed
   const allItems = useMemo(() => {
-    return getAllItems().map((i) => {
+    return getAllItems(preferredGeneration ?? LATEST_GEN).map((i) => {
       const desc = i.desc || i.shortDesc || "";
       return {
         id: i.num,
@@ -100,7 +103,7 @@ export default function ItemsPage() {
         generation: i.gen || 1,
       };
     });
-  }, []);
+  }, [preferredGeneration]);
 
   // Apply filters client-side
   const filteredItems = useMemo(() => {
@@ -284,7 +287,9 @@ export default function ItemsPage() {
                 )}
               </div>
               <div className="flex flex-wrap gap-2">
-                {GENERATIONS.map((gen) => (
+                {GENERATIONS.filter(
+                  (gen) => gen.num <= (preferredGeneration ?? LATEST_GEN),
+                ).map((gen) => (
                   <button
                     key={gen.id}
                     type="button"
@@ -335,7 +340,7 @@ export default function ItemsPage() {
 
           {/* Rows */}
           {filteredItems.slice(0, displayCount).map((item) => (
-            <ItemRow key={item.id} item={item} />
+            <ItemRow key={item.name} item={item} />
           ))}
 
           {filteredItems.length === 0 && (

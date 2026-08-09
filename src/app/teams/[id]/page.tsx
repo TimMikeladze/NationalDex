@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useComparison } from "@/hooks/use-comparison";
+import { useGenerationPreference } from "@/hooks/use-generation-preference";
 import { usePokemon } from "@/hooks/use-pokemon";
 import { useTeams } from "@/hooks/use-teams";
 import { toID } from "@/lib/pkmn";
@@ -307,7 +308,8 @@ function TeamMemberCard({
   member: TeamMember;
   onRemove: () => void;
 }) {
-  const { data: pokemon } = usePokemon(member.id);
+  const { preferredGeneration } = useGenerationPreference();
+  const { data: pokemon } = usePokemon(member.id, preferredGeneration);
   const { addToComparison, isInComparison, removeFromComparison } =
     useComparison();
 
@@ -399,9 +401,12 @@ function TeamCoverageTab({ teamId }: { teamId: string }) {
 }
 
 function TeamCoverageContent({ members }: { members: TeamMember[] }) {
+  const { preferredGeneration } = useGenerationPreference();
   // Fetch Pokemon data for all members
-  // biome-ignore lint/correctness/useHookAtTopLevel: members array is stable
-  const pokemonQueries = members.map((m) => usePokemon(m.id));
+  const pokemonQueries = members.map(
+    // biome-ignore lint/correctness/useHookAtTopLevel: members array is stable from localStorage state
+    (m) => usePokemon(m.id, preferredGeneration),
+  );
   const allLoaded = pokemonQueries.every((q) => q.data);
 
   if (!allLoaded) {

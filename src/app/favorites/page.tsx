@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useFavorites } from "@/hooks/use-favorites";
+import { useGenerationPreference } from "@/hooks/use-generation-preference";
 import { usePokemon } from "@/hooks/use-pokemon";
 import { toID } from "@/lib/pkmn";
 import { cn } from "@/lib/utils";
@@ -141,7 +142,8 @@ function FavoriteCard({
   id: number;
   onRemove: (id: number) => void;
 }) {
-  const { data: pokemon, isLoading } = usePokemon(id);
+  const { preferredGeneration } = useGenerationPreference();
+  const { data: pokemon, isLoading } = usePokemon(id, preferredGeneration);
 
   if (isLoading || !pokemon) {
     return <FavoriteCardSkeleton />;

@@ -151,10 +151,10 @@ export default function SettingsPage() {
 
           <div className="flex items-center justify-between gap-4 py-2 border-b">
             <div>
-              <p className="text-sm">view data as of</p>
+              <p className="text-sm">view the dex as</p>
               <p className="text-xs text-muted-foreground">
-                Scopes learnsets, base stats, types, abilities and matchups to a
-                generation&rsquo;s games
+                Scopes the whole app — dex, learnsets, stats, types, abilities,
+                items, matchups and search — to one generation&rsquo;s games
               </p>
             </div>
             <Select

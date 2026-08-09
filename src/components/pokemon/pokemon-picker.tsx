@@ -14,7 +14,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { getAllSpecies, toID } from "@/lib/pkmn";
+import { useGenerationPreference } from "@/hooks/use-generation-preference";
+import { getSpeciesForView, toID } from "@/lib/pkmn";
 import { pokemonSpriteById } from "@/lib/sprites";
 import { cn } from "@/lib/utils";
 import type { PokemonType } from "@/types/pokemon";
@@ -64,10 +65,11 @@ export function PokemonPicker({
 }: PokemonPickerProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState<PokemonType | null>(null);
+  const { preferredGeneration } = useGenerationPreference();
 
-  // Get all Pokemon in the allowed range
+  // Get all Pokemon in the allowed range, as of the generation being viewed
   const allPokemon = useMemo((): PokemonListItem[] => {
-    const species = getAllSpecies();
+    const species = getSpeciesForView(preferredGeneration);
     return species
       .filter((s) => {
         // Filter by ID range if specified
@@ -85,7 +87,7 @@ export function PokemonPicker({
         sprite: pokemonSpriteById(s.num),
       }))
       .sort((a, b) => a.id - b.id);
-  }, [excludeIds, idRange]);
+  }, [excludeIds, idRange, preferredGeneration]);
 
   // Filter Pokemon based on search and type filter
   const filteredPokemon = useMemo(() => {

@@ -4,12 +4,18 @@ import { Search, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AddToListDialog } from "@/components/add-to-list-dialog";
 import {
+  GenerationScope,
+  resolveGenerationScope,
+} from "@/components/pokemon/generation-scope";
+import {
   PokemonCard,
   PokemonCardSkeleton,
 } from "@/components/pokemon/pokemon-card";
 import { TypeBadge } from "@/components/pokemon/type-badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useGenerationPreference } from "@/hooks/use-generation-preference";
 import { useFullMoveDetail } from "@/hooks/use-pokemon";
+import { getGenerationName, getMoveGenerations } from "@/lib/pkmn";
 import { cn } from "@/lib/utils";
 import type { MovePokemon } from "@/types/pokemon";
 
@@ -36,7 +42,17 @@ function getGeneration(pokemonId: number): string | null {
 }
 
 export function MoveDetailClient({ name }: { name: string }) {
-  const { data: move, isLoading, error } = useFullMoveDetail(name);
+  const { preferredGeneration } = useGenerationPreference();
+  const availableGenerations = useMemo(() => getMoveGenerations(name), [name]);
+  const { activeGeneration, unavailableGeneration } = resolveGenerationScope(
+    preferredGeneration,
+    availableGenerations,
+  );
+  const {
+    data: move,
+    isLoading,
+    error,
+  } = useFullMoveDetail(name, activeGeneration);
 
   if (isLoading) {
     return <MoveDetailSkeleton />;
@@ -57,7 +73,7 @@ export function MoveDetailClient({ name }: { name: string }) {
       <div className="space-y-6">
         {/* Header */}
         <section className="space-y-3">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-xl font-medium">{move.name}</h1>
             <TypeBadge type={move.type} size="default" />
             <AddToListDialog
@@ -65,7 +81,16 @@ export function MoveDetailClient({ name }: { name: string }) {
               itemId={name}
               itemName={move.name}
             />
+            <GenerationScope
+              activeGeneration={activeGeneration}
+              subject={move.name}
+            />
           </div>
+          <GenerationScope
+            activeGeneration={null}
+            unavailableGeneration={unavailableGeneration}
+            subject={move.name}
+          />
           <p className="text-sm text-muted-foreground leading-relaxed">
             {move.description}
           </p>
@@ -106,7 +131,11 @@ export function MoveDetailClient({ name }: { name: string }) {
         </section>
 
         {/* Pokemon that learn this move */}
-        <PokemonSection pokemon={move.pokemon} moveName={move.name} />
+        <PokemonSection
+          pokemon={move.pokemon}
+          moveName={move.name}
+          activeGeneration={activeGeneration}
+        />
       </div>
     </div>
   );
@@ -157,9 +186,11 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 function PokemonSection({
   pokemon,
   moveName,
+  activeGeneration,
 }: {
   pokemon: MovePokemon[];
   moveName: string;
+  activeGeneration: number | null;
 }) {
   const [search, setSearch] = useState("");
   const [selectedGens, setSelectedGens] = useState<string[]>([]);
@@ -207,7 +238,12 @@ function PokemonSection({
 
   return (
     <section className="space-y-4">
-      <Label>pokemon that can learn {moveName}</Label>
+      <Label>
+        {activeGeneration === null
+          ? `pokemon that can learn ${moveName}`
+          : `pokemon that learn ${moveName} in ${getGenerationName(activeGeneration)}`}{" "}
+        ({pokemon.length})
+      </Label>
 
       {/* Filters */}
       <div className="space-y-3">
@@ -276,7 +312,7 @@ function PokemonSection({
       {sortedPokemon.length > 0 ? (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 md:gap-3 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
           {sortedPokemon.map((poke) => (
-            <PokemonCard key={poke.id} id={poke.id} name={poke.name} />
+            <PokemonCard key={poke.name} pokemon={poke} />
           ))}
         </div>
       ) : hasFilters ? (
