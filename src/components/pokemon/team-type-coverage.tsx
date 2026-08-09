@@ -2,7 +2,8 @@
 
 import { useMemo } from "react";
 import { TypeBadge } from "@/components/pokemon/type-badge";
-import { ALL_TYPES, gens } from "@/lib/pkmn";
+import { useGenerationPreference } from "@/hooks/use-generation-preference";
+import { gens, getAllTypes, LATEST_GEN } from "@/lib/pkmn";
 import { cn } from "@/lib/utils";
 import type { PokemonType } from "@/types/pokemon";
 
@@ -34,11 +35,12 @@ interface TypeCoverage {
 
 function calculateDefensiveCoverage(
   pokemonTypes: PokemonType[][],
+  genNum: number,
 ): TypeCoverage[] {
-  const gen = gens.get(9);
+  const gen = gens.get(genNum);
   const coverage: TypeCoverage[] = [];
 
-  for (const typeName of ALL_TYPES) {
+  for (const { name: typeName } of getAllTypes(genNum)) {
     let weakCount = 0;
     let resistCount = 0;
     let immuneCount = 0;
@@ -69,11 +71,12 @@ function calculateDefensiveCoverage(
 
 function calculateOffensiveCoverage(
   pokemonTypes: PokemonType[][],
+  genNum: number,
 ): TypeCoverage[] {
-  const gen = gens.get(9);
+  const gen = gens.get(genNum);
   const coverage: TypeCoverage[] = [];
 
-  for (const targetTypeName of ALL_TYPES) {
+  for (const { name: targetTypeName } of getAllTypes(genNum)) {
     let coverageCount = 0;
 
     // For each Pokemon in the team, check if any of their types hit the target super-effectively
@@ -111,14 +114,19 @@ export function TeamTypeCoverage({
   showDefensive = true,
   className,
 }: TeamTypeCoverageProps) {
+  const { preferredGeneration } = useGenerationPreference();
+  // Coverage is only meaningful against the type chart of the games being
+  // played, so it follows the selected generation.
+  const genNum = preferredGeneration ?? LATEST_GEN;
+
   const defensiveCoverage = useMemo(
-    () => calculateDefensiveCoverage(pokemonTypes),
-    [pokemonTypes],
+    () => calculateDefensiveCoverage(pokemonTypes, genNum),
+    [pokemonTypes, genNum],
   );
 
   const offensiveCoverage = useMemo(
-    () => calculateOffensiveCoverage(pokemonTypes),
-    [pokemonTypes],
+    () => calculateOffensiveCoverage(pokemonTypes, genNum),
+    [pokemonTypes, genNum],
   );
 
   // Calculate summary stats
@@ -256,7 +264,8 @@ export function TeamTypeCoverage({
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-medium">offensive coverage</h3>
             <span className="text-xs text-muted-foreground">
-              {offensiveStrengths.length}/{ALL_TYPES.length} types covered
+              {offensiveStrengths.length}/{offensiveCoverage.length} types
+              covered
             </span>
           </div>
 

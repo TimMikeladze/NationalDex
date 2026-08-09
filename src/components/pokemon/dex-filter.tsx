@@ -27,6 +27,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Slider } from "@/components/ui/slider";
+import { useGenerationPreference } from "@/hooks/use-generation-preference";
 import {
   type DexPokemonListItem,
   getDexPokemonList,
@@ -38,12 +39,13 @@ import {
   toRegulationMask,
 } from "@/lib/dex-pokemon";
 import {
-  ALL_TYPES,
   GEN_RANGES,
   getAllAbilities,
   getAllItems,
   getAllMoves,
+  getAllTypes,
   getGenerationByPokemonId,
+  LATEST_GEN,
   toID,
 } from "@/lib/pkmn";
 import type { PokemonType } from "@/types/pokemon";
@@ -267,7 +269,19 @@ export function DexFilter({
   filter,
   collapsed = false,
 }: DexFilterProps) {
-  const statBounds = useMemo(() => getStatBounds(), []);
+  const { preferredGeneration } = useGenerationPreference();
+  const statBounds = useMemo(
+    () => getStatBounds(preferredGeneration),
+    [preferredGeneration],
+  );
+  // Only offer the types that existed in the generation being viewed.
+  const availableTypes = useMemo(
+    () =>
+      getAllTypes(preferredGeneration ?? LATEST_GEN).map(
+        (t) => t.name as PokemonType,
+      ),
+    [preferredGeneration],
+  );
 
   const handleSearchChange = useCallback(
     (value: string) => {
@@ -694,7 +708,7 @@ export function DexFilter({
         >
           <div className="overflow-hidden">
             <div className="flex flex-wrap gap-1.5">
-              {ALL_TYPES.map((type) => (
+              {availableTypes.map((type) => (
                 <button
                   key={type}
                   type="button"
@@ -788,9 +802,10 @@ function comparePokemon(
 
 // Hook to get filtered Pokemon based on filter state
 export function useFilteredPokemon(filter: DexFilterState) {
+  const { preferredGeneration } = useGenerationPreference();
   const allPokemon = useMemo(
-    () => getDexPokemonList(9, { forms: "distinct-sprites" }),
-    [],
+    () => getDexPokemonList(preferredGeneration, { forms: "distinct-sprites" }),
+    [preferredGeneration],
   );
 
   const activeTags = useMemo(
@@ -900,9 +915,10 @@ export function useFilteredPokemon(filter: DexFilterState) {
 
 // Hook to get filtered Moves based on filter state
 export function useFilteredMoves(filter: DexFilterState) {
+  const { preferredGeneration } = useGenerationPreference();
   const allMoves = useMemo(
     () =>
-      getAllMoves().map((m) => ({
+      getAllMoves(preferredGeneration ?? LATEST_GEN).map((m) => ({
         name: m.name,
         id: m.num,
         type: m.type as string,
@@ -911,7 +927,7 @@ export function useFilteredMoves(filter: DexFilterState) {
         accuracy: m.accuracy,
         pp: m.pp,
       })),
-    [],
+    [preferredGeneration],
   );
 
   const hasActiveFilters = filter.search.length > 0 || filter.types.length > 0;
@@ -960,14 +976,15 @@ export function useFilteredMoves(filter: DexFilterState) {
 
 // Hook to get filtered Abilities based on filter state
 export function useFilteredAbilities(filter: DexFilterState) {
+  const { preferredGeneration } = useGenerationPreference();
   const allAbilities = useMemo(
     () =>
-      getAllAbilities().map((a) => ({
+      getAllAbilities(preferredGeneration ?? LATEST_GEN).map((a) => ({
         name: a.name,
         id: a.num,
         shortDesc: a.shortDesc || a.desc || "",
       })),
-    [],
+    [preferredGeneration],
   );
 
   const hasActiveFilters = filter.search.length > 0;
@@ -1005,14 +1022,15 @@ export function useFilteredAbilities(filter: DexFilterState) {
 
 // Hook to get filtered Items based on filter state
 export function useFilteredItems(filter: DexFilterState) {
+  const { preferredGeneration } = useGenerationPreference();
   const allItems = useMemo(
     () =>
-      getAllItems().map((i) => ({
+      getAllItems(preferredGeneration ?? LATEST_GEN).map((i) => ({
         name: i.name,
         id: i.num,
         sprite: `https://play.pokemonshowdown.com/sprites/itemicons/${toID(i.name)}.png`,
       })),
-    [],
+    [preferredGeneration],
   );
 
   const hasActiveFilters = filter.search.length > 0;

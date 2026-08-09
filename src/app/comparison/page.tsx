@@ -16,6 +16,7 @@ import {
   StatsComparisonTable,
   TeamCoverageSection,
 } from "@/components/comparison/comparison-shared";
+import { GenerationScope } from "@/components/pokemon/generation-scope";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -27,10 +28,12 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useComparison } from "@/hooks/use-comparison";
+import { useGenerationPreference } from "@/hooks/use-generation-preference";
 
 export default function ComparisonPage() {
   const { comparison, isLoaded, removeFromComparison, clearComparison } =
     useComparison();
+  const { preferredGeneration } = useGenerationPreference();
   const [sortBy, setSortBy] = useState<SortOption>("id");
   const [activeTab, setActiveTab] = useState("cards");
 
@@ -70,10 +73,14 @@ export default function ComparisonPage() {
     <div className="p-4 md:p-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <h1 className="text-lg font-medium">
             comparing {comparison.length} pokemon
           </h1>
+          <GenerationScope
+            activeGeneration={preferredGeneration}
+            subject="Comparison"
+          />
         </div>
         <div className="flex items-center gap-2">
           <Select

@@ -9,6 +9,7 @@ NationalDex is a modern web-based Pokedex covering the full National Dex across 
 ### Key features
 
 - **Instant search** across Pokemon, moves, abilities, and items
+- **Game-relative view** — read the entire dex as any generation's games: learnsets, base stats, types, abilities, items, moves, evolutions, type charts, and search all scoped to the games you're playing
 - **Team builder** with type coverage analysis and Showdown import/export
 - **Pokemon comparison** with side-by-side stat breakdowns
 - **Favorites and custom lists** persisted in local storage

@@ -1,5 +1,5 @@
 import regulationData from "@/data/regulations.json";
-import { getAllSpecies, toID } from "@/lib/pkmn";
+import { getSpeciesForView, toID } from "@/lib/pkmn";
 import { pokemonSprite } from "@/lib/sprites";
 import type { PokemonType } from "@/types/pokemon";
 
@@ -109,7 +109,7 @@ export interface DexPokemonListItem {
   isRestricted: boolean;
 }
 
-type DexSpecies = ReturnType<typeof getAllSpecies>[number];
+type DexSpecies = ReturnType<typeof getSpeciesForView>[number];
 
 function toListItem(
   species: DexSpecies,
@@ -154,11 +154,14 @@ function toListItem(
   };
 }
 
+/**
+ * @param genNum Generation whose games to read, or null for the National Dex.
+ */
 export function getDexPokemonVariationsByDexNumber(
-  genNum = 9,
+  genNum: number | null,
   dexNumber: number,
 ): DexPokemonListItem[] {
-  const all = getAllSpecies(genNum, { includeFormes: true }).filter(
+  const all = getSpeciesForView(genNum, { includeFormes: true }).filter(
     (s) => s.num === dexNumber,
   );
   const base = all.find((s) => !s.forme) ?? all[0];
@@ -177,19 +180,24 @@ export function getDexPokemonVariationsByDexNumber(
 
 const dexListCache = new Map<string, DexPokemonListItem[]>();
 
+/**
+ * @param genNum Generation whose games to list, or null for the National Dex.
+ * A generation drops the Pokemon it never had and reports that generation's
+ * base stats, types and abilities.
+ */
 export function getDexPokemonList(
-  genNum = 9,
+  genNum: number | null,
   options?: {
     forms?: DexPokemonFormsMode;
   },
 ): DexPokemonListItem[] {
   const formsMode = options?.forms ?? "distinct-sprites";
-  const cacheKey = `${genNum}|${formsMode}`;
+  const cacheKey = `${genNum ?? "national"}|${formsMode}`;
   const cached = dexListCache.get(cacheKey);
   if (cached) return cached;
 
   // Include formes so we can decide which ones to render.
-  const all = getAllSpecies(genNum, { includeFormes: true });
+  const all = getSpeciesForView(genNum, { includeFormes: true });
 
   const groups = new Map<
     number,
@@ -255,18 +263,25 @@ export function getDexPokemonList(
   return result;
 }
 
-let statBoundsCache: Record<RangeStatKey, [number, number]> | null = null;
+const statBoundsCache = new Map<
+  string,
+  Record<RangeStatKey, [number, number]>
+>();
 
 /** Min/max of every stat across the dex, used to size the range sliders. */
-export function getStatBounds(): Record<RangeStatKey, [number, number]> {
-  if (statBoundsCache) return statBoundsCache;
+export function getStatBounds(
+  genNum: number | null = null,
+): Record<RangeStatKey, [number, number]> {
+  const cacheKey = `${genNum ?? "national"}`;
+  const cached = statBoundsCache.get(cacheKey);
+  if (cached) return cached;
 
   const bounds = {} as Record<RangeStatKey, [number, number]>;
   for (const key of RANGE_STAT_KEYS) {
     bounds[key] = [Number.POSITIVE_INFINITY, 0];
   }
 
-  for (const p of getDexPokemonList(9, { forms: "distinct-sprites" })) {
+  for (const p of getDexPokemonList(genNum, { forms: "distinct-sprites" })) {
     for (const key of RANGE_STAT_KEYS) {
       const value = p.stats[key];
       if (value < bounds[key][0]) bounds[key][0] = value;
@@ -278,6 +293,6 @@ export function getStatBounds(): Record<RangeStatKey, [number, number]> {
     if (!Number.isFinite(bounds[key][0])) bounds[key] = [0, 0];
   }
 
-  statBoundsCache = bounds;
+  statBoundsCache.set(cacheKey, bounds);
   return bounds;
 }

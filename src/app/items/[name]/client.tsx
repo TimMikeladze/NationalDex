@@ -3,20 +3,39 @@
 import { Search, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AddToListDialog } from "@/components/add-to-list-dialog";
+import {
+  GenerationScope,
+  resolveGenerationScope,
+} from "@/components/pokemon/generation-scope";
 import { ItemImage } from "@/components/pokemon/item-image";
 import {
   PokemonCard,
   PokemonCardSkeleton,
 } from "@/components/pokemon/pokemon-card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useGenerationPreference } from "@/hooks/use-generation-preference";
 import { useFullItemDetail } from "@/hooks/use-pokemon";
-import { GEN_RANGES, getGenerationByPokemonId } from "@/lib/pkmn";
+import {
+  GEN_RANGES,
+  getGenerationByPokemonId,
+  getItemGenerations,
+} from "@/lib/pkmn";
 import { cn } from "@/lib/utils";
 import type { ItemHeldByPokemon } from "@/types/pokemon";
 import { ITEM_POCKET_COLORS, ITEM_POCKET_LABELS } from "@/types/pokemon";
 
 export function ItemDetailClient({ name }: { name: string }) {
-  const { data: item, isLoading, error } = useFullItemDetail(name);
+  const { preferredGeneration } = useGenerationPreference();
+  const availableGenerations = useMemo(() => getItemGenerations(name), [name]);
+  const { activeGeneration, unavailableGeneration } = resolveGenerationScope(
+    preferredGeneration,
+    availableGenerations,
+  );
+  const {
+    data: item,
+    isLoading,
+    error,
+  } = useFullItemDetail(name, activeGeneration);
 
   if (isLoading) {
     return <ItemDetailSkeleton />;
@@ -58,7 +77,7 @@ export function ItemDetailClient({ name }: { name: string }) {
                   itemSprite={item.sprite}
                 />
               </div>
-              <div className="flex items-center gap-2 mt-1">
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <span
                   className="text-[10px] px-2 py-0.5 uppercase tracking-wider rounded"
                   style={{
@@ -71,7 +90,17 @@ export function ItemDetailClient({ name }: { name: string }) {
                 <span className="text-xs text-muted-foreground">
                   {item.category}
                 </span>
+                <GenerationScope
+                  activeGeneration={activeGeneration}
+                  subject={item.name}
+                />
               </div>
+              <GenerationScope
+                activeGeneration={null}
+                unavailableGeneration={unavailableGeneration}
+                subject={item.name}
+                className="mt-1 block"
+              />
             </div>
           </div>
           {item.shortDescription && (

@@ -3,12 +3,14 @@
 import { Filter, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useGenerationPreference } from "@/hooks/use-generation-preference";
 import {
-  ALL_TYPES,
   DAMAGE_CLASSES,
   GENERATIONS,
   getAllMoves,
+  getAllTypes,
   getGenerationName,
+  LATEST_GEN,
   toID,
 } from "@/lib/pkmn";
 import { cn } from "@/lib/utils";
@@ -53,9 +55,19 @@ export default function MovesPage() {
   const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  // Get all moves synchronously with extended data
+  const { preferredGeneration } = useGenerationPreference();
+
+  const availableTypes = useMemo(
+    () =>
+      getAllTypes(preferredGeneration ?? LATEST_GEN).map(
+        (t) => t.name as PokemonType,
+      ),
+    [preferredGeneration],
+  );
+
+  // Moves as they exist in the generation being viewed
   const allMoves = useMemo(() => {
-    return getAllMoves().map((m) => ({
+    return getAllMoves(preferredGeneration ?? LATEST_GEN).map((m) => ({
       id: m.num,
       name: m.name,
       type: m.type as PokemonType,
@@ -67,7 +79,7 @@ export default function MovesPage() {
       priority: m.priority ?? 0,
       contact: m.flags?.contact ?? false,
     }));
-  }, []);
+  }, [preferredGeneration]);
 
   // Apply filters client-side
   const filteredMoves = useMemo(() => {
@@ -308,12 +320,12 @@ export default function MovesPage() {
                 )}
               </div>
               <div className="flex flex-wrap gap-1">
-                {ALL_TYPES.map((type) => (
+                {availableTypes.map((type) => (
                   <TypeFilterButton
                     key={type}
-                    type={type as PokemonType}
-                    selected={filters.types.includes(type as PokemonType)}
-                    onClick={() => toggleType(type as PokemonType)}
+                    type={type}
+                    selected={filters.types.includes(type)}
+                    onClick={() => toggleType(type)}
                   />
                 ))}
               </div>
@@ -371,7 +383,9 @@ export default function MovesPage() {
                 )}
               </div>
               <div className="flex flex-wrap gap-2">
-                {GENERATIONS.map((gen) => (
+                {GENERATIONS.filter(
+                  (gen) => gen.num <= (preferredGeneration ?? LATEST_GEN),
+                ).map((gen) => (
                   <button
                     key={gen.id}
                     type="button"

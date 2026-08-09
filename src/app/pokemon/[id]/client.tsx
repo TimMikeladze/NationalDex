@@ -16,6 +16,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AddToListDialog } from "@/components/add-to-list-dialog";
 import { useSecondaryToolbar } from "@/components/app-shell";
+import { GenerationPicker } from "@/components/pokemon/generation-picker";
+import { GenerationScope } from "@/components/pokemon/generation-scope";
 import { PokemonImage } from "@/components/pokemon/pokemon-image";
 import { StatBar } from "@/components/pokemon/stat-bar";
 import { TypeBadge } from "@/components/pokemon/type-badge";
@@ -41,6 +43,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useComparison } from "@/hooks/use-comparison";
 import { useFavorites } from "@/hooks/use-favorites";
+import { useGenerationPreference } from "@/hooks/use-generation-preference";
 import { usePokedexPreference } from "@/hooks/use-pokedex-preference";
 import {
   calculateTypeEffectiveness,
@@ -54,7 +57,16 @@ import {
   getDexPokemonList,
   getDexPokemonVariationsByDexNumber,
 } from "@/lib/dex-pokemon";
-import { getOffensiveTypeMatchups, toID } from "@/lib/pkmn";
+import {
+  FIRST_ABILITY_GEN,
+  FIRST_BREEDING_GEN,
+  getGenerationGames,
+  getGenerationName,
+  getOffensiveTypeMatchups,
+  getSpeciesGenerations,
+  LATEST_GEN,
+  toID,
+} from "@/lib/pkmn";
 import type { FormattedPokemonEncounter, PokedexEntry } from "@/lib/pokeapi";
 import { pokemonSprite, type SpriteGen } from "@/lib/sprites";
 import { cn } from "@/lib/utils";
@@ -450,14 +462,33 @@ export function PokemonPageClient({
   pokedexEntry,
 }: PokemonPageClientProps) {
   const router = useRouter();
-  const { pokemon, species, isLoading, error } = usePokemonWithSpecies(id);
+  const { preferredGeneration } = useGenerationPreference();
+
+  // Generations whose games this Pokemon actually appears in. A preference for
+  // a generation it missed (Kakuna in Gen IX, say) falls back to latest data.
+  const availableGenerations = useMemo(() => getSpeciesGenerations(id), [id]);
+  const activeGeneration =
+    preferredGeneration !== null &&
+    availableGenerations.includes(preferredGeneration)
+      ? preferredGeneration
+      : null;
+  const missingFromPreferredGeneration =
+    preferredGeneration !== null && activeGeneration === null;
+
+  const { pokemon, species, isLoading, error } = usePokemonWithSpecies(
+    id,
+    activeGeneration,
+  );
   const { isFavorite, toggleFavorite } = useFavorites();
   const { isInComparison, toggleComparison, expandPanel } = useComparison();
   const setSecondaryToolbar = useSecondaryToolbar();
   const { defaultPokemonSpriteGen } = useSpritePreferences();
-  const { data: moves, isLoading: movesLoading } = usePokemonMoves(id);
+  const { data: moves, isLoading: movesLoading } = usePokemonMoves(
+    id,
+    activeGeneration,
+  );
   const { data: evolutionChain, isLoading: evolutionLoading } =
-    useEvolutionChain(species?.evolutionChainUrl ?? null);
+    useEvolutionChain(species?.evolutionChainUrl ?? null, activeGeneration);
   const { data: encounters, isLoading: encountersLoading } =
     usePokemonEncounters(pokemon?.id ?? null);
 
@@ -471,8 +502,12 @@ export function PokemonPageClient({
   // Base species only, ordered by National Dex number, each with a unique
   // routable slug. Forms/formes share their base species' dex number, so
   // prev/next/random navigate between base species rather than individual
-  // forms.
-  const dexOrder = useMemo(() => getDexPokemonList(9, { forms: "none" }), []);
+  // forms. Scoped to the generation being viewed, so prev/next walk that
+  // generation's dex.
+  const dexOrder = useMemo(
+    () => getDexPokemonList(activeGeneration, { forms: "none" }),
+    [activeGeneration],
+  );
   const dexIndex = useMemo(() => {
     if (!pokemon) return -1;
     return dexOrder.findIndex((p) => p.id === pokemon.id);
@@ -491,8 +526,11 @@ export function PokemonPageClient({
 
   const typeEffectiveness = useMemo(() => {
     if (!pokemon) return null;
-    return calculateTypeEffectiveness(pokemon.types);
-  }, [pokemon]);
+    return calculateTypeEffectiveness(
+      pokemon.types,
+      activeGeneration ?? LATEST_GEN,
+    );
+  }, [pokemon, activeGeneration]);
 
   const secondaryToolbarContent = useMemo(() => {
     if (!pokemon) return null;
@@ -520,6 +558,11 @@ export function PokemonPageClient({
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          <GenerationPicker
+            availableGenerations={availableGenerations}
+            size="compact"
+          />
+
           <Popover>
             <PopoverTrigger asChild>
               <Button
@@ -699,6 +742,7 @@ export function PokemonPageClient({
     pokemon,
     prevDexPokemon,
     nextDexPokemon,
+    availableGenerations,
     expandPanel,
     handleRandomPokemon,
     isFavorite,
@@ -793,11 +837,22 @@ export function PokemonPageClient({
                   />
                 </div>
               </div>
+
+              <GenerationScope
+                activeGeneration={activeGeneration}
+                unavailableGeneration={
+                  missingFromPreferredGeneration ? preferredGeneration : null
+                }
+                subject={getBaseName(pokemon.name)}
+              />
             </div>
 
             {/* Pokedex Entries */}
             {pokedexEntry?.entries && pokedexEntry.entries.length > 0 && (
-              <PokedexEntriesSection entries={pokedexEntry.entries} />
+              <PokedexEntriesSection
+                entries={pokedexEntry.entries}
+                activeGeneration={activeGeneration}
+              />
             )}
           </section>
 
@@ -854,7 +909,10 @@ export function PokemonPageClient({
           )}
 
           {/* Abilities */}
-          <AbilitiesSection pokemon={pokemon} />
+          <AbilitiesSection
+            pokemon={pokemon}
+            activeGeneration={activeGeneration}
+          />
 
           {/* Stats */}
           <section className="space-y-3">
@@ -875,20 +933,30 @@ export function PokemonPageClient({
             chain={evolutionChain}
             isLoading={evolutionLoading}
             currentSlug={currentSlug}
+            generation={activeGeneration}
           />
 
-          <DetailsSection pokemon={pokemon} species={species} />
+          <DetailsSection
+            pokemon={pokemon}
+            species={species}
+            activeGeneration={activeGeneration}
+          />
         </div>
 
         {/* Main content column */}
         <div className="space-y-6 md:col-span-7 lg:col-span-7 xl:col-span-7 2xl:col-span-8">
           {/* Moves */}
-          <MovesSection moves={moves} isLoading={movesLoading} />
+          <MovesSection
+            moves={moves}
+            isLoading={movesLoading}
+            activeGeneration={activeGeneration}
+          />
 
           {/* Locations */}
           <LocationsSection
             encounters={encounters}
             isLoading={encountersLoading}
+            activeGeneration={activeGeneration}
           />
         </div>
       </div>
@@ -910,15 +978,26 @@ function Label({ children }: { children: React.ReactNode }) {
 
 function PokedexEntriesSection({
   entries,
+  activeGeneration,
 }: {
   entries: { version: string; flavorText: string }[];
+  activeGeneration: number | null;
 }) {
   const { preferredGameVersion, setPreferredGameVersion, isLoaded } =
     usePokedexPreference();
   const [showAllVersions, setShowAllVersions] = useState(false);
 
-  // Group entries with identical flavor text
-  const groupedEntries = useMemo(() => groupEntriesByText(entries), [entries]);
+  // Group entries with identical flavor text, keeping only the games of the
+  // generation being viewed when one is selected.
+  const groupedEntries = useMemo(() => {
+    const scoped =
+      activeGeneration === null
+        ? entries
+        : entries.filter(
+            (e) => getVersionGeneration(e.version) === activeGeneration,
+          );
+    return groupEntriesByText(scoped.length > 0 ? scoped : entries);
+  }, [entries, activeGeneration]);
 
   // Find the group to display - prefer user's selection, fall back to most recent
   const selectedGroup = useMemo(() => {
@@ -1057,7 +1136,28 @@ function PokedexEntriesSection({
   );
 }
 
-function AbilitiesSection({ pokemon }: { pokemon: Pokemon }) {
+function AbilitiesSection({
+  pokemon,
+  activeGeneration,
+}: {
+  pokemon: Pokemon;
+  activeGeneration: number | null;
+}) {
+  if (
+    activeGeneration !== null &&
+    activeGeneration < FIRST_ABILITY_GEN &&
+    pokemon.abilities.length === 0
+  ) {
+    return (
+      <section className="space-y-2">
+        <Label>abilities</Label>
+        <p className="text-xs text-muted-foreground">
+          Abilities were introduced in {getGenerationName(FIRST_ABILITY_GEN)}.
+        </p>
+      </section>
+    );
+  }
+
   return (
     <section className="space-y-2">
       <Label>abilities</Label>
@@ -1090,14 +1190,21 @@ function AbilitiesSection({ pokemon }: { pokemon: Pokemon }) {
 function MovesSection({
   moves,
   isLoading,
+  activeGeneration,
 }: {
   moves?: PokemonMove[];
   isLoading: boolean;
+  activeGeneration: number | null;
 }) {
+  const heading =
+    activeGeneration === null
+      ? "moves"
+      : `moves — ${getGenerationName(activeGeneration)} (${getGenerationGames(activeGeneration)})`;
+
   if (isLoading) {
     return (
       <section className="space-y-4">
-        <Label>moves</Label>
+        <Label>{heading}</Label>
         {MOVES_SKELETON_GROUP_KEYS.map((groupKey) => (
           <div key={groupKey} className="space-y-2">
             <Skeleton className="h-4 w-20" />
@@ -1113,34 +1220,66 @@ function MovesSection({
   if (!moves || moves.length === 0) {
     return (
       <section className="space-y-3">
-        <Label>moves</Label>
+        <Label>{heading}</Label>
         <p className="text-sm text-muted-foreground">No moves found.</p>
       </section>
     );
   }
 
-  const levelUpMoves = moves
-    .filter((m) => m.learnMethod === "level-up")
-    .sort((a, b) => a.levelLearnedAt - b.levelLearnedAt);
+  const byName = (a: PokemonMove, b: PokemonMove) =>
+    a.name.localeCompare(b.name);
+  const withMethod = (method: PokemonMove["learnMethod"]) =>
+    moves.filter((m) => m.learnMethod === method);
 
-  const tmMoves = moves
-    .filter((m) => m.learnMethod === "machine")
-    .sort((a, b) => a.name.localeCompare(b.name));
-
-  const eggMoves = moves
-    .filter((m) => m.learnMethod === "egg")
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const levelUpMoves = withMethod("level-up").sort(
+    (a, b) => a.levelLearnedAt - b.levelLearnedAt || byName(a, b),
+  );
+  const tmMoves = withMethod("machine").sort(byName);
+  const eggMoves = withMethod("egg").sort(byName);
+  const tutorMoves = withMethod("tutor").sort(byName);
+  const otherMoves = [...withMethod("event"), ...withMethod("other")].sort(
+    byName,
+  );
 
   return (
     <section className="space-y-4">
-      <Label>moves</Label>
+      <Label>{heading}</Label>
       <div className="space-y-6">
         {levelUpMoves.length > 0 && (
-          <MoveGroup title="Level Up" moves={levelUpMoves} showLevel />
+          <MoveGroup
+            title="Level Up"
+            moves={levelUpMoves}
+            showLevel
+            generation={activeGeneration}
+          />
         )}
-        {tmMoves.length > 0 && <MoveGroup title="TM / HM" moves={tmMoves} />}
+        {tmMoves.length > 0 && (
+          <MoveGroup
+            title="TM / HM"
+            moves={tmMoves}
+            generation={activeGeneration}
+          />
+        )}
         {eggMoves.length > 0 && (
-          <MoveGroup title="Egg Moves" moves={eggMoves} />
+          <MoveGroup
+            title="Egg Moves"
+            moves={eggMoves}
+            generation={activeGeneration}
+          />
+        )}
+        {tutorMoves.length > 0 && (
+          <MoveGroup
+            title="Move Tutor"
+            moves={tutorMoves}
+            generation={activeGeneration}
+          />
+        )}
+        {otherMoves.length > 0 && (
+          <MoveGroup
+            title="Event & Other"
+            moves={otherMoves}
+            generation={activeGeneration}
+          />
         )}
       </div>
     </section>
@@ -1151,10 +1290,12 @@ function MoveGroup({
   title,
   moves,
   showLevel = false,
+  generation,
 }: {
   title: string;
   moves: PokemonMove[];
   showLevel?: boolean;
+  generation: number | null;
 }) {
   return (
     <div className="space-y-2">
@@ -1184,7 +1325,7 @@ function MoveGroup({
                 </Link>
               </TooltipTrigger>
               <TooltipContent side="top" className="w-fit max-w-none p-0">
-                <MoveTooltipContent move={move} />
+                <MoveTooltipContent move={move} generation={generation} />
               </TooltipContent>
             </Tooltip>
           );
@@ -1194,10 +1335,16 @@ function MoveGroup({
   );
 }
 
-function MoveTooltipContent({ move }: { move: PokemonMove }) {
+function MoveTooltipContent({
+  move,
+  generation,
+}: {
+  move: PokemonMove;
+  generation: number | null;
+}) {
   const typeMatchups = useMemo(
-    () => getOffensiveTypeMatchups(move.type),
-    [move.type],
+    () => getOffensiveTypeMatchups(move.type, generation ?? LATEST_GEN),
+    [move.type, generation],
   );
 
   const formatTarget = (target: string) => {
@@ -1414,62 +1561,75 @@ const VERSION_DISPLAY: Record<string, string> = {
 };
 
 // Group versions by generation for better organization
-const VERSION_GENERATIONS: Record<string, string> = {
-  red: "Gen I",
-  blue: "Gen I",
-  yellow: "Gen I",
-  gold: "Gen II",
-  silver: "Gen II",
-  crystal: "Gen II",
-  ruby: "Gen III",
-  sapphire: "Gen III",
-  emerald: "Gen III",
-  firered: "Gen III",
-  leafgreen: "Gen III",
-  diamond: "Gen IV",
-  pearl: "Gen IV",
-  platinum: "Gen IV",
-  heartgold: "Gen IV",
-  soulsilver: "Gen IV",
-  black: "Gen V",
-  white: "Gen V",
-  "black-2": "Gen V",
-  "white-2": "Gen V",
-  x: "Gen VI",
-  y: "Gen VI",
-  "omega-ruby": "Gen VI",
-  "alpha-sapphire": "Gen VI",
-  sun: "Gen VII",
-  moon: "Gen VII",
-  "ultra-sun": "Gen VII",
-  "ultra-moon": "Gen VII",
-  "lets-go-pikachu": "Gen VII",
-  "lets-go-eevee": "Gen VII",
-  sword: "Gen VIII",
-  shield: "Gen VIII",
-  "brilliant-diamond": "Gen VIII",
-  "shining-pearl": "Gen VIII",
-  "legends-arceus": "Gen VIII",
-  scarlet: "Gen IX",
-  violet: "Gen IX",
+const VERSION_GENERATIONS: Record<string, number> = {
+  red: 1,
+  blue: 1,
+  yellow: 1,
+  gold: 2,
+  silver: 2,
+  crystal: 2,
+  ruby: 3,
+  sapphire: 3,
+  emerald: 3,
+  firered: 3,
+  leafgreen: 3,
+  diamond: 4,
+  pearl: 4,
+  platinum: 4,
+  heartgold: 4,
+  soulsilver: 4,
+  black: 5,
+  white: 5,
+  "black-2": 5,
+  "white-2": 5,
+  x: 6,
+  y: 6,
+  "omega-ruby": 6,
+  "alpha-sapphire": 6,
+  sun: 7,
+  moon: 7,
+  "ultra-sun": 7,
+  "ultra-moon": 7,
+  "lets-go-pikachu": 7,
+  "lets-go-eevee": 7,
+  sword: 8,
+  shield: 8,
+  "brilliant-diamond": 8,
+  "shining-pearl": 8,
+  "legends-arceus": 8,
+  scarlet: 9,
+  violet: 9,
 };
+
+/** Generation a game version belongs to, 0 when it isn't a main-series game. */
+const getVersionGeneration = (version: string) =>
+  VERSION_GENERATIONS[version] ?? 0;
 
 function LocationsSection({
   encounters,
   isLoading,
+  activeGeneration,
 }: {
   encounters?: FormattedPokemonEncounter[];
   isLoading: boolean;
+  activeGeneration: number | null;
 }) {
   const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
   const [showAllVersions, setShowAllVersions] = useState(false);
 
-  // Get all unique versions from encounters, organized by generation
+  // Get all unique versions from encounters, organized by generation. While a
+  // generation is selected only its own games are offered.
   const versionsByGen = useMemo(() => {
     if (!encounters) return new Map<string, string[]>();
     const versions = new Set<string>();
     for (const enc of encounters) {
       for (const v of enc.versions) {
+        if (
+          activeGeneration !== null &&
+          getVersionGeneration(v.name) !== activeGeneration
+        ) {
+          continue;
+        }
         versions.add(v.name);
       }
     }
@@ -1482,12 +1642,13 @@ function LocationsSection({
     // Group by generation
     const byGen = new Map<string, string[]>();
     for (const v of sorted) {
-      const gen = VERSION_GENERATIONS[v] ?? "Other";
+      const genNum = getVersionGeneration(v);
+      const gen = genNum > 0 ? getGenerationName(genNum) : "Other";
       if (!byGen.has(gen)) byGen.set(gen, []);
       byGen.get(gen)?.push(v);
     }
     return byGen;
-  }, [encounters]);
+  }, [encounters, activeGeneration]);
 
   const availableVersions = useMemo(() => {
     return Array.from(versionsByGen.values()).flat();
@@ -1508,12 +1669,12 @@ function LocationsSection({
   // Get location count for the current selection
   const locationCount = filteredEncounters.length;
 
-  // Set default version when data loads
+  // Default to the most recent version on offer, and re-pick when switching
+  // generation drops the current one.
   useEffect(() => {
-    if (availableVersions.length > 0 && !selectedVersion) {
-      // Default to most recent version
-      setSelectedVersion(availableVersions[availableVersions.length - 1]);
-    }
+    if (availableVersions.length === 0) return;
+    if (selectedVersion && availableVersions.includes(selectedVersion)) return;
+    setSelectedVersion(availableVersions[availableVersions.length - 1]);
   }, [availableVersions, selectedVersion]);
 
   if (isLoading) {
@@ -1527,12 +1688,18 @@ function LocationsSection({
     );
   }
 
-  if (!encounters || encounters.length === 0) {
+  if (
+    !encounters ||
+    encounters.length === 0 ||
+    availableVersions.length === 0
+  ) {
     return (
       <section className="space-y-3">
         <Label>locations</Label>
         <p className="text-sm text-muted-foreground">
-          No wild encounter data available for this Pokemon.
+          {activeGeneration === null
+            ? "No wild encounter data available for this Pokemon."
+            : `No wild encounter data for ${getGenerationName(activeGeneration)} (${getGenerationGames(activeGeneration)}).`}
         </p>
       </section>
     );
@@ -1796,10 +1963,12 @@ function EvolutionSection({
   chain,
   isLoading,
   currentSlug,
+  generation,
 }: {
   chain?: EvolutionChainLink;
   isLoading: boolean;
   currentSlug: string;
+  generation: number | null;
 }) {
   if (isLoading) {
     return (
@@ -1828,7 +1997,11 @@ function EvolutionSection({
   return (
     <section className="space-y-3">
       <Label>evolution</Label>
-      <EvolutionChainDisplay chain={chain} currentSlug={currentSlug} />
+      <EvolutionChainDisplay
+        chain={chain}
+        currentSlug={currentSlug}
+        generation={generation}
+      />
     </section>
   );
 }
@@ -1836,9 +2009,11 @@ function EvolutionSection({
 function EvolutionChainDisplay({
   chain,
   currentSlug,
+  generation,
 }: {
   chain: EvolutionChainLink;
   currentSlug: string;
+  generation: number | null;
 }) {
   if (chain.evolvesTo.length === 0) {
     return (
@@ -1850,7 +2025,12 @@ function EvolutionChainDisplay({
 
   return (
     <div className="flex flex-wrap items-center justify-center gap-2">
-      <EvolutionNode pokemon={chain} currentSlug={currentSlug} isFirst />
+      <EvolutionNode
+        pokemon={chain}
+        currentSlug={currentSlug}
+        generation={generation}
+        isFirst
+      />
     </div>
   );
 }
@@ -1858,18 +2038,22 @@ function EvolutionChainDisplay({
 function EvolutionNode({
   pokemon,
   currentSlug,
+  generation,
   isFirst = false,
 }: {
   pokemon: EvolutionChainLink;
   currentSlug: string;
+  generation: number | null;
   isFirst?: boolean;
 }) {
   const hasBranching = pokemon.evolvesTo.length > 1;
 
-  // Get all variations for this Pokemon
-  const variations = useMemo(() => {
-    return getDexPokemonVariationsByDexNumber(9, pokemon.id);
-  }, [pokemon.id]);
+  // Get all variations for this Pokemon, limited to the forms that existed in
+  // the generation being viewed (the current Pokemon always stays listed).
+  const variations = useMemo(
+    () => getDexPokemonVariationsByDexNumber(generation, pokemon.id),
+    [pokemon.id, generation],
+  );
 
   // Check if this node contains the current Pokemon (either base or a variation)
   const currentVariation = variations.find((v) => v.slug === currentSlug);
@@ -1922,6 +2106,7 @@ function EvolutionNode({
               key={`${evo.id}-${evo.name}`}
               pokemon={evo}
               currentSlug={currentSlug}
+              generation={generation}
             />
           ))}
         </div>
@@ -2047,10 +2232,13 @@ function formatEvolutionMethod(
 function DetailsSection({
   pokemon,
   species,
+  activeGeneration,
 }: {
   pokemon: Pokemon;
   species?: PokemonSpecies;
+  activeGeneration: number | null;
 }) {
+  const hasBreeding = (activeGeneration ?? LATEST_GEN) >= FIRST_BREEDING_GEN;
   const genderDisplay = species
     ? species.genderRate === -1
       ? "Genderless"
@@ -2070,17 +2258,24 @@ function DetailsSection({
       {/* Breeding */}
       <div className="space-y-2">
         <Label>breeding</Label>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
-          <DetailRow
-            label="Egg Groups"
-            value={species?.eggGroups.join(", ") ?? "—"}
-          />
-          <DetailRow label="Gender" value={genderDisplay} />
-          <DetailRow
-            label="Hatch Time"
-            value={species ? `~${hatchSteps} steps` : "—"}
-          />
-        </div>
+        {hasBreeding ? (
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+            <DetailRow
+              label="Egg Groups"
+              value={species?.eggGroups.join(", ") ?? "—"}
+            />
+            <DetailRow label="Gender" value={genderDisplay} />
+            <DetailRow
+              label="Hatch Time"
+              value={species ? `~${hatchSteps} steps` : "—"}
+            />
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Breeding and genders arrived in{" "}
+            {getGenerationName(FIRST_BREEDING_GEN)}.
+          </p>
+        )}
       </div>
 
       {/* Training */}

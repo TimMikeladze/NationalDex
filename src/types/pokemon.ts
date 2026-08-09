@@ -1,3 +1,7 @@
+import type { LearnMethod } from "@/lib/learnsets";
+
+export type { LearnMethod };
+
 export type PokemonType =
   | "Normal"
   | "Fire"
@@ -63,7 +67,7 @@ export interface PokemonMove {
   accuracy: number | null;
   pp: number;
   damageClass: "Physical" | "Special" | "Status";
-  learnMethod: "level-up" | "machine" | "egg" | "tutor" | "other";
+  learnMethod: LearnMethod;
   levelLearnedAt: number;
   description: string;
   priority: number;
@@ -135,8 +139,9 @@ export interface MovePokemon {
   id: number;
   name: string;
   sprite: string;
+  types: PokemonType[];
   learnMethods: {
-    method: "level-up" | "machine" | "egg" | "tutor" | "other";
+    method: LearnMethod;
     levelLearnedAt: number;
   }[];
 }
@@ -149,6 +154,7 @@ export interface AbilityPokemon {
   id: number;
   name: string;
   sprite: string;
+  types: PokemonType[];
   isHidden: boolean;
 }
 
@@ -169,6 +175,7 @@ export interface TypePokemon {
   id: number;
   name: string;
   sprite: string;
+  types: PokemonType[];
   slot: 1 | 2;
 }
 

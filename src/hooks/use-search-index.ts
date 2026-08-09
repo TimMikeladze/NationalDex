@@ -2,12 +2,14 @@
 
 import Fuse, { type IFuseOptions } from "fuse.js";
 import { useMemo } from "react";
+import { useGenerationPreference } from "@/hooks/use-generation-preference";
 import { getDexPokemonList } from "@/lib/dex-pokemon";
 import {
-  ALL_TYPES,
   getAllAbilities,
   getAllItems,
   getAllMoves,
+  getAllTypes,
+  LATEST_GEN,
   toID,
 } from "@/lib/pkmn";
 import { pokemonSprite, pokemonSpriteById } from "@/lib/sprites";
@@ -36,11 +38,17 @@ const FUSE_OPTIONS: IFuseOptions<SearchResult> = {
 };
 
 export function useSearchIndex() {
+  const { preferredGeneration } = useGenerationPreference();
+
   const { index, allItems } = useMemo(() => {
     const items: SearchResult[] = [];
+    // Search only offers what the selected generation's games had.
+    const gen = preferredGeneration ?? LATEST_GEN;
 
     // Add Pokemon
-    for (const p of getDexPokemonList(9, { forms: "distinct-sprites" })) {
+    for (const p of getDexPokemonList(preferredGeneration, {
+      forms: "distinct-sprites",
+    })) {
       items.push({
         id: `pokemon-${p.slug}`,
         name: p.name,
@@ -53,9 +61,9 @@ export function useSearchIndex() {
     }
 
     // Add Moves
-    for (const m of getAllMoves()) {
+    for (const m of getAllMoves(gen)) {
       items.push({
-        id: `move-${m.num}`,
+        id: `move-${toID(m.name)}`,
         name: m.name,
         type: "move",
         url: `/moves/${toID(m.name)}`,
@@ -63,9 +71,9 @@ export function useSearchIndex() {
     }
 
     // Add Abilities
-    for (const a of getAllAbilities()) {
+    for (const a of getAllAbilities(gen)) {
       items.push({
-        id: `ability-${a.num}`,
+        id: `ability-${toID(a.name)}`,
         name: a.name,
         type: "ability",
         url: `/abilities/${toID(a.name)}`,
@@ -73,7 +81,7 @@ export function useSearchIndex() {
     }
 
     // Add Types
-    for (const t of ALL_TYPES) {
+    for (const { name: t } of getAllTypes(gen)) {
       items.push({
         id: `type-${t.toLowerCase()}`,
         name: t,
@@ -84,9 +92,9 @@ export function useSearchIndex() {
     }
 
     // Add Items
-    for (const i of getAllItems()) {
+    for (const i of getAllItems(gen)) {
       items.push({
-        id: `item-${i.num}`,
+        id: `item-${toID(i.name)}`,
         name: i.name,
         type: "item",
         url: `/items/${toID(i.name)}`,
@@ -98,7 +106,7 @@ export function useSearchIndex() {
       index: new Fuse(items, FUSE_OPTIONS),
       allItems: items,
     };
-  }, []);
+  }, [preferredGeneration]);
 
   const search = (query: string, limit = 20): SearchResult[] => {
     if (!query.trim()) {

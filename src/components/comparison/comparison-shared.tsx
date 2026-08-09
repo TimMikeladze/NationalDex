@@ -23,9 +23,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useGenerationPreference } from "@/hooks/use-generation-preference";
 import { calculateTypeEffectiveness, usePokemon } from "@/hooks/use-pokemon";
 import { useTeams } from "@/hooks/use-teams";
-import { toID } from "@/lib/pkmn";
+import { LATEST_GEN, toID } from "@/lib/pkmn";
 import { pokemonSpriteById } from "@/lib/sprites";
 import { cn } from "@/lib/utils";
 import type { PokemonStat, TypeEffectiveness } from "@/types/pokemon";
@@ -59,15 +60,22 @@ export function ComparisonCard({
   variant: ComparisonCardVariant;
   onRemove: () => void;
 }) {
-  const { data: pokemon, isLoading } = usePokemon(pokemonName);
+  const { preferredGeneration } = useGenerationPreference();
+  const { data: pokemon, isLoading } = usePokemon(
+    pokemonName,
+    preferredGeneration,
+  );
   const { teams, addMember } = useTeams();
   const [showAddToTeam, setShowAddToTeam] = useState(false);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
 
   const typeEffectiveness = useMemo(() => {
     if (!pokemon) return null;
-    return calculateTypeEffectiveness(pokemon.types);
-  }, [pokemon]);
+    return calculateTypeEffectiveness(
+      pokemon.types,
+      preferredGeneration ?? LATEST_GEN,
+    );
+  }, [pokemon, preferredGeneration]);
 
   if (isLoading || !pokemon) {
     return <ComparisonCardSkeleton variant={variant} />;
@@ -554,7 +562,8 @@ function PokemonTableHeader({
   pokemonName: string;
   variant: ComparisonCardVariant;
 }) {
-  const { data: pokemon } = usePokemon(pokemonName);
+  const { preferredGeneration } = useGenerationPreference();
+  const { data: pokemon } = usePokemon(pokemonName, preferredGeneration);
   const compact = variant === "compact";
 
   if (!pokemon) {
@@ -588,11 +597,15 @@ function PokemonTableHeader({
 }
 
 function StatsComparisonRows({ pokemonNames }: { pokemonNames: string[] }) {
-  // biome-ignore lint/correctness/useHookAtTopLevel: pokemonNames array is stable from localStorage state
-  const pokemonQueries = pokemonNames.map((name) => usePokemon(name));
+  const { preferredGeneration } = useGenerationPreference();
+  const pokemonQueries = pokemonNames.map(
+    // biome-ignore lint/correctness/useHookAtTopLevel: pokemonNames array is stable from localStorage state
+    (name) => usePokemon(name, preferredGeneration),
+  );
   const allLoaded = pokemonQueries.every((q) => q.data);
 
-  const statNames = ["HP", "Attack", "Defense", "Sp. Atk", "Sp. Def", "Speed"];
+  // Gen I reports a single Special stat, so the rows come from the data.
+  const statNames = (pokemonQueries[0]?.data?.stats ?? []).map((s) => s.name);
 
   if (!allLoaded) {
     return (
@@ -687,8 +700,11 @@ export function TeamCoverageSection({
   variant: ComparisonCardVariant;
 }) {
   const compact = variant === "compact";
-  // biome-ignore lint/correctness/useHookAtTopLevel: pokemonNames array is stable from localStorage state
-  const pokemonQueries = pokemonNames.map((name) => usePokemon(name));
+  const { preferredGeneration } = useGenerationPreference();
+  const pokemonQueries = pokemonNames.map(
+    // biome-ignore lint/correctness/useHookAtTopLevel: pokemonNames array is stable from localStorage state
+    (name) => usePokemon(name, preferredGeneration),
+  );
   const allLoaded = pokemonQueries.every((q) => q.data);
 
   if (!allLoaded) {
