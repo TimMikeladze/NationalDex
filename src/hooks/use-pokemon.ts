@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useSpritePreferences } from "@/hooks/use-sprite-preferences";
 import { getPokemonMoves } from "@/lib/learnsets";
 import {
+  COMBINED_SPECIAL_GEN,
   gens,
   getAbility,
   getAllAbilities,
@@ -15,8 +16,12 @@ import {
   getGenerationName,
   getItem,
   getMove,
+  getSpeciesGenerations,
+  getSpeciesInGen,
   getType,
   getTypeMatchups,
+  LATEST_GEN,
+  resolveSpecies,
   toID,
 } from "@/lib/pkmn";
 import { pokemonSprite, pokemonSpriteById } from "@/lib/sprites";
@@ -37,55 +42,70 @@ import type {
   TypeEffectiveness,
 } from "@/types/pokemon";
 
-function findSpeciesByNumOrName(nameOrId: string | number) {
-  // Use Dex.species directly to include ALL Pokemon forms (Mega, Gmax, etc.)
-  // not just those in Gen 9 games
-  const allSpecies = Dex.species.all();
+// Use Dex.species directly to include ALL Pokemon forms (Mega, Gmax, etc.)
+// not just those in Gen 9 games
+const findSpeciesByNumOrName = resolveSpecies;
 
-  if (typeof nameOrId === "number") {
-    // Find by dex number - prefer base form, then any form
-    return (
-      allSpecies.find((s) => s.num === nameOrId && !s.forme) ??
-      allSpecies.find((s) => s.num === nameOrId)
-    );
+/**
+ * Gen I had a single Special stat, so it is shown as one row rather than the
+ * identical Sp. Atk / Sp. Def pair @pkmn/dex reports for that generation.
+ */
+function buildStats(
+  baseStats: {
+    hp: number;
+    atk: number;
+    def: number;
+    spa: number;
+    spd: number;
+    spe: number;
+  },
+  genNum: number,
+) {
+  if (genNum === COMBINED_SPECIAL_GEN) {
+    return [
+      { name: "HP", value: baseStats.hp },
+      { name: "Attack", value: baseStats.atk },
+      { name: "Defense", value: baseStats.def },
+      { name: "Special", value: baseStats.spa },
+      { name: "Speed", value: baseStats.spe },
+    ];
   }
 
-  // Try to get by name/id first
-  const byName = Dex.species.get(nameOrId);
-  if (byName?.exists) return byName;
-
-  // Try parsing as number
-  const asNum = Number.parseInt(nameOrId, 10);
-  if (!Number.isNaN(asNum)) {
-    return (
-      allSpecies.find((s) => s.num === asNum && !s.forme) ??
-      allSpecies.find((s) => s.num === asNum)
-    );
-  }
-
-  return undefined;
+  return [
+    { name: "HP", value: baseStats.hp },
+    { name: "Attack", value: baseStats.atk },
+    { name: "Defense", value: baseStats.def },
+    { name: "Sp. Atk", value: baseStats.spa },
+    { name: "Sp. Def", value: baseStats.spd },
+    { name: "Speed", value: baseStats.spe },
+  ];
 }
 
-export function usePokemon(nameOrId: string | number | null) {
+/**
+ * @param genNum View the Pokemon as it was in this generation's games (base
+ * stats, types and abilities all changed over time). Null shows the latest data.
+ */
+export function usePokemon(
+  nameOrId: string | number | null,
+  genNum: number | null = null,
+) {
   const { defaultPokemonSpriteGen } = useSpritePreferences();
 
   return useQuery<Pokemon>({
-    queryKey: ["pokemon", nameOrId, defaultPokemonSpriteGen],
+    queryKey: ["pokemon", nameOrId, defaultPokemonSpriteGen, genNum],
     queryFn: () => {
       if (nameOrId === null) throw new Error("Pokemon id is required");
       const species = findSpeciesByNumOrName(nameOrId);
       if (!species) throw new Error("Species not found");
 
-      const stats = [
-        { name: "HP", value: species.baseStats.hp },
-        { name: "Attack", value: species.baseStats.atk },
-        { name: "Defense", value: species.baseStats.def },
-        { name: "Sp. Atk", value: species.baseStats.spa },
-        { name: "Sp. Def", value: species.baseStats.spd },
-        { name: "Speed", value: species.baseStats.spe },
-      ];
+      // Fall back to the latest data when the Pokemon is absent from the
+      // requested generation's games.
+      const genSpecies =
+        (genNum ? getSpeciesInGen(species.name, genNum) : undefined) ?? species;
 
-      const abilities = Object.entries(species.abilities)
+      const stats = buildStats(genSpecies.baseStats, genNum ?? LATEST_GEN);
+
+      const abilities = Object.entries(genSpecies.abilities)
         .map(([slot, name]) => ({
           name: name as string,
           isHidden: slot === "H",
@@ -95,7 +115,7 @@ export function usePokemon(nameOrId: string | number | null) {
       return {
         id: species.num,
         name: species.name,
-        types: species.types as PokemonType[],
+        types: genSpecies.types as PokemonType[],
         sprite:
           pokemonSprite(species.name, { gen: defaultPokemonSpriteGen }) ||
           pokemonSpriteById(species.num),
@@ -154,8 +174,11 @@ export function usePokemonSpecies(nameOrId: string | number | null) {
   });
 }
 
-export function usePokemonWithSpecies(nameOrId: string | number | null) {
-  const pokemon = usePokemon(nameOrId);
+export function usePokemonWithSpecies(
+  nameOrId: string | number | null,
+  genNum: number | null = null,
+) {
+  const pokemon = usePokemon(nameOrId, genNum);
   const species = usePokemonSpecies(nameOrId);
 
   return {
@@ -166,21 +189,31 @@ export function usePokemonWithSpecies(nameOrId: string | number | null) {
   };
 }
 
-export function usePokemonMoves(nameOrId: string | number | null) {
+/**
+ * @param genNum Only include moves learnable in this generation's games, with
+ * that generation's move data. Null shows the most recent learnset instead.
+ */
+export function usePokemonMoves(
+  nameOrId: string | number | null,
+  genNum: number | null = null,
+) {
   return useQuery<PokemonMove[]>({
-    queryKey: ["pokemon-moves", nameOrId],
+    queryKey: ["pokemon-moves", nameOrId, genNum],
     queryFn: async () => {
       if (nameOrId === null) throw new Error("Pokemon id is required");
       const species = findSpeciesByNumOrName(nameOrId);
       if (!species) throw new Error("Species not found");
 
+      const options = { exact: genNum !== null };
+      const gen = genNum ?? LATEST_GEN;
+
       // Try to get moves for the exact species first
-      let moves = await getPokemonMoves(species.name);
+      let moves = await getPokemonMoves(species.name, gen, options);
 
       // If no moves found and this is a forme (Mega, Gmax, regional, etc.),
       // fall back to the base species' learnset
       if (moves.length === 0 && species.baseSpecies) {
-        moves = await getPokemonMoves(species.baseSpecies);
+        moves = await getPokemonMoves(species.baseSpecies, gen, options);
       }
 
       return moves.map((m) => ({
@@ -202,13 +235,28 @@ export function usePokemonMoves(nameOrId: string | number | null) {
   });
 }
 
-export function useEvolutionChain(evolutionChainUrl: string | null) {
+/**
+ * @param genNum Limit the chain to Pokemon that existed in this generation's
+ * games, e.g. Eevee has no Sylveon before Gen VI. Null includes every stage.
+ */
+export function useEvolutionChain(
+  evolutionChainUrl: string | null,
+  genNum: number | null = null,
+) {
   const { defaultPokemonSpriteGen } = useSpritePreferences();
 
   return useQuery<EvolutionChainLink>({
-    queryKey: ["evolution-chain", evolutionChainUrl, defaultPokemonSpriteGen],
+    queryKey: [
+      "evolution-chain",
+      evolutionChainUrl,
+      defaultPokemonSpriteGen,
+      genNum,
+    ],
     queryFn: () => {
       if (!evolutionChainUrl) throw new Error("No evolution chain");
+
+      const existsInGen = (name: string) =>
+        genNum === null || getSpeciesGenerations(name).includes(genNum);
 
       const startId = evolutionChainUrl.replace("evo-", "");
       // Use Dex.species.get() to include ALL Pokemon, not just those in Gen 9 games
@@ -238,7 +286,8 @@ export function useEvolutionChain(evolutionChainUrl: string | null) {
           if (
             otherSpecies.prevo &&
             variantIds.has(toID(otherSpecies.prevo)) &&
-            !seenEvoNums.has(otherSpecies.num)
+            !seenEvoNums.has(otherSpecies.num) &&
+            existsInGen(otherSpecies.name)
           ) {
             seenEvoNums.add(otherSpecies.num);
             const evoDetails: EvolutionChainLink["evolutionDetails"] = [];
@@ -323,7 +372,8 @@ export function useEvolutionChain(evolutionChainUrl: string | null) {
       let baseSpecies = startSpecies;
       while (baseSpecies.prevo) {
         const prev = Dex.species.get(baseSpecies.prevo);
-        if (prev?.exists) baseSpecies = prev;
+        // Stop at pre-evolutions the generation didn't have yet (Pichu in Gen I)
+        if (prev?.exists && existsInGen(prev.name)) baseSpecies = prev;
         else break;
       }
 
@@ -671,8 +721,9 @@ export function useItemCategories() {
 
 export function calculateTypeEffectiveness(
   types: PokemonType[],
+  genNum: number = LATEST_GEN,
 ): TypeEffectiveness {
-  const matchups = getTypeMatchups(types);
+  const matchups = getTypeMatchups(types, genNum);
   return {
     weaknesses: matchups.weaknesses.map((w) => ({
       type: w.type as PokemonType,

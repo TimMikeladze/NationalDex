@@ -61,6 +61,67 @@ export function getSpecies(name: string, genNum = 9) {
   return dexResult.exists ? dexResult : undefined;
 }
 
+/**
+ * Species as it existed in a specific generation's games (gen-specific base
+ * stats, types and abilities), or undefined when it wasn't in those games.
+ */
+export function getSpeciesInGen(name: string, genNum: number) {
+  return gens.get(genNum).species.get(name);
+}
+
+/**
+ * Resolve a species from a National Dex number, a name, or a URL slug.
+ * Uses the global Dex so every form (Mega, Gmax, regional) resolves, not just
+ * the ones present in the latest generation's games.
+ */
+export function resolveSpecies(nameOrId: string | number) {
+  const allSpecies = Dex.species.all();
+
+  if (typeof nameOrId === "number") {
+    // Find by dex number - prefer base form, then any form
+    return (
+      allSpecies.find((s) => s.num === nameOrId && !s.forme) ??
+      allSpecies.find((s) => s.num === nameOrId)
+    );
+  }
+
+  const byName = Dex.species.get(nameOrId);
+  if (byName?.exists) return byName;
+
+  const asNum = Number.parseInt(nameOrId, 10);
+  if (!Number.isNaN(asNum)) {
+    return (
+      allSpecies.find((s) => s.num === asNum && !s.forme) ??
+      allSpecies.find((s) => s.num === asNum)
+    );
+  }
+
+  return undefined;
+}
+
+const speciesGenerationsCache = new Map<string, number[]>();
+
+/**
+ * Generation numbers whose games this species appears in, e.g. Kakuna is
+ * `[1..7]` (cut from Sword/Shield onwards) and Great Tusk is `[9]`. Forms that
+ * only exist in battle (Gmax) have no games of their own and return `[]`.
+ */
+export function getSpeciesGenerations(nameOrId: string | number): number[] {
+  const species = resolveSpecies(nameOrId);
+  if (!species) return [];
+
+  const cached = speciesGenerationsCache.get(species.id);
+  if (cached) return cached;
+
+  const result: number[] = [];
+  for (const { num } of GENERATIONS) {
+    if (getSpeciesInGen(species.name, num)) result.push(num);
+  }
+
+  speciesGenerationsCache.set(species.id, result);
+  return result;
+}
+
 export function getMove(name: string, genNum = 9) {
   return gens.get(genNum).moves.get(name);
 }
@@ -198,6 +259,20 @@ export function getGenerationByPokemonId(pokemonId: number): string | null {
 export function getGenerationName(genNum: number): string {
   return GENERATIONS.find((g) => g.num === genNum)?.name ?? `Gen ${genNum}`;
 }
+
+/** Games a generation covers, e.g. "Gold/Silver" for gen 2. */
+export function getGenerationGames(genNum: number): string {
+  return GENERATIONS.find((g) => g.num === genNum)?.label ?? "";
+}
+
+/** The most recent generation this app has data for. */
+export const LATEST_GEN = 9;
+
+/** Abilities were introduced in Gen III. */
+export const FIRST_ABILITY_GEN = 3;
+
+/** Gen I used a single Special stat instead of Sp. Atk / Sp. Def. */
+export const COMBINED_SPECIAL_GEN = 1;
 
 export const ALL_ITEM_POCKETS = [
   "medicine",

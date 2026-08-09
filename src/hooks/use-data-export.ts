@@ -9,6 +9,7 @@ const STORAGE_KEYS = {
   recentlyViewed: "pokedex-recently-viewed",
   spritePreferences: "pokedex-sprite-preferences",
   pokedexPreference: "pokedex-entry-preference",
+  generationPreference: "pokedex-generation-preference",
   whosThatPokemonBestStreak: "whos-that-pokemon-best-streak",
   theme: "theme",
 };
@@ -22,6 +23,7 @@ export interface ExportedData {
   recentlyViewed: unknown[];
   spritePreferences: unknown;
   pokedexPreference: string | null;
+  generationPreference: string | null;
   whosThatPokemonBestStreak: number;
 }
 
@@ -45,6 +47,9 @@ export function useDataExport() {
       recentlyViewed: getData(STORAGE_KEYS.recentlyViewed) || [],
       spritePreferences: getData(STORAGE_KEYS.spritePreferences) || {},
       pokedexPreference: localStorage.getItem(STORAGE_KEYS.pokedexPreference),
+      generationPreference: localStorage.getItem(
+        STORAGE_KEYS.generationPreference,
+      ),
       whosThatPokemonBestStreak:
         Number.parseInt(
           localStorage.getItem(STORAGE_KEYS.whosThatPokemonBestStreak) || "0",
@@ -99,6 +104,14 @@ export function useDataExport() {
           localStorage.setItem(
             STORAGE_KEYS.pokedexPreference,
             data.pokedexPreference,
+          );
+        }
+
+        // Import generation preference
+        if (data.generationPreference) {
+          localStorage.setItem(
+            STORAGE_KEYS.generationPreference,
+            data.generationPreference,
           );
         }
 

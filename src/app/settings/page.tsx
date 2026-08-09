@@ -25,10 +25,12 @@ import {
 } from "@/components/ui/select";
 import { type ExportedData, useDataExport } from "@/hooks/use-data-export";
 import { useFavorites } from "@/hooks/use-favorites";
+import { useGenerationPreference } from "@/hooks/use-generation-preference";
 import { useLists } from "@/hooks/use-lists";
 import { useRecentlyViewed } from "@/hooks/use-recently-viewed";
 import { useSpritePreferences } from "@/hooks/use-sprite-preferences";
 import { useTeams } from "@/hooks/use-teams";
+import { GENERATIONS } from "@/lib/pkmn";
 import { cn } from "@/lib/utils";
 
 export default function SettingsPage() {
@@ -39,6 +41,8 @@ export default function SettingsPage() {
   const { recentlyViewed, clearRecentlyViewed } = useRecentlyViewed();
   const { defaultPokemonSpriteGen, setDefaultPokemonSpriteGen } =
     useSpritePreferences();
+  const { preferredGeneration, setPreferredGeneration } =
+    useGenerationPreference();
   const { downloadExport, importAllData, clearAllData } = useDataExport();
 
   const [importStatus, setImportStatus] = useState<{
@@ -137,6 +141,49 @@ export default function SettingsPage() {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider block">
+            game
+          </p>
+
+          <div className="flex items-center justify-between gap-4 py-2 border-b">
+            <div>
+              <p className="text-sm">view data as of</p>
+              <p className="text-xs text-muted-foreground">
+                Scopes learnsets, base stats, types, abilities and matchups to a
+                generation&rsquo;s games
+              </p>
+            </div>
+            <Select
+              value={
+                preferredGeneration !== null
+                  ? String(preferredGeneration)
+                  : "latest"
+              }
+              onValueChange={(value) =>
+                setPreferredGeneration(
+                  value === "latest" ? null : Number.parseInt(value, 10),
+                )
+              }
+            >
+              <SelectTrigger className="w-52 justify-between">
+                <SelectValue placeholder="Select" />
+              </SelectTrigger>
+              <SelectContent align="end">
+                <SelectItem value="latest">Latest data</SelectItem>
+                {GENERATIONS.map((generation) => (
+                  <SelectItem
+                    key={generation.num}
+                    value={String(generation.num)}
+                  >
+                    {generation.name} ({generation.label})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </section>
 
