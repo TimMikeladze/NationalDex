@@ -1,3 +1,4 @@
+import { Dex } from "@pkmn/dex";
 import { type GraphicsGen, Sprites } from "@pkmn/img";
 import { toID } from "./pkmn";
 
@@ -14,6 +15,7 @@ export type SpriteSetId =
   | "gen2g"
   | "gen2s"
   | "gen2"
+  | "gen2ani"
   // Gen 3
   | "gen3rs"
   | "gen3frlg"
@@ -41,7 +43,7 @@ export type SpriteSetId =
 /** Legacy alias — the preference used to only allow these three. */
 export type SpriteGen = SpriteSetId;
 
-type SpriteSource = "showdown" | "pokemondb" | "pokemondb-artwork";
+type SpriteSource = "showdown" | "pokemondb" | "pokemondb-artwork" | "pokeapi";
 
 export type SpriteSetDefinition = {
   id: SpriteSetId;
@@ -55,6 +57,18 @@ export type SpriteSetDefinition = {
   showdownGen?: GraphicsGen;
   /** PokemonDB sprite directory (`source: "pokemondb"`). */
   pokemonDbDir?: string;
+  /** PokeAPI sprite directory below `sprites/pokemon` (`source: "pokeapi"`). */
+  pokeApiDir?: string;
+  /** File extension PokeAPI stores the set as (`source: "pokeapi"`). */
+  pokeApiExtension?: "png" | "gif";
+  /** Highest dex number the directory holds (`source: "pokeapi"`). */
+  pokeApiMaxDexNumber?: number;
+  /**
+   * Name-keyed set to draw species a dex-number-keyed source cannot address —
+   * alternate formes have no dex number of their own, and species past the
+   * directory's last entry are simply absent (`source: "pokeapi"`).
+   */
+  staticFallbackSet?: SpriteSetId;
   animated?: boolean;
   shiny: boolean;
   back: boolean;
@@ -121,13 +135,31 @@ export const SPRITE_SETS: SpriteSetDefinition[] = [
   },
   {
     id: "gen2",
-    label: "Crystal",
+    label: "Crystal (static)",
     group: "Gen 2",
     gen: 2,
     source: "showdown",
     showdownGen: "gen2",
     shiny: true,
     back: true,
+    female: false,
+  },
+  {
+    // Crystal was the first game to animate battle sprites. Showdown only ships
+    // the still frames, so the animations come from PokeAPI instead — front
+    // only, since Crystal never animated the back sprite.
+    id: "gen2ani",
+    label: "Crystal (animated)",
+    group: "Gen 2",
+    gen: 2,
+    source: "pokeapi",
+    pokeApiDir: "versions/generation-ii/crystal/animated",
+    pokeApiExtension: "gif",
+    pokeApiMaxDexNumber: 251,
+    staticFallbackSet: "gen2",
+    animated: true,
+    shiny: true,
+    back: false,
     female: false,
   },
   // Gen 3
@@ -345,11 +377,13 @@ export function getSpriteSetGroups(): {
  * sprites can follow the generation the dex is being viewed as. Several sets
  * share a generation — this picks the one the generation is named after
  * (Gen III is "Ruby/Sapphire" in the picker, so it gets the RS sheet), except
- * in Gen II where Crystal is the only Gold/Silver-era sheet with shinies.
+ * in Gen II where Crystal is the only Gold/Silver-era sheet with shinies, and
+ * where the animated sheet is preferred for the same reason Gen V gets
+ * `gen5ani`: the games animated their sprites, so the dex should too.
  */
 const SPRITE_SET_BY_GENERATION: Record<number, SpriteSetId> = {
   1: "gen1rb",
-  2: "gen2",
+  2: "gen2ani",
   3: "gen3rs",
   4: "gen4dp",
   5: "gen5ani",
@@ -406,6 +440,36 @@ function pokemonDbUrl(
   return `https://img.pokemondb.net/sprites/${set.pokemonDbDir}/${variant}/${slug}.png`;
 }
 
+const POKEAPI_SPRITES_BASE =
+  "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon";
+
+/**
+ * National Dex number to draw a species with, or null when the name is not a
+ * plain base form. PokeAPI keys its sprite directories by dex number, which no
+ * alternate forme has of its own — without this guard Charizard-Mega-X would
+ * quietly render as plain Charizard.
+ */
+function baseSpeciesNumber(
+  name: string,
+  set: SpriteSetDefinition,
+): number | null {
+  const species = Dex.species.get(name);
+  if (!species?.exists || species.forme || species.num <= 0) return null;
+  const max = set.pokeApiMaxDexNumber;
+  if (max !== undefined && species.num > max) return null;
+  return species.num;
+}
+
+function pokeApiUrl(
+  set: SpriteSetDefinition,
+  num: number,
+  options: SpriteOptions,
+): string {
+  const shiny = Boolean(options.shiny) && set.shiny;
+  const dir = `${set.pokeApiDir}${shiny ? "/shiny" : ""}`;
+  return `${POKEAPI_SPRITES_BASE}/${dir}/${num}.${set.pokeApiExtension ?? "png"}`;
+}
+
 function showdownUrl(
   set: SpriteSetDefinition,
   name: string,
@@ -443,6 +507,18 @@ export function pokemonSprite(name: string, options?: SpriteOptions): string {
 
   if (set.source === "pokemondb") {
     return pokemonDbUrl(set, pokemonDbSlug(name), resolved);
+  }
+
+  if (set.source === "pokeapi") {
+    const num = baseSpeciesNumber(name, set);
+    if (num !== null) return pokeApiUrl(set, num, resolved);
+    // Formes and later-generation species fall back to the name-keyed still
+    // sheet, so they degrade exactly as they do on the set's static twin.
+    return pokemonSprite(name, {
+      ...resolved,
+      gen: undefined,
+      set: set.staticFallbackSet,
+    });
   }
 
   return showdownUrl(set, name, resolved);
