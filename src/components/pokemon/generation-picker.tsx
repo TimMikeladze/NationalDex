@@ -1,16 +1,22 @@
 "use client";
 
 import { Gamepad2 } from "lucide-react";
+import { Fragment } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useGenerationPreference } from "@/hooks/use-generation-preference";
+import { useSpritePreferences } from "@/hooks/use-sprite-preferences";
 import { GENERATIONS, getGenerationName } from "@/lib/pkmn";
+import { getSpriteSet, getSpriteSetGroups } from "@/lib/sprites";
 import { cn } from "@/lib/utils";
 
 export interface GenerationPickerProps {
@@ -27,9 +33,10 @@ export interface GenerationPickerProps {
 }
 
 /**
- * Chooses which generation's games the dex is read as. The choice is global and
- * persisted, so every page (dex, moves, abilities, items, types, teams) follows
- * it.
+ * Chooses which generation's games the dex is read as, and which sprite sheet
+ * Pokemon are drawn with. Both are global and persisted, so every page (dex,
+ * moves, abilities, items, types, teams) follows them. The sprites track the
+ * chosen generation until a set is pinned, which is why the two share a menu.
  */
 export function GenerationPicker({
   availableGenerations,
@@ -39,6 +46,12 @@ export function GenerationPicker({
 }: GenerationPickerProps) {
   const { preferredGeneration, setPreferredGeneration } =
     useGenerationPreference();
+  const {
+    spriteSetOverride,
+    generationSpriteSet,
+    followsGeneration,
+    setSpriteSetOverride,
+  } = useSpritePreferences();
 
   const isAvailable = (genNum: number) =>
     !availableGenerations || availableGenerations.includes(genNum);
@@ -54,7 +67,7 @@ export function GenerationPicker({
             : "text-muted-foreground hover:text-foreground",
           className,
         )}
-        title="View the dex as a specific generation's games"
+        title="View the dex as a specific generation's games, and pick its sprites"
       >
         <Gamepad2 className="size-4" strokeWidth={1.5} />
         {/* On narrow screens the icon stands alone, like the toolbar's other
@@ -96,6 +109,52 @@ export function GenerationPicker({
             </span>
           </DropdownMenuItem>
         ))}
+
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+          sprites
+        </DropdownMenuLabel>
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger className="cursor-pointer">
+            <span className="flex-1 truncate">
+              {getSpriteSet(spriteSetOverride ?? generationSpriteSet).label}
+            </span>
+            <span className="text-xs text-muted-foreground whitespace-nowrap">
+              {followsGeneration ? "matched" : "pinned"}
+            </span>
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent className="w-56 max-h-80 overflow-y-auto">
+            <DropdownMenuItem
+              onSelect={() => setSpriteSetOverride(null)}
+              className={cn("cursor-pointer", followsGeneration && "bg-muted")}
+            >
+              <span className="whitespace-nowrap">Match generation</span>
+              <span className="ml-auto text-xs text-muted-foreground truncate">
+                {getSpriteSet(generationSpriteSet).label}
+              </span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {getSpriteSetGroups().map((group) => (
+              <Fragment key={group.group}>
+                <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  {group.group}
+                </DropdownMenuLabel>
+                {group.sets.map((set) => (
+                  <DropdownMenuItem
+                    key={set.id}
+                    onSelect={() => setSpriteSetOverride(set.id)}
+                    className={cn(
+                      "cursor-pointer",
+                      spriteSetOverride === set.id && "bg-muted",
+                    )}
+                  >
+                    {set.label}
+                  </DropdownMenuItem>
+                ))}
+              </Fragment>
+            ))}
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
       </DropdownMenuContent>
     </DropdownMenu>
   );

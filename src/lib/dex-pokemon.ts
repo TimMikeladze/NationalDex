@@ -189,9 +189,38 @@ export function getDexPokemonList(
   genNum: number | null,
   options?: {
     forms?: DexPokemonFormsMode;
+    /**
+     * Additionally drops species that did not exist by this generation, on top
+     * of the generation being viewed. Set when an older sprite sheet is pinned:
+     * that sheet never drew anything newer, so those cards would silently fall
+     * back to modern artwork and break the grid's look.
+     */
+    speciesCutoffGeneration?: number | null;
   },
 ): DexPokemonListItem[] {
   const formsMode = options?.forms ?? "distinct-sprites";
+  const base = getDexPokemonListForGeneration(genNum, formsMode);
+
+  // A cutoff at or past the viewed generation can only be a no-op.
+  const cutoff = options?.speciesCutoffGeneration ?? null;
+  if (cutoff === null || (genNum !== null && cutoff >= genNum)) return base;
+
+  const cacheKey = `${genNum ?? "national"}|${formsMode}|<=${cutoff}`;
+  const cached = dexListCache.get(cacheKey);
+  if (cached) return cached;
+
+  const available = new Set(
+    getDexPokemonListForGeneration(cutoff, formsMode).map((p) => p.slug),
+  );
+  const narrowed = base.filter((p) => available.has(p.slug));
+  dexListCache.set(cacheKey, narrowed);
+  return narrowed;
+}
+
+function getDexPokemonListForGeneration(
+  genNum: number | null,
+  formsMode: DexPokemonFormsMode,
+): DexPokemonListItem[] {
   const cacheKey = `${genNum ?? "national"}|${formsMode}`;
   const cached = dexListCache.get(cacheKey);
   if (cached) return cached;
@@ -271,8 +300,9 @@ const statBoundsCache = new Map<
 /** Min/max of every stat across the dex, used to size the range sliders. */
 export function getStatBounds(
   genNum: number | null = null,
+  speciesCutoffGeneration: number | null = null,
 ): Record<RangeStatKey, [number, number]> {
-  const cacheKey = `${genNum ?? "national"}`;
+  const cacheKey = `${genNum ?? "national"}|${speciesCutoffGeneration ?? "all"}`;
   const cached = statBoundsCache.get(cacheKey);
   if (cached) return cached;
 
@@ -281,7 +311,10 @@ export function getStatBounds(
     bounds[key] = [Number.POSITIVE_INFINITY, 0];
   }
 
-  for (const p of getDexPokemonList(genNum, { forms: "distinct-sprites" })) {
+  for (const p of getDexPokemonList(genNum, {
+    forms: "distinct-sprites",
+    speciesCutoffGeneration,
+  })) {
     for (const key of RANGE_STAT_KEYS) {
       const value = p.stats[key];
       if (value < bounds[key][0]) bounds[key][0] = value;
