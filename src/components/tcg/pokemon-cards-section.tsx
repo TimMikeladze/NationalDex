@@ -3,19 +3,20 @@
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useCardsByDexId, usePocketSetIds } from "@/hooks/use-tcg";
-import { cn } from "@/lib/utils";
 import type { TcgGame } from "@/types/tcg";
-import { TCG_GAME_FULL_LABELS } from "@/types/tcg";
-import { TcgCardTile, TcgCardTileSkeleton } from "./tcg-card-tile";
+import { TCG_GAME_FULL_LABELS, TCG_GAME_LABELS } from "@/types/tcg";
+import { TcgCardTile } from "./tcg-card-tile";
+import { Chip, SectionLabel } from "./tcg-chip";
 
 const SKELETON_KEYS = Array.from(
   { length: 6 },
   (_, i) => `pokemon-card-skeleton-${i}`,
 );
 
-const INITIAL_COUNT = 12;
+/** A rail holds plenty without turning the Pokemon page into a card page. */
+const RAIL_LIMIT = 24;
 
 type GameFilter = "all" | TcgGame;
 
@@ -28,7 +29,8 @@ interface PokemonCardsSectionProps {
 /**
  * The trading cards printed for a Pokemon, across the physical game and TCG
  * Pocket. Cards are matched on National Dex number, so every form of a species
- * lands on the same set of cards.
+ * lands on the same set of cards. They scroll sideways: a Pokemon can have a
+ * hundred prints, and none of them should push the rest of the page away.
  */
 export function PokemonCardsSection({
   dexId,
@@ -37,7 +39,6 @@ export function PokemonCardsSection({
   const pocketSetIds = usePocketSetIds();
   const { cards, byGame, isLoading, isError } = useCardsByDexId(dexId);
   const [game, setGame] = useState<GameFilter>("all");
-  const [expanded, setExpanded] = useState(false);
 
   const availableGames = useMemo(() => {
     const games: GameFilter[] = ["all"];
@@ -47,14 +48,15 @@ export function PokemonCardsSection({
   }, [byGame]);
 
   const visibleCards = game === "all" ? cards : byGame[game];
-  const shown = expanded ? visibleCards : visibleCards.slice(0, INITIAL_COUNT);
+  const shown = visibleCards.slice(0, RAIL_LIMIT);
+  const hasMore = visibleCards.length > shown.length;
 
   if (isError) return null;
 
   if (!isLoading && cards.length === 0) {
     return (
-      <section className="space-y-3">
-        <SectionHeading count={0} dexId={dexId} />
+      <section className="space-y-2">
+        <SectionLabel>trading cards</SectionLabel>
         <p className="text-xs text-muted-foreground">
           No trading cards found for {pokemonName}.
         </p>
@@ -64,78 +66,73 @@ export function PokemonCardsSection({
 
   return (
     <section className="space-y-3">
-      <SectionHeading count={cards.length} dexId={dexId} />
+      <div className="flex items-center justify-between gap-3">
+        <SectionLabel>
+          trading cards{cards.length > 0 ? ` (${cards.length})` : ""}
+        </SectionLabel>
+        {cards.length > 0 && (
+          <Link
+            href={`/cards?dexId=${dexId}`}
+            className="inline-flex shrink-0 items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+          >
+            browse
+            <ArrowRight className="size-3" />
+          </Link>
+        )}
+      </div>
 
       {availableGames.length > 2 && (
-        <div className="flex flex-wrap gap-2">
-          {availableGames.map((option) => {
-            const count =
-              option === "all" ? cards.length : byGame[option].length;
-            return (
-              <button
-                key={option}
-                type="button"
-                onClick={() => {
-                  setGame(option);
-                  setExpanded(false);
-                }}
-                className={cn(
-                  "rounded-full border px-3 py-1 text-xs transition-colors",
-                  game === option
-                    ? "border-foreground bg-foreground text-background"
-                    : "hover:bg-muted",
-                )}
-              >
-                {option === "all" ? "All" : TCG_GAME_FULL_LABELS[option]} (
-                {count})
-              </button>
-            );
-          })}
+        <div className="flex flex-wrap gap-1">
+          {availableGames.map((option) => (
+            <Chip
+              key={option}
+              selected={game === option}
+              title={
+                option === "all" ? undefined : TCG_GAME_FULL_LABELS[option]
+              }
+              onClick={() => setGame(option)}
+            >
+              {option === "all" ? "All" : TCG_GAME_LABELS[option]}
+              <span className="ml-1 tabular-nums opacity-60">
+                {option === "all" ? cards.length : byGame[option].length}
+              </span>
+            </Chip>
+          ))}
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-        {isLoading && cards.length === 0
-          ? SKELETON_KEYS.map((key) => <TcgCardTileSkeleton key={key} />)
-          : shown.map((card) => (
-              <TcgCardTile
-                key={card.id}
-                card={card}
-                pocketSetIds={pocketSetIds}
-                showGame={game === "all"}
-              />
-            ))}
+      {/* Bleeds to the page edge so the rail reads as scrollable on a phone */}
+      <div className="-mx-4 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0">
+        <div className="flex w-max snap-x snap-mandatory gap-2 md:gap-3">
+          {isLoading && cards.length === 0
+            ? SKELETON_KEYS.map((key) => (
+                <div key={key} className="w-28 shrink-0 space-y-1.5 sm:w-32">
+                  <Skeleton className="aspect-[63/88] w-full" />
+                  <Skeleton className="h-3 w-3/4" />
+                </div>
+              ))
+            : shown.map((card) => (
+                <TcgCardTile
+                  key={card.id}
+                  card={card}
+                  pocketSetIds={pocketSetIds}
+                  showGame={game === "all"}
+                  className="w-28 shrink-0 snap-start sm:w-32"
+                />
+              ))}
+
+          {hasMore && (
+            <Link
+              href={`/cards?dexId=${dexId}`}
+              className="flex w-28 shrink-0 snap-start flex-col items-center justify-center gap-1.5 border border-dashed text-center text-xs text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground sm:w-32"
+              style={{ aspectRatio: "63 / 88" }}
+            >
+              <ArrowRight className="size-4" />
+              {visibleCards.length - shown.length} more
+            </Link>
+          )}
+        </div>
       </div>
-
-      {visibleCards.length > INITIAL_COUNT && (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => setExpanded((prev) => !prev)}
-        >
-          {expanded ? "show fewer" : `show all ${visibleCards.length} cards`}
-        </Button>
-      )}
     </section>
-  );
-}
-
-function SectionHeading({ count, dexId }: { count: number; dexId: number }) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-        trading cards{count > 0 ? ` (${count})` : ""}
-      </span>
-      {count > 0 && (
-        <Link
-          href={`/cards?dexId=${dexId}`}
-          className="inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
-        >
-          browse
-          <ArrowRight className="size-3" />
-        </Link>
-      )}
-    </div>
   );
 }

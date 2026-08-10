@@ -6,8 +6,14 @@ import { AddToListDialog } from "@/components/add-to-list-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCardFavorites } from "@/hooks/use-card-favorites";
 import { cn } from "@/lib/utils";
-import type { TcgCardBrief, TcgGame } from "@/types/tcg";
-import { cardImageUrl, gameForCardId } from "@/types/tcg";
+import type { TcgCardBrief, TcgGame, TcgLanguage } from "@/types/tcg";
+import {
+  cardImageUrl,
+  DEFAULT_TCG_LANGUAGE,
+  formatLocalId,
+  gameForCardId,
+  withTcgLanguage,
+} from "@/types/tcg";
 import { GameBadge } from "./game-badge";
 import { TcgCardImage } from "./tcg-card-image";
 
@@ -17,18 +23,22 @@ interface TcgCardTileProps {
   pocketSetIds?: string[];
   showGame?: boolean;
   priority?: boolean;
+  /** Catalogue the card came from — its detail page needs the same one. */
+  language?: TcgLanguage;
   className?: string;
 }
 
 /**
- * A card in a grid: artwork, number, and the same favourite/list actions every
- * other kind of entry in the dex has.
+ * A card in a grid: artwork first, then the two things that identify a print —
+ * its name and its number. Actions sit on the artwork so the caption stays
+ * readable at the two-column size a phone shows.
  */
 export function TcgCardTile({
   card,
   pocketSetIds,
   showGame = true,
   priority = false,
+  language = DEFAULT_TCG_LANGUAGE,
   className,
 }: TcgCardTileProps) {
   const { isFavoriteCard, toggleFavoriteCard } = useCardFavorites();
@@ -38,41 +48,66 @@ export function TcgCardTile({
   return (
     <div className={cn("group relative", className)}>
       <Link
-        href={`/cards/${card.id.toLowerCase()}`}
-        className="block space-y-1.5"
+        href={withTcgLanguage(`/cards/${card.id.toLowerCase()}`, language)}
+        className="block space-y-1.5 outline-none"
       >
-        <TcgCardImage
-          image={card.image}
-          alt={card.name}
-          priority={priority}
-          className="transition-transform group-hover:-translate-y-0.5"
-        />
-        <div className="space-y-0.5 px-0.5">
-          <p className="truncate text-xs font-medium" title={card.name}>
+        <div className="relative overflow-hidden bg-muted/30 transition-transform duration-150 group-active:scale-[0.98] group-focus-visible:ring-2 group-focus-visible:ring-ring">
+          <TcgCardImage
+            image={card.image}
+            alt={card.name}
+            localId={card.localId}
+            priority={priority}
+            className="transition-transform duration-200 md:group-hover:scale-[1.03]"
+          />
+          {showGame && (
+            <GameBadge
+              game={game}
+              variant="overlay"
+              className="pointer-events-none absolute bottom-1 left-1 backdrop-blur"
+            />
+          )}
+        </div>
+
+        <div className="flex items-baseline gap-1.5 px-0.5">
+          <p
+            className="min-w-0 flex-1 truncate text-xs font-medium"
+            title={card.name}
+          >
             {card.name}
           </p>
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] tabular-nums text-muted-foreground">
-              #{card.localId}
-            </span>
-            {showGame && <GameBadge game={game} />}
-          </div>
+          <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
+            {formatLocalId(card.localId)}
+          </span>
         </div>
       </Link>
 
-      <div className="absolute right-1 top-1 flex flex-col gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100 max-md:opacity-100">
+      {/* The heart stays put once a card is favourited; the rest only appears
+          to a pointer, so a phone grid is artwork and nothing else. */}
+      <div className="absolute right-0 top-0 flex flex-col items-end">
         <button
           type="button"
           onClick={() => toggleFavoriteCard(card)}
           className={cn(
-            "rounded-full bg-background/90 p-1.5 shadow-sm backdrop-blur transition-colors",
+            "p-2 transition-opacity",
             favorited
-              ? "text-rose-500"
-              : "text-muted-foreground hover:text-foreground",
+              ? "text-rose-500 opacity-100"
+              : "text-muted-foreground opacity-0 focus-visible:opacity-100 md:group-hover:opacity-100",
           )}
-          title={favorited ? "Remove from favorites" : "Add to favorites"}
+          title={
+            favorited
+              ? `Remove ${card.name} from favorites`
+              : `Add ${card.name} to favorites`
+          }
+          aria-label={
+            favorited
+              ? `Remove ${card.name} from favorites`
+              : `Add ${card.name} to favorites`
+          }
+          aria-pressed={favorited}
         >
-          <Heart className={cn("size-3.5", favorited && "fill-current")} />
+          <span className="flex size-6 items-center justify-center bg-background/80 backdrop-blur">
+            <Heart className={cn("size-3.5", favorited && "fill-current")} />
+          </span>
         </button>
 
         <AddToListDialog
@@ -83,10 +118,13 @@ export function TcgCardTile({
           trigger={
             <button
               type="button"
-              className="rounded-full bg-background/90 p-1.5 text-muted-foreground shadow-sm backdrop-blur transition-colors hover:text-foreground"
-              title="Add to list"
+              className="hidden p-2 text-muted-foreground opacity-0 transition-opacity focus-visible:opacity-100 md:block md:group-hover:opacity-100"
+              title={`Add ${card.name} to a list`}
+              aria-label={`Add ${card.name} to a list`}
             >
-              <ListPlus className="size-3.5" />
+              <span className="flex size-6 items-center justify-center bg-background/80 backdrop-blur">
+                <ListPlus className="size-3.5" />
+              </span>
             </button>
           }
         />
@@ -98,9 +136,8 @@ export function TcgCardTile({
 export function TcgCardTileSkeleton() {
   return (
     <div className="space-y-1.5">
-      <Skeleton className="aspect-[63/88] w-full rounded-lg" />
+      <Skeleton className="aspect-[63/88] w-full" />
       <Skeleton className="h-3 w-3/4" />
-      <Skeleton className="h-2.5 w-1/3" />
     </div>
   );
 }

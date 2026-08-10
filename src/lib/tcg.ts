@@ -17,25 +17,32 @@
  */
 
 import {
+  DEFAULT_TCG_LANGUAGE,
   FALLBACK_POCKET_SET_IDS,
   POCKET_SERIE_ID,
   type TcgCard,
   type TcgCardBrief,
   type TcgGame,
+  type TcgLanguage,
   type TcgSerie,
   type TcgSerieBrief,
   type TcgSet,
   type TcgSetBrief,
+  type TcgVariantKey,
 } from "@/types/tcg";
 
-const TCG_API_BASE = "https://api.tcgdex.net/v2/en";
+const TCG_API_BASE = "https://api.tcgdex.net/v2";
 
 /** Card data barely changes, so responses are cached for a day. */
 const REVALIDATE_SECONDS = 60 * 60 * 24;
 
-async function tcgFetch<T>(path: string, params?: URLSearchParams) {
+async function tcgFetch<T>(
+  path: string,
+  params?: URLSearchParams,
+  language: TcgLanguage = DEFAULT_TCG_LANGUAGE,
+) {
   const query = params?.toString();
-  const url = `${TCG_API_BASE}${path}${query ? `?${query}` : ""}`;
+  const url = `${TCG_API_BASE}/${language}${path}${query ? `?${query}` : ""}`;
 
   const res = await fetch(url, {
     next: { revalidate: REVALIDATE_SECONDS },
@@ -54,41 +61,70 @@ async function tcgFetch<T>(path: string, params?: URLSearchParams) {
 // Series and sets
 // =============================================================================
 
-export async function getTcgSeries(): Promise<TcgSerieBrief[]> {
-  return (await tcgFetch<TcgSerieBrief[]>("/series")) ?? [];
+export async function getTcgSeries(
+  language?: TcgLanguage,
+): Promise<TcgSerieBrief[]> {
+  return (
+    (await tcgFetch<TcgSerieBrief[]>("/series", undefined, language)) ?? []
+  );
 }
 
-export async function getTcgSerie(id: string): Promise<TcgSerie | null> {
-  return tcgFetch<TcgSerie>(`/series/${encodeURIComponent(id)}`);
+export async function getTcgSerie(
+  id: string,
+  language?: TcgLanguage,
+): Promise<TcgSerie | null> {
+  return tcgFetch<TcgSerie>(
+    `/series/${encodeURIComponent(id)}`,
+    undefined,
+    language,
+  );
 }
 
-export async function getTcgSets(): Promise<TcgSetBrief[]> {
-  return (await tcgFetch<TcgSetBrief[]>("/sets")) ?? [];
+export async function getTcgSets(
+  language?: TcgLanguage,
+): Promise<TcgSetBrief[]> {
+  return (await tcgFetch<TcgSetBrief[]>("/sets", undefined, language)) ?? [];
 }
 
-export async function getTcgSet(id: string): Promise<TcgSet | null> {
-  return tcgFetch<TcgSet>(`/sets/${encodeURIComponent(id)}`);
+export async function getTcgSet(
+  id: string,
+  language?: TcgLanguage,
+): Promise<TcgSet | null> {
+  return tcgFetch<TcgSet>(
+    `/sets/${encodeURIComponent(id)}`,
+    undefined,
+    language,
+  );
 }
 
 /**
  * Set ids belonging to Pokemon TCG Pocket. Everything else is the physical
  * game, which is how cards get split between the two without a per-card lookup.
+ *
+ * Pocket has only ever been catalogued in English, so any other language
+ * answers 404 and gets an empty list — falling back to the English set ids
+ * there would claim Pocket sets a Japanese browse can never return.
  */
-export async function getPocketSetIds(): Promise<string[]> {
+export async function getPocketSetIds(
+  language: TcgLanguage = DEFAULT_TCG_LANGUAGE,
+): Promise<string[]> {
   try {
-    const serie = await getTcgSerie(POCKET_SERIE_ID);
+    const serie = await getTcgSerie(POCKET_SERIE_ID, language);
     const ids = serie?.sets?.map((set) => set.id) ?? [];
-    return ids.length > 0 ? ids : FALLBACK_POCKET_SET_IDS;
+    if (ids.length > 0) return ids;
   } catch {
-    return FALLBACK_POCKET_SET_IDS;
+    // Fall through to the shipped list.
   }
+  return language === DEFAULT_TCG_LANGUAGE ? FALLBACK_POCKET_SET_IDS : [];
 }
 
 /** Every series, each with its sets, newest series first. */
-export async function getTcgSeriesWithSets(): Promise<TcgSerie[]> {
-  const series = await getTcgSeries();
+export async function getTcgSeriesWithSets(
+  language?: TcgLanguage,
+): Promise<TcgSerie[]> {
+  const series = await getTcgSeries(language);
   const detailed = await Promise.all(
-    series.map((serie) => getTcgSerie(serie.id).catch(() => null)),
+    series.map((serie) => getTcgSerie(serie.id, language).catch(() => null)),
   );
   return detailed.filter((serie): serie is TcgSerie => serie !== null);
 }
@@ -114,6 +150,10 @@ export interface TcgCardFilters {
   category?: string | null;
   stage?: string | null;
   suffix?: string | null;
+  trainerType?: string | null;
+  energyType?: string | null;
+  /** Printings the card must exist in, AND-ed (a card can have several). */
+  variants?: TcgVariantKey[];
   illustrator?: string | null;
   regulationMark?: string | null;
   /** National Dex number the card depicts. */
@@ -129,6 +169,8 @@ export interface TcgCardQueryOptions extends TcgCardFilters {
   itemsPerPage?: number;
   /** Pocket set ids, so the game filter stays correct as new sets ship. */
   pocketSetIds?: string[];
+  /** Which language's catalogue to search — they hold different sets. */
+  language?: TcgLanguage;
 }
 
 /**
@@ -150,6 +192,9 @@ export function buildCardSearchParams(
     category,
     stage,
     suffix,
+    trainerType,
+    energyType,
+    variants,
     illustrator,
     regulationMark,
     dexId,
@@ -171,7 +216,12 @@ export function buildCardSearchParams(
   if (setIds && setIds.length > 0) {
     params.append("set", `eq:${setIds.join("|")}`);
   } else if (game === "pocket") {
-    params.append("set", `eq:${pocketSetIds.join("|")}`);
+    // Pocket exists in the English catalogue only. Asking for it elsewhere has
+    // to match nothing rather than send an empty `set=eq:` and hope.
+    params.append(
+      "set",
+      pocketSetIds.length > 0 ? `eq:${pocketSetIds.join("|")}` : "eq:__none__",
+    );
   } else if (game === "tcg") {
     for (const setId of pocketSetIds) {
       params.append("id", `not:${setId.toLowerCase()}-*`);
@@ -189,6 +239,15 @@ export function buildCardSearchParams(
   if (category) params.append("category", `eq:${category}`);
   if (stage) params.append("stage", `eq:${stage}`);
   if (suffix) params.append("suffix", `eq:${suffix}`);
+  if (trainerType) params.append("trainerType", `eq:${trainerType}`);
+  if (energyType) params.append("energyType", `eq:${energyType}`);
+
+  // The variant flags are nested booleans, which the query engine only matches
+  // as text — `eq:true` finds nothing, while a plain `true` matches.
+  for (const variant of variants ?? []) {
+    params.append(`variants.${variant}`, "true");
+  }
+
   if (illustrator) params.append("illustrator", illustrator);
   if (regulationMark) {
     params.append("regulationMark", `eq:${regulationMark}`);
@@ -220,23 +279,33 @@ export async function searchTcgCards(
   options: TcgCardQueryOptions,
 ): Promise<TcgCardBrief[]> {
   const params = buildCardSearchParams(options);
-  return (await tcgFetch<TcgCardBrief[]>("/cards", params)) ?? [];
+  return (
+    (await tcgFetch<TcgCardBrief[]>("/cards", params, options.language)) ?? []
+  );
 }
 
-export async function getTcgCard(id: string): Promise<TcgCard | null> {
-  return tcgFetch<TcgCard>(`/cards/${encodeURIComponent(id)}`);
+export async function getTcgCard(
+  id: string,
+  language?: TcgLanguage,
+): Promise<TcgCard | null> {
+  return tcgFetch<TcgCard>(
+    `/cards/${encodeURIComponent(id)}`,
+    undefined,
+    language,
+  );
 }
 
 /** Every card depicting a National Dex number, newest sets last. */
 export async function getCardsByDexId(
   dexId: number,
-  options?: { limit?: number },
+  options?: { limit?: number; language?: TcgLanguage },
 ): Promise<TcgCardBrief[]> {
   return searchTcgCards({
     dexId,
     page: 1,
     // Well clear of the ~300 cards the most-printed Pokemon have.
     itemsPerPage: options?.limit ?? 600,
+    language: options?.language,
   });
 }
 
@@ -244,28 +313,50 @@ export async function getCardsByDexId(
 // Facets
 // =============================================================================
 
-/** Distinct values of a card field, for building filter controls. */
-async function getCardFacet(endpoint: string): Promise<string[]> {
-  const values = await tcgFetch<Array<string | number>>(`/${endpoint}`);
+/**
+ * Distinct values of a card field, for building filter controls. Facets are
+ * per-language: a Japanese browse has its own rarity ladder.
+ */
+async function getCardFacet(
+  endpoint: string,
+  language?: TcgLanguage,
+): Promise<string[]> {
+  const values = await tcgFetch<Array<string | number>>(
+    `/${endpoint}`,
+    undefined,
+    language,
+  );
   return (values ?? []).map(String).filter(Boolean);
 }
 
-export function getTcgRarities() {
-  return getCardFacet("rarities");
+export function getTcgRarities(language?: TcgLanguage) {
+  return getCardFacet("rarities", language);
 }
 
-export function getTcgStages() {
-  return getCardFacet("stages");
+export function getTcgStages(language?: TcgLanguage) {
+  return getCardFacet("stages", language);
 }
 
-export function getTcgSuffixes() {
-  return getCardFacet("suffixes");
+export function getTcgSuffixes(language?: TcgLanguage) {
+  return getCardFacet("suffixes", language);
 }
 
-export function getTcgRegulationMarks() {
-  return getCardFacet("regulation-marks");
+export function getTcgRegulationMarks(language?: TcgLanguage) {
+  return getCardFacet("regulation-marks", language);
 }
 
-export function getTcgIllustrators() {
-  return getCardFacet("illustrators");
+export function getTcgIllustrators(language?: TcgLanguage) {
+  return getCardFacet("illustrators", language);
+}
+
+export function getTcgTrainerTypes(language?: TcgLanguage) {
+  return getCardFacet("trainer-types", language);
+}
+
+export function getTcgEnergyTypes(language?: TcgLanguage) {
+  return getCardFacet("energy-types", language);
+}
+
+export function getTcgVariants(language?: TcgLanguage) {
+  return getCardFacet("variants", language);
 }

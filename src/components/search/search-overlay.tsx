@@ -27,7 +27,7 @@ import type {
   SearchResult,
   SearchResultType,
 } from "@/types/search";
-import { cardImageUrl } from "@/types/tcg";
+import { cardImageUrl, formatLocalId } from "@/types/tcg";
 
 const TYPE_LABELS: Record<SearchResultType, string> = {
   pokemon: "Pokémon",
@@ -183,9 +183,9 @@ function ResultIcon({ result }: { result: SearchResult }) {
         <img
           src={result.sprite}
           alt={result.name}
-          className="h-8 w-6 rounded-sm object-contain"
+          className="h-8 w-6 object-contain"
           onError={(e) => {
-            e.currentTarget.style.display = "none";
+            e.currentTarget.style.visibility = "hidden";
           }}
         />
       ) : (
@@ -228,9 +228,11 @@ function ResultMeta({ result }: { result: SearchResult }) {
         </span>
       );
     case "card":
+      // The set-prefixed id is long and unreadable mid-list; the printed
+      // number is what identifies a card at a glance.
       return (
         <span className="ml-auto text-xs text-muted-foreground tabular-nums">
-          {result.id.replace(/^card-/, "")}
+          {result.localId ? `#${formatLocalId(result.localId)}` : null}
         </span>
       );
     case "type":

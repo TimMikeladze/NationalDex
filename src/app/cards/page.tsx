@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronsUpDown, Filter, Layers, Search, X } from "lucide-react";
+import { X } from "lucide-react";
 import Link from "next/link";
 import {
   parseAsArrayOf,
@@ -16,78 +16,39 @@ import {
   useRef,
   useState,
 } from "react";
-import { TcgCardGrid } from "@/components/tcg";
+import { BackToTop, LatestSetsRail, TcgCardGrid } from "@/components/tcg";
 import { Button } from "@/components/ui/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   CARDS_PER_PAGE,
   usePocketSetIds,
   useTcgCardSearch,
+  useTcgEnergyTypes,
   useTcgRarities,
+  useTcgRegulationMarks,
   useTcgSets,
   useTcgStages,
+  useTcgSuffixes,
+  useTcgTrainerTypes,
 } from "@/hooks/use-tcg";
-import { resolveSpecies } from "@/lib/pkmn";
-import type { TcgSortField, TcgSortOrder } from "@/lib/tcg";
+import { resolveSpecies, toID } from "@/lib/pkmn";
 import { cn } from "@/lib/utils";
-import type { TcgGame } from "@/types/tcg";
+import type { TcgLanguage, TcgVariantKey } from "@/types/tcg";
 import {
+  DEFAULT_TCG_LANGUAGE,
   gameForSetId,
-  TCG_CATEGORIES,
-  TCG_ENERGY_COLORS,
-  TCG_ENERGY_TYPES,
-  TCG_GAME_FULL_LABELS,
+  isTcgLanguage,
+  sortRarities,
+  variantLabel,
+  withTcgLanguage,
 } from "@/types/tcg";
-
-type GameFilter = "all" | TcgGame;
-
-const GAME_OPTIONS: { id: GameFilter; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "tcg", label: TCG_GAME_FULL_LABELS.tcg },
-  { id: "pocket", label: TCG_GAME_FULL_LABELS.pocket },
-];
-
-const HP_PRESETS = [
-  { label: "Any", min: null, max: null },
-  { label: "≤ 60", min: null, max: 60 },
-  { label: "70-120", min: 70, max: 120 },
-  { label: "130-200", min: 130, max: 200 },
-  { label: "210+", min: 210, max: null },
-];
-
-const SORT_OPTIONS: {
-  value: string;
-  label: string;
-  field: TcgSortField | null;
-  order: TcgSortOrder;
-}[] = [
-  { value: "default", label: "Set order", field: null, order: "ASC" },
-  { value: "name-asc", label: "Name A-Z", field: "name", order: "ASC" },
-  { value: "name-desc", label: "Name Z-A", field: "name", order: "DESC" },
-  { value: "hp-desc", label: "HP high to low", field: "hp", order: "DESC" },
-  { value: "hp-asc", label: "HP low to high", field: "hp", order: "ASC" },
-  { value: "id-asc", label: "Card ID", field: "id", order: "ASC" },
-];
+import { CardsFilterBar } from "./filter-bar";
+import {
+  type CardFilterUpdate,
+  type GameFilter,
+  isGameFilter,
+  SORT_OPTIONS,
+} from "./filters";
 
 export default function CardsPage() {
   return (
@@ -97,21 +58,9 @@ export default function CardsPage() {
   );
 }
 
-function CardsPageSkeleton() {
-  return (
-    <div className="min-h-screen p-4 md:p-6">
-      <div className="mb-6 space-y-4">
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-7 w-64" />
-      </div>
-      <TcgCardGrid cards={[]} isLoading skeletonCount={CARDS_PER_PAGE} />
-    </div>
-  );
-}
-
 /** Filters live in the URL, so a card search can be shared or bookmarked. */
 function CardsBrowser() {
-  const [filters, setFilters] = useQueryStates(
+  const [filters, setQueryFilters] = useQueryStates(
     {
       q: parseAsString.withDefault(""),
       game: parseAsString.withDefault("all"),
@@ -120,43 +69,50 @@ function CardsBrowser() {
       rarities: parseAsArrayOf(parseAsString).withDefault([]),
       category: parseAsString.withDefault(""),
       stage: parseAsString.withDefault(""),
+      suffix: parseAsString.withDefault(""),
+      regulationMark: parseAsString.withDefault(""),
+      trainerType: parseAsString.withDefault(""),
+      energyType: parseAsString.withDefault(""),
+      variants: parseAsArrayOf(parseAsString).withDefault([]),
       illustrator: parseAsString.withDefault(""),
       hpMin: parseAsInteger,
       hpMax: parseAsInteger,
       dexId: parseAsInteger,
       sort: parseAsString.withDefault("default"),
+      lang: parseAsString.withDefault(DEFAULT_TCG_LANGUAGE),
     },
     { history: "replace", clearOnDefault: true },
   );
 
-  const [showFilters, setShowFilters] = useState(false);
-  const [searchInput, setSearchInput] = useState(filters.q);
+  const setFilters = useCallback(
+    (next: CardFilterUpdate) => {
+      void setQueryFilters(next);
+    },
+    [setQueryFilters],
+  );
+
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const [toolbarCollapsed, setToolbarCollapsed] = useState(false);
 
-  const pocketSetIds = usePocketSetIds();
-  const { data: sets } = useTcgSets();
-  const { data: rarities } = useTcgRarities();
-  const { data: stages } = useTcgStages();
+  // Each language is its own catalogue of sets, not a translation of one.
+  const language: TcgLanguage = isTcgLanguage(filters.lang)
+    ? filters.lang
+    : DEFAULT_TCG_LANGUAGE;
 
-  // Typing shouldn't fire a request per keystroke.
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (searchInput !== filters.q) {
-        void setFilters({ q: searchInput || null });
-      }
-    }, 300);
-    return () => clearTimeout(timeout);
-  }, [searchInput, filters.q, setFilters]);
+  const pocketSetIds = usePocketSetIds(language);
+  const { data: sets } = useTcgSets(language);
+  const { data: rarities } = useTcgRarities(language);
+  const { data: stages } = useTcgStages(language);
+  const { data: suffixes } = useTcgSuffixes(language);
+  const { data: regulationMarks } = useTcgRegulationMarks(language);
+  const { data: trainerTypes } = useTcgTrainerTypes(language);
+  const { data: energyTypes } = useTcgEnergyTypes(language);
 
   const sortOption =
     SORT_OPTIONS.find((option) => option.value === filters.sort) ??
     SORT_OPTIONS[0];
 
-  const game: GameFilter = (["all", "tcg", "pocket"] as const).includes(
-    filters.game as GameFilter,
-  )
-    ? (filters.game as GameFilter)
-    : "all";
+  const game: GameFilter = isGameFilter(filters.game) ? filters.game : "all";
 
   const searchFilters = useMemo(
     () => ({
@@ -167,6 +123,14 @@ function CardsBrowser() {
       rarities: filters.rarities.length > 0 ? filters.rarities : undefined,
       category: filters.category || null,
       stage: filters.stage || null,
+      suffix: filters.suffix || null,
+      regulationMark: filters.regulationMark || null,
+      trainerType: filters.trainerType || null,
+      energyType: filters.energyType || null,
+      variants:
+        filters.variants.length > 0
+          ? (filters.variants as TcgVariantKey[])
+          : undefined,
       illustrator: filters.illustrator || null,
       dexId: filters.dexId,
       hpMin: filters.hpMin,
@@ -181,6 +145,11 @@ function CardsBrowser() {
       filters.rarities,
       filters.category,
       filters.stage,
+      filters.suffix,
+      filters.regulationMark,
+      filters.trainerType,
+      filters.energyType,
+      filters.variants,
       filters.illustrator,
       filters.dexId,
       filters.hpMin,
@@ -193,11 +162,16 @@ function CardsBrowser() {
   const {
     cards,
     isLoading,
+    isFetching,
     isFetchingNextPage,
     hasNextPage,
     fetchNextPage,
     isError,
-  } = useTcgCardSearch(searchFilters);
+  } = useTcgCardSearch(searchFilters, { language });
+
+  // Re-filtering keeps the old results on screen; dimming them says the list
+  // being read is about to be replaced.
+  const isRefiltering = isFetching && !isFetchingNextPage && cards.length > 0;
 
   const handleObserver = useCallback(
     (entries: IntersectionObserverEntry[]) => {
@@ -222,6 +196,35 @@ function CardsBrowser() {
     return () => observer.disconnect();
   }, [handleObserver]);
 
+  // The toolbar's second row folds away while the grid is scrolled, the same
+  // way the dex toolbar does, so more artwork stays on screen.
+  const lastScrollY = useRef(0);
+  useEffect(() => {
+    const scrollContainer = document.querySelector("main");
+    if (!scrollContainer) return;
+
+    const handleScroll = () => {
+      const currentScrollY = scrollContainer.scrollTop;
+      const delta = currentScrollY - lastScrollY.current;
+
+      if (Math.abs(delta) > 50) {
+        if (delta > 0 && currentScrollY > 100) setToolbarCollapsed(true);
+        else if (delta < 0) setToolbarCollapsed(false);
+        lastScrollY.current = currentScrollY;
+      }
+
+      if (currentScrollY < 50) setToolbarCollapsed(false);
+    };
+
+    scrollContainer.addEventListener("scroll", handleScroll, { passive: true });
+    return () => scrollContainer.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const sortedRarities = useMemo(
+    () => sortRarities(rarities ?? []),
+    [rarities],
+  );
+
   const selectedSet = useMemo(
     () => sets?.find((set) => set.id === filters.set) ?? null,
     [sets, filters.set],
@@ -240,510 +243,325 @@ function CardsBrowser() {
     return species ? { name: species.name, id: species.num } : null;
   }, [filters.dexId]);
 
-  const activeFilterCount =
-    (filters.set ? 1 : 0) +
-    filters.types.length +
-    filters.rarities.length +
-    (filters.category ? 1 : 0) +
-    (filters.stage ? 1 : 0) +
-    (filters.illustrator ? 1 : 0) +
-    (filters.hpMin !== null || filters.hpMax !== null ? 1 : 0) +
-    (filters.dexId !== null ? 1 : 0);
+  // Chips for everything currently narrowing the list, each one removable.
+  const activeChips = useMemo(() => {
+    const chips: { key: string; label: string; clear: CardFilterUpdate }[] = [];
 
-  const toggleArrayFilter = (key: "types" | "rarities", value: string) => {
-    const current = filters[key];
-    const next = current.includes(value)
-      ? current.filter((entry) => entry !== value)
-      : [...current, value];
-    void setFilters({ [key]: next.length > 0 ? next : null });
-  };
+    if (selectedSet) {
+      chips.push({
+        key: "set",
+        label: selectedSet.name,
+        clear: { set: null },
+      });
+    } else if (filters.set) {
+      chips.push({ key: "set", label: filters.set, clear: { set: null } });
+    }
 
-  const clearFilters = () => {
-    void setFilters({
+    for (const type of filters.types) {
+      chips.push({
+        key: `type-${type}`,
+        label: type,
+        clear: {
+          types: filters.types.filter((entry) => entry !== type),
+        },
+      });
+    }
+
+    for (const rarity of filters.rarities) {
+      chips.push({
+        key: `rarity-${rarity}`,
+        label: rarity,
+        clear: {
+          rarities: filters.rarities.filter((entry) => entry !== rarity),
+        },
+      });
+    }
+
+    if (filters.category) {
+      chips.push({
+        key: "category",
+        label: filters.category,
+        clear: { category: null },
+      });
+    }
+
+    if (filters.stage) {
+      chips.push({
+        key: "stage",
+        label: filters.stage,
+        clear: { stage: null },
+      });
+    }
+
+    if (filters.suffix) {
+      chips.push({
+        key: "suffix",
+        label: filters.suffix,
+        clear: { suffix: null },
+      });
+    }
+
+    if (filters.regulationMark) {
+      chips.push({
+        key: "regulationMark",
+        label: `Regulation ${filters.regulationMark}`,
+        clear: { regulationMark: null },
+      });
+    }
+
+    if (filters.trainerType) {
+      chips.push({
+        key: "trainerType",
+        label: filters.trainerType,
+        clear: { trainerType: null },
+      });
+    }
+
+    if (filters.energyType) {
+      chips.push({
+        key: "energyType",
+        label: `${filters.energyType} energy`,
+        clear: { energyType: null },
+      });
+    }
+
+    for (const variant of filters.variants) {
+      chips.push({
+        key: `variant-${variant}`,
+        label: variantLabel(variant),
+        clear: {
+          variants: filters.variants.filter((entry) => entry !== variant),
+        },
+      });
+    }
+
+    if (filters.hpMin !== null || filters.hpMax !== null) {
+      const label =
+        filters.hpMin !== null && filters.hpMax !== null
+          ? `HP ${filters.hpMin}-${filters.hpMax}`
+          : filters.hpMin !== null
+            ? `HP ${filters.hpMin}+`
+            : `HP ≤ ${filters.hpMax}`;
+      chips.push({ key: "hp", label, clear: { hpMin: null, hpMax: null } });
+    }
+
+    if (filters.illustrator) {
+      chips.push({
+        key: "illustrator",
+        label: `illus. ${filters.illustrator}`,
+        clear: { illustrator: null },
+      });
+    }
+
+    return chips;
+  }, [
+    filters.category,
+    filters.hpMax,
+    filters.hpMin,
+    filters.illustrator,
+    filters.rarities,
+    filters.set,
+    filters.stage,
+    filters.suffix,
+    filters.regulationMark,
+    filters.trainerType,
+    filters.energyType,
+    filters.variants,
+    filters.types,
+    selectedSet,
+  ]);
+
+  const panelFilterCount = activeChips.length;
+
+  const hasAnyFilter =
+    panelFilterCount > 0 || filters.q.length > 0 || filters.dexId !== null;
+
+  const clearAll = () =>
+    setFilters({
       set: null,
       types: null,
       rarities: null,
       category: null,
       stage: null,
+      suffix: null,
+      regulationMark: null,
+      trainerType: null,
+      energyType: null,
+      variants: null,
       illustrator: null,
       hpMin: null,
       hpMax: null,
       dexId: null,
     });
-  };
+
+  const resultLabel =
+    isLoading && cards.length === 0
+      ? "loading..."
+      : `${cards.length}${hasNextPage ? "+" : ""} cards`;
 
   return (
-    <div className="min-h-screen p-4 md:p-6">
-      <div className="mb-6 space-y-4">
-        {/* Search + filter toggle */}
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Search cards..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              className="w-full rounded-lg border bg-background py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-            {searchInput && (
+    <div>
+      <div className="pwa-sticky-toolbar sticky top-0 z-30 border-b bg-background px-4 py-3 md:px-6 lg:bg-background/95 lg:backdrop-blur lg:supports-[backdrop-filter]:bg-background/80">
+        <CardsFilterBar
+          filters={filters}
+          setFilters={setFilters}
+          game={game}
+          sets={availableSets}
+          selectedSet={selectedSet}
+          language={language}
+          hasPocket={pocketSetIds.length > 0}
+          rarities={sortedRarities}
+          stages={stages ?? []}
+          suffixes={suffixes ?? []}
+          regulationMarks={regulationMarks ?? []}
+          trainerTypes={trainerTypes ?? []}
+          energyTypes={energyTypes ?? []}
+          panelFilterCount={panelFilterCount}
+          resultLabel={resultLabel}
+          collapsed={toolbarCollapsed}
+        />
+      </div>
+
+      <div className="p-4 md:p-6">
+        {/* An unfiltered browse opens on 1999 promos, so the newest sets lead */}
+        {!hasAnyFilter && <LatestSetsRail game={game} language={language} />}
+
+        {/* What is currently narrowing the list, and how to undo any of it */}
+        {(crossReferencedPokemon || activeChips.length > 0) && (
+          <div className="mb-4 flex flex-wrap items-center gap-1.5">
+            {crossReferencedPokemon && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-foreground py-1 pl-2.5 pr-1 text-xs font-medium text-background">
+                <Link
+                  href={`/pokemon/${toID(crossReferencedPokemon.name)}`}
+                  className="hover:underline"
+                >
+                  {crossReferencedPokemon.name} #
+                  {crossReferencedPokemon.id.toString().padStart(3, "0")}
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setFilters({ dexId: null })}
+                  title="Clear Pokemon filter"
+                  className="p-0.5 opacity-70 hover:opacity-100"
+                >
+                  <X className="size-3" />
+                </button>
+              </span>
+            )}
+
+            {activeChips.map((chip) => (
+              <span
+                key={chip.key}
+                className="inline-flex items-center gap-1 rounded-full bg-muted py-1 pl-2.5 pr-1 text-xs font-medium text-muted-foreground"
+              >
+                {chip.label}
+                <button
+                  type="button"
+                  onClick={() => setFilters(chip.clear)}
+                  title={`Remove ${chip.label}`}
+                  className="p-0.5 hover:text-foreground"
+                >
+                  <X className="size-3" />
+                </button>
+              </span>
+            ))}
+
+            {activeChips.length > 1 && (
               <button
                 type="button"
-                onClick={() => setSearchInput("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2"
+                onClick={clearAll}
+                className="px-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
               >
-                <X className="size-4 text-muted-foreground hover:text-foreground" />
+                clear all
               </button>
             )}
           </div>
-          <button
-            type="button"
-            onClick={() => setShowFilters(!showFilters)}
-            className={cn(
-              "flex items-center gap-2 rounded-lg border px-4 py-2 text-sm transition-colors hover:bg-muted",
-              showFilters && "bg-muted",
-            )}
+        )}
+
+        <div className="mb-3 flex items-center justify-between gap-3 sm:hidden">
+          <p className="text-xs tabular-nums text-muted-foreground">
+            {resultLabel}
+          </p>
+          <Link
+            href={withTcgLanguage("/cards/sets", language)}
+            className="text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
           >
-            <Filter className="size-4" />
-            Filters
-            {activeFilterCount > 0 && (
-              <span className="rounded-full bg-primary px-1.5 py-0.5 text-xs text-primary-foreground">
-                {activeFilterCount}
-              </span>
-            )}
-          </button>
-          <Button asChild variant="outline" size="sm" className="h-auto">
-            <Link href="/cards/sets">
-              <Layers className="size-4" />
-              <span className="hidden sm:inline">sets</span>
-            </Link>
-          </Button>
+            browse sets →
+          </Link>
         </div>
 
-        {/* Game switch + sort */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex gap-2">
-            {GAME_OPTIONS.map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                onClick={() =>
-                  void setFilters({
-                    game: option.id === "all" ? null : option.id,
-                    // A set from the other game would contradict the switch.
-                    set: null,
-                  })
-                }
-                className={cn(
-                  "rounded-full border px-3 py-1 text-xs transition-colors",
-                  game === option.id
-                    ? "border-foreground bg-foreground text-background"
-                    : "hover:bg-muted",
-                )}
+        {isError ? (
+          <div className="py-16 text-center">
+            <p className="text-sm text-muted-foreground">
+              Could not load cards right now.
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Card data comes from TCGdex — check your connection and try again.
+            </p>
+          </div>
+        ) : (
+          <div aria-busy={isRefiltering}>
+            <TcgCardGrid
+              className={cn(
+                "transition-opacity duration-150",
+                isRefiltering && "opacity-50",
+              )}
+              cards={cards}
+              language={language}
+              pocketSetIds={pocketSetIds}
+              showGame={game === "all"}
+              isLoading={isLoading}
+              skeletonCount={CARDS_PER_PAGE}
+              emptyMessage="No cards match these filters"
+              emptyAction={
+                panelFilterCount > 0 ? (
+                  <Button variant="outline" size="sm" onClick={clearAll}>
+                    clear filters
+                  </Button>
+                ) : undefined
+              }
+            />
+
+            {hasNextPage ? (
+              <div
+                ref={loadMoreRef}
+                className="flex justify-center py-8 text-xs text-muted-foreground"
               >
-                {option.label}
-              </button>
+                loading more...
+              </div>
+            ) : (
+              cards.length > 0 && (
+                <p className="py-8 text-center text-xs tabular-nums text-muted-foreground">
+                  end of results — {cards.length} card
+                  {cards.length === 1 ? "" : "s"}
+                </p>
+              )
+            )}
+          </div>
+        )}
+      </div>
+
+      <BackToTop />
+    </div>
+  );
+}
+
+function CardsPageSkeleton() {
+  return (
+    <div>
+      <div className="sticky top-0 z-30 border-b bg-background px-4 py-3 md:px-6">
+        <div className="space-y-3">
+          <Skeleton className="h-9 w-full" />
+          <div className="flex gap-1">
+            {["all", "tcg", "pocket"].map((key) => (
+              <Skeleton key={key} className={cn("h-6 w-20 rounded-full")} />
             ))}
           </div>
-
-          <Select
-            value={filters.sort}
-            onValueChange={(value) =>
-              void setFilters({ sort: value === "default" ? null : value })
-            }
-          >
-            <SelectTrigger className="h-8 w-44">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent align="end">
-              {SORT_OPTIONS.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
-
-        {/* Cross-reference chip when arriving from a Pokemon page */}
-        {crossReferencedPokemon && (
-          <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2">
-            <span className="text-xs text-muted-foreground">
-              Showing cards of
-            </span>
-            <Link
-              href={`/pokemon/${crossReferencedPokemon.name.toLowerCase().replace(/[^a-z0-9]/g, "")}`}
-              className="text-xs font-medium hover:underline"
-            >
-              {crossReferencedPokemon.name} #
-              {crossReferencedPokemon.id.toString().padStart(3, "0")}
-            </Link>
-            <button
-              type="button"
-              onClick={() => void setFilters({ dexId: null })}
-              className="ml-auto text-muted-foreground hover:text-foreground"
-              title="Clear Pokemon filter"
-            >
-              <X className="size-3.5" />
-            </button>
-          </div>
-        )}
-
-        {/* Filter panel */}
-        {showFilters && (
-          <div className="space-y-4 rounded-lg border p-4">
-            {/* Set */}
-            <div className="space-y-2">
-              <FilterLabel>Set</FilterLabel>
-              <div className="flex items-center gap-2">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-between sm:w-72"
-                    >
-                      <span className="truncate">
-                        {selectedSet ? selectedSet.name : "Any set"}
-                      </span>
-                      <ChevronsUpDown className="size-3.5 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent align="start" className="w-72 p-0">
-                    <Command>
-                      <CommandInput placeholder="Find a set..." />
-                      <CommandList>
-                        <CommandEmpty>No sets found</CommandEmpty>
-                        <CommandGroup>
-                          {availableSets.map((set) => (
-                            <CommandItem
-                              key={set.id}
-                              value={`${set.name} ${set.id}`}
-                              onSelect={() =>
-                                void setFilters({
-                                  set: set.id === filters.set ? null : set.id,
-                                })
-                              }
-                              className="flex items-center justify-between gap-2"
-                            >
-                              <span className="truncate">{set.name}</span>
-                              <span className="shrink-0 text-[10px] text-muted-foreground">
-                                {set.cardCount.official}
-                              </span>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-                {selectedSet && (
-                  <>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => void setFilters({ set: null })}
-                    >
-                      Clear
-                    </Button>
-                    <Button asChild variant="ghost" size="sm">
-                      <Link
-                        href={`/cards/sets/${selectedSet.id.toLowerCase()}`}
-                      >
-                        View set
-                      </Link>
-                    </Button>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Energy types */}
-            <div className="space-y-2">
-              <FilterHeader
-                label="Energy type"
-                onClear={
-                  filters.types.length > 0
-                    ? () => void setFilters({ types: null })
-                    : undefined
-                }
-              />
-              <div className="flex flex-wrap gap-1">
-                {TCG_ENERGY_TYPES.map((type) => {
-                  const color = TCG_ENERGY_COLORS[type];
-                  const selected = filters.types.includes(type);
-                  return (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => toggleArrayFilter("types", type)}
-                      className={cn(
-                        "rounded px-2 py-0.5 text-[10px] uppercase tracking-wider transition-all",
-                        selected
-                          ? "ring-2 ring-offset-1 ring-offset-background"
-                          : "opacity-60 hover:opacity-100",
-                      )}
-                      style={{
-                        backgroundColor: `${color}20`,
-                        color,
-                        // @ts-expect-error - CSS custom property for Tailwind ring color
-                        "--tw-ring-color": color,
-                      }}
-                    >
-                      {type}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Category */}
-            <div className="space-y-2">
-              <FilterHeader
-                label="Category"
-                onClear={
-                  filters.category
-                    ? () => void setFilters({ category: null })
-                    : undefined
-                }
-              />
-              <div className="flex flex-wrap gap-2">
-                {TCG_CATEGORIES.map((category) => (
-                  <ChipButton
-                    key={category}
-                    selected={filters.category === category}
-                    onClick={() =>
-                      void setFilters({
-                        category:
-                          filters.category === category ? null : category,
-                      })
-                    }
-                  >
-                    {category}
-                  </ChipButton>
-                ))}
-              </div>
-            </div>
-
-            {/* Rarity */}
-            {rarities && rarities.length > 0 && (
-              <div className="space-y-2">
-                <FilterHeader
-                  label="Rarity"
-                  onClear={
-                    filters.rarities.length > 0
-                      ? () => void setFilters({ rarities: null })
-                      : undefined
-                  }
-                />
-                <div className="flex max-h-32 flex-wrap gap-2 overflow-y-auto">
-                  {rarities.map((rarity) => (
-                    <ChipButton
-                      key={rarity}
-                      selected={filters.rarities.includes(rarity)}
-                      onClick={() => toggleArrayFilter("rarities", rarity)}
-                    >
-                      {rarity}
-                    </ChipButton>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Stage */}
-            {stages && stages.length > 0 && (
-              <div className="space-y-2">
-                <FilterHeader
-                  label="Stage"
-                  onClear={
-                    filters.stage
-                      ? () => void setFilters({ stage: null })
-                      : undefined
-                  }
-                />
-                <div className="flex flex-wrap gap-2">
-                  {stages.map((stage) => (
-                    <ChipButton
-                      key={stage}
-                      selected={filters.stage === stage}
-                      onClick={() =>
-                        void setFilters({
-                          stage: filters.stage === stage ? null : stage,
-                        })
-                      }
-                    >
-                      {stage}
-                    </ChipButton>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* HP */}
-            <div className="space-y-2">
-              <FilterHeader
-                label="HP"
-                onClear={
-                  filters.hpMin !== null || filters.hpMax !== null
-                    ? () => void setFilters({ hpMin: null, hpMax: null })
-                    : undefined
-                }
-              />
-              <div className="flex flex-wrap gap-2">
-                {HP_PRESETS.map((preset) => (
-                  <ChipButton
-                    key={preset.label}
-                    selected={
-                      filters.hpMin === preset.min &&
-                      filters.hpMax === preset.max
-                    }
-                    onClick={() =>
-                      void setFilters({
-                        hpMin: preset.min,
-                        hpMax: preset.max,
-                      })
-                    }
-                  >
-                    {preset.label}
-                  </ChipButton>
-                ))}
-              </div>
-            </div>
-
-            {/* Illustrator */}
-            <div className="space-y-2">
-              <FilterLabel>Illustrator</FilterLabel>
-              <input
-                type="text"
-                placeholder="Any illustrator"
-                defaultValue={filters.illustrator}
-                onBlur={(e) =>
-                  void setFilters({ illustrator: e.target.value || null })
-                }
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    void setFilters({
-                      illustrator: e.currentTarget.value || null,
-                    });
-                  }
-                }}
-                className="w-full rounded-lg border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary sm:w-72"
-              />
-            </div>
-
-            {activeFilterCount > 0 && (
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="text-xs text-muted-foreground hover:text-foreground"
-              >
-                Clear all filters
-              </button>
-            )}
-          </div>
-        )}
       </div>
-
-      {/* Results */}
-      <div className="mb-4">
-        <p className="text-xs text-muted-foreground">
-          {isLoading && cards.length === 0
-            ? "Loading cards..."
-            : `Showing ${cards.length} card${cards.length === 1 ? "" : "s"}${
-                hasNextPage ? "+" : ""
-              }`}
-        </p>
+      <div className="p-4 md:p-6">
+        <TcgCardGrid cards={[]} isLoading skeletonCount={CARDS_PER_PAGE} />
       </div>
-
-      {isError ? (
-        <div className="py-16 text-center">
-          <p className="text-sm text-muted-foreground">
-            Could not load cards right now.
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Card data comes from TCGdex — check your connection and try again.
-          </p>
-        </div>
-      ) : (
-        <>
-          <TcgCardGrid
-            cards={cards}
-            pocketSetIds={pocketSetIds}
-            showGame={game === "all"}
-            isLoading={isLoading}
-            skeletonCount={CARDS_PER_PAGE}
-            emptyMessage="No cards match these filters"
-          />
-
-          {hasNextPage && (
-            <div ref={loadMoreRef} className="flex justify-center py-6">
-              <span className="text-xs text-muted-foreground">
-                Loading more...
-              </span>
-            </div>
-          )}
-        </>
-      )}
     </div>
-  );
-}
-
-// ============================================================================
-// Components
-// ============================================================================
-
-function FilterLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-      {children}
-    </span>
-  );
-}
-
-function FilterHeader({
-  label,
-  onClear,
-}: {
-  label: string;
-  onClear?: () => void;
-}) {
-  return (
-    <div className="flex items-center justify-between">
-      <FilterLabel>{label}</FilterLabel>
-      {onClear && (
-        <button
-          type="button"
-          onClick={onClear}
-          className="text-xs text-muted-foreground hover:text-foreground"
-        >
-          Clear
-        </button>
-      )}
-    </div>
-  );
-}
-
-function ChipButton({
-  selected,
-  onClick,
-  children,
-}: {
-  selected: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "rounded-full border px-3 py-1 text-xs transition-colors",
-        selected
-          ? "border-foreground bg-foreground text-background"
-          : "hover:bg-muted",
-      )}
-    >
-      {children}
-    </button>
   );
 }

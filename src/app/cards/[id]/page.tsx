@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTcgCard } from "@/lib/tcg";
-import { cardImageUrl } from "@/types/tcg";
+import { cardImageUrl, resolveTcgLanguage, withTcgLanguage } from "@/types/tcg";
 import { CardDetailClient } from "./client";
 
 interface PageProps {
   params: Promise<{ id: string }>;
+  // Card ids repeat across catalogues, so which one is being read travels with
+  // the link rather than being guessed from the id.
+  searchParams: Promise<{ lang?: string }>;
 }
 
 function describeCard(card: Awaited<ReturnType<typeof getTcgCard>>) {
@@ -21,9 +24,11 @@ function describeCard(card: Awaited<ReturnType<typeof getTcgCard>>) {
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  const card = await getTcgCard(id).catch(() => null);
+  const language = resolveTcgLanguage((await searchParams).lang);
+  const card = await getTcgCard(id, language).catch(() => null);
 
   if (!card) {
     return { title: "Card not found" };
@@ -37,7 +42,7 @@ export async function generateMetadata({
     title,
     description,
     alternates: {
-      canonical: `/cards/${card.id.toLowerCase()}`,
+      canonical: withTcgLanguage(`/cards/${card.id.toLowerCase()}`, language),
     },
     openGraph: {
       title,
@@ -47,11 +52,15 @@ export async function generateMetadata({
   };
 }
 
-export default async function CardDetailPage({ params }: PageProps) {
+export default async function CardDetailPage({
+  params,
+  searchParams,
+}: PageProps) {
   const { id } = await params;
-  const card = await getTcgCard(id).catch(() => null);
+  const language = resolveTcgLanguage((await searchParams).lang);
+  const card = await getTcgCard(id, language).catch(() => null);
 
   if (!card) notFound();
 
-  return <CardDetailClient card={card} />;
+  return <CardDetailClient card={card} language={language} />;
 }

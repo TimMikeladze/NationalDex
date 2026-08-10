@@ -1,18 +1,22 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTcgSet } from "@/lib/tcg";
-import { assetUrl } from "@/types/tcg";
+import { assetUrl, resolveTcgLanguage, withTcgLanguage } from "@/types/tcg";
 import { SetDetailClient } from "./client";
 
 interface PageProps {
   params: Promise<{ setId: string }>;
+  /** Set ids repeat across catalogues, so the language travels with the link. */
+  searchParams: Promise<{ lang?: string }>;
 }
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: PageProps): Promise<Metadata> {
   const { setId } = await params;
-  const set = await getTcgSet(setId).catch(() => null);
+  const language = resolveTcgLanguage((await searchParams).lang);
+  const set = await getTcgSet(setId, language).catch(() => null);
 
   if (!set) {
     return { title: "Set not found" };
@@ -27,7 +31,10 @@ export async function generateMetadata({
     title: set.name,
     description,
     alternates: {
-      canonical: `/cards/sets/${set.id.toLowerCase()}`,
+      canonical: withTcgLanguage(
+        `/cards/sets/${set.id.toLowerCase()}`,
+        language,
+      ),
     },
     openGraph: {
       title: `${set.name} — Pokemon card set`,
@@ -37,11 +44,15 @@ export async function generateMetadata({
   };
 }
 
-export default async function SetDetailPage({ params }: PageProps) {
+export default async function SetDetailPage({
+  params,
+  searchParams,
+}: PageProps) {
   const { setId } = await params;
-  const set = await getTcgSet(setId).catch(() => null);
+  const language = resolveTcgLanguage((await searchParams).lang);
+  const set = await getTcgSet(setId, language).catch(() => null);
 
   if (!set) notFound();
 
-  return <SetDetailClient set={set} />;
+  return <SetDetailClient set={set} language={language} />;
 }

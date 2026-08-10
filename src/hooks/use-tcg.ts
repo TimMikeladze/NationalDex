@@ -6,13 +6,16 @@ import {
   getCardsByDexId,
   getPocketSetIds,
   getTcgCard,
+  getTcgEnergyTypes,
   getTcgRarities,
+  getTcgRegulationMarks,
   getTcgSerie,
   getTcgSeriesWithSets,
   getTcgSet,
   getTcgSets,
   getTcgStages,
   getTcgSuffixes,
+  getTcgTrainerTypes,
   searchTcgCards,
   type TcgCardFilters,
 } from "@/lib/tcg";
@@ -20,11 +23,16 @@ import type {
   TcgCard,
   TcgCardBrief,
   TcgGame,
+  TcgLanguage,
   TcgSerie,
   TcgSet,
   TcgSetBrief,
 } from "@/types/tcg";
-import { FALLBACK_POCKET_SET_IDS, gameForCardId } from "@/types/tcg";
+import {
+  DEFAULT_TCG_LANGUAGE,
+  FALLBACK_POCKET_SET_IDS,
+  gameForCardId,
+} from "@/types/tcg";
 
 /** Card data is versioned by set release, so it can be cached aggressively. */
 const DAY = 1000 * 60 * 60 * 24;
@@ -35,57 +43,69 @@ export const CARDS_PER_PAGE = 36;
  * Set ids belonging to Pokemon TCG Pocket. Everything not in this list is a
  * physical card, so most other card queries wait on it.
  */
-export function usePocketSetIds() {
+export function usePocketSetIds(language: TcgLanguage = DEFAULT_TCG_LANGUAGE) {
   const { data } = useQuery({
-    queryKey: ["tcg", "pocket-set-ids"],
-    queryFn: getPocketSetIds,
+    queryKey: ["tcg", "pocket-set-ids", language],
+    queryFn: () => getPocketSetIds(language),
     staleTime: DAY,
     gcTime: DAY,
   });
 
-  return data ?? FALLBACK_POCKET_SET_IDS;
+  if (data) return data;
+  return language === DEFAULT_TCG_LANGUAGE ? FALLBACK_POCKET_SET_IDS : [];
 }
 
-export function useTcgSets() {
+export function useTcgSets(language: TcgLanguage = DEFAULT_TCG_LANGUAGE) {
   return useQuery<TcgSetBrief[]>({
-    queryKey: ["tcg", "sets"],
-    queryFn: getTcgSets,
+    queryKey: ["tcg", "sets", language],
+    queryFn: () => getTcgSets(language),
     staleTime: DAY,
     gcTime: DAY,
   });
 }
 
-export function useTcgSeriesWithSets() {
+export function useTcgSeriesWithSets(
+  language: TcgLanguage = DEFAULT_TCG_LANGUAGE,
+) {
   return useQuery<TcgSerie[]>({
-    queryKey: ["tcg", "series-with-sets"],
-    queryFn: getTcgSeriesWithSets,
+    queryKey: ["tcg", "series-with-sets", language],
+    queryFn: () => getTcgSeriesWithSets(language),
     staleTime: DAY,
     gcTime: DAY,
   });
 }
 
-export function useTcgSerie(id: string | null) {
+export function useTcgSerie(
+  id: string | null,
+  language: TcgLanguage = DEFAULT_TCG_LANGUAGE,
+) {
   return useQuery<TcgSerie | null>({
-    queryKey: ["tcg", "serie", id],
-    queryFn: () => (id ? getTcgSerie(id) : null),
+    queryKey: ["tcg", "serie", id, language],
+    queryFn: () => (id ? getTcgSerie(id, language) : null),
     enabled: id !== null,
     staleTime: DAY,
   });
 }
 
-export function useTcgSet(id: string | null) {
+export function useTcgSet(
+  id: string | null,
+  language: TcgLanguage = DEFAULT_TCG_LANGUAGE,
+) {
   return useQuery<TcgSet | null>({
-    queryKey: ["tcg", "set", id],
-    queryFn: () => (id ? getTcgSet(id) : null),
+    queryKey: ["tcg", "set", id, language],
+    queryFn: () => (id ? getTcgSet(id, language) : null),
     enabled: id !== null,
     staleTime: DAY,
   });
 }
 
-export function useTcgCard(id: string | null) {
+export function useTcgCard(
+  id: string | null,
+  language: TcgLanguage = DEFAULT_TCG_LANGUAGE,
+) {
   return useQuery<TcgCard | null>({
-    queryKey: ["tcg", "card", id],
-    queryFn: () => (id ? getTcgCard(id) : null),
+    queryKey: ["tcg", "card", id, language],
+    queryFn: () => (id ? getTcgCard(id, language) : null),
     enabled: id !== null,
     staleTime: DAY,
   });
@@ -97,13 +117,18 @@ export function useTcgCard(id: string | null) {
  */
 export function useTcgCardSearch(
   filters: TcgCardFilters,
-  options?: { enabled?: boolean; itemsPerPage?: number },
+  options?: {
+    enabled?: boolean;
+    itemsPerPage?: number;
+    language?: TcgLanguage;
+  },
 ) {
-  const pocketSetIds = usePocketSetIds();
+  const language = options?.language ?? DEFAULT_TCG_LANGUAGE;
+  const pocketSetIds = usePocketSetIds(language);
   const itemsPerPage = options?.itemsPerPage ?? CARDS_PER_PAGE;
 
   const query = useInfiniteQuery({
-    queryKey: ["tcg", "cards", filters, pocketSetIds, itemsPerPage],
+    queryKey: ["tcg", "cards", filters, pocketSetIds, itemsPerPage, language],
     initialPageParam: 1,
     queryFn: async ({ pageParam }) => {
       const cards = await searchTcgCards({
@@ -111,6 +136,7 @@ export function useTcgCardSearch(
         page: pageParam,
         itemsPerPage,
         pocketSetIds,
+        language,
       });
 
       // A Pocket set shipping between deploys would otherwise leak into the
@@ -141,12 +167,15 @@ export function useTcgCardSearch(
 }
 
 /** Every card depicting a Pokemon, split by game. */
-export function useCardsByDexId(dexId: number | null) {
-  const pocketSetIds = usePocketSetIds();
+export function useCardsByDexId(
+  dexId: number | null,
+  language: TcgLanguage = DEFAULT_TCG_LANGUAGE,
+) {
+  const pocketSetIds = usePocketSetIds(language);
 
   const query = useQuery<TcgCardBrief[]>({
-    queryKey: ["tcg", "cards-by-dex-id", dexId],
-    queryFn: () => (dexId === null ? [] : getCardsByDexId(dexId)),
+    queryKey: ["tcg", "cards-by-dex-id", dexId, language],
+    queryFn: () => (dexId === null ? [] : getCardsByDexId(dexId, { language })),
     enabled: dexId !== null,
     staleTime: DAY,
   });
@@ -166,17 +195,22 @@ export function useCardsByDexId(dexId: number | null) {
  * Card matches for the global search overlay. Kept small and name-only so it
  * stays snappy while typing.
  */
-export function useTcgCardQuickSearch(query: string, limit = 8) {
+export function useTcgCardQuickSearch(
+  query: string,
+  limit = 8,
+  language: TcgLanguage = DEFAULT_TCG_LANGUAGE,
+) {
   const trimmed = query.trim();
 
   return useQuery<TcgCardBrief[]>({
-    queryKey: ["tcg", "quick-search", trimmed, limit],
+    queryKey: ["tcg", "quick-search", trimmed, limit, language],
     queryFn: () =>
       searchTcgCards({
         name: trimmed,
         sortField: "name",
         page: 1,
         itemsPerPage: limit,
+        language,
       }),
     enabled: trimmed.length >= 2,
     staleTime: DAY,
@@ -184,28 +218,61 @@ export function useTcgCardQuickSearch(query: string, limit = 8) {
   });
 }
 
-export function useTcgRarities() {
+export function useTcgRarities(language: TcgLanguage = DEFAULT_TCG_LANGUAGE) {
   return useQuery<string[]>({
-    queryKey: ["tcg", "rarities"],
-    queryFn: getTcgRarities,
+    queryKey: ["tcg", "rarities", language],
+    queryFn: () => getTcgRarities(language),
     staleTime: DAY,
     gcTime: DAY,
   });
 }
 
-export function useTcgStages() {
+export function useTcgStages(language: TcgLanguage = DEFAULT_TCG_LANGUAGE) {
   return useQuery<string[]>({
-    queryKey: ["tcg", "stages"],
-    queryFn: getTcgStages,
+    queryKey: ["tcg", "stages", language],
+    queryFn: () => getTcgStages(language),
     staleTime: DAY,
     gcTime: DAY,
   });
 }
 
-export function useTcgSuffixes() {
+export function useTcgSuffixes(language: TcgLanguage = DEFAULT_TCG_LANGUAGE) {
   return useQuery<string[]>({
-    queryKey: ["tcg", "suffixes"],
-    queryFn: getTcgSuffixes,
+    queryKey: ["tcg", "suffixes", language],
+    queryFn: () => getTcgSuffixes(language),
+    staleTime: DAY,
+    gcTime: DAY,
+  });
+}
+
+export function useTcgRegulationMarks(
+  language: TcgLanguage = DEFAULT_TCG_LANGUAGE,
+) {
+  return useQuery<string[]>({
+    queryKey: ["tcg", "regulation-marks", language],
+    queryFn: () => getTcgRegulationMarks(language),
+    staleTime: DAY,
+    gcTime: DAY,
+  });
+}
+
+export function useTcgTrainerTypes(
+  language: TcgLanguage = DEFAULT_TCG_LANGUAGE,
+) {
+  return useQuery<string[]>({
+    queryKey: ["tcg", "trainer-types", language],
+    queryFn: () => getTcgTrainerTypes(language),
+    staleTime: DAY,
+    gcTime: DAY,
+  });
+}
+
+export function useTcgEnergyTypes(
+  language: TcgLanguage = DEFAULT_TCG_LANGUAGE,
+) {
+  return useQuery<string[]>({
+    queryKey: ["tcg", "energy-types", language],
+    queryFn: () => getTcgEnergyTypes(language),
     staleTime: DAY,
     gcTime: DAY,
   });

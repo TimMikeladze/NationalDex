@@ -569,7 +569,7 @@ export function DexFilter({
             : "grid-rows-[1fr] opacity-100"
         }`}
       >
-        <div className="overflow-hidden">
+        <div className="min-h-0 overflow-hidden">
           <div className="flex flex-wrap gap-2 pb-3">
             {(["pokemon", "moves", "abilities", "items"] as const).map(
               (cat) => (
@@ -840,7 +840,7 @@ export function DexFilter({
               : "grid-rows-[1fr] opacity-100"
           }`}
         >
-          <div className="overflow-hidden">
+          <div className="min-h-0 overflow-hidden">
             <div className="flex flex-wrap gap-1.5">
               {availableTypes.map((type) => (
                 <button
@@ -871,7 +871,7 @@ export function DexFilter({
               : "grid-rows-[1fr] opacity-100"
           }`}
         >
-          <div className="overflow-hidden">
+          <div className="min-h-0 overflow-hidden">
             <div className="flex items-center gap-2">
               <Button
                 variant="ghost"

@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import type { PokemonType } from "@/types/pokemon";
 import { TYPE_COLORS, TYPE_TEXT_COLORS } from "@/types/pokemon";
@@ -21,10 +20,7 @@ export function TypeBadge({
   linkable = false,
   className,
 }: TypeBadgeProps) {
-  const { resolvedTheme } = useTheme();
   const bgColor = TYPE_COLORS[type];
-  const textColor =
-    resolvedTheme === "dark" ? TYPE_COLORS[type] : TYPE_TEXT_COLORS[type];
 
   const multiplierLabel =
     multiplier !== undefined
@@ -33,8 +29,12 @@ export function TypeBadge({
         : `×${multiplier}`
       : null;
 
+  // The readable text colour differs per theme. Picking it in JS meant the
+  // server and the client disagreed on first paint, so both colours ship as
+  // custom properties and CSS chooses.
   const badgeClasses = cn(
     "inline-flex items-center gap-1 uppercase tracking-wider rounded font-medium",
+    "text-(--type-fg) dark:text-(--type-fg-dark)",
     size === "sm" && "text-[10px] px-1.5 py-0.5",
     size === "default" && "text-xs px-2 py-0.5",
     size === "lg" && "text-sm px-2.5 py-1",
@@ -42,7 +42,11 @@ export function TypeBadge({
     className,
   );
 
-  const badgeStyle = { backgroundColor: `${bgColor}20`, color: textColor };
+  const badgeStyle = {
+    backgroundColor: `${bgColor}20`,
+    "--type-fg": TYPE_TEXT_COLORS[type],
+    "--type-fg-dark": bgColor,
+  } as React.CSSProperties;
 
   const content = (
     <>
