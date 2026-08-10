@@ -16,7 +16,7 @@ import {
   parseAsString,
   useQueryStates,
 } from "nuqs";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TypeBadge } from "@/components/pokemon/type-badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -188,6 +188,86 @@ const dexFilterUrlKeys = {
   tags: "tg",
 };
 
+/** Also listed in use-data-export's STORAGE_KEYS so backup/clear cover it. */
+const FILTER_STORAGE_KEY = "pokedex-dex-filter";
+
+/**
+ * The parts of the filter worth remembering between visits: the filter panel
+ * and the sort. Search text, the active category tab and the random seed are
+ * per-visit intent, so they stay out.
+ */
+type PersistedDexFilter = Pick<
+  DexFilterState,
+  | "types"
+  | "generations"
+  | "regulations"
+  | "sort"
+  | "sortDirection"
+  | "stats"
+  | "tags"
+>;
+
+function isPersistedFilterEmpty(filter: PersistedDexFilter): boolean {
+  return (
+    filter.types.length === 0 &&
+    filter.generations.length === 0 &&
+    filter.regulations.length === 0 &&
+    filter.sort === "dex" &&
+    filter.sortDirection === "asc" &&
+    Object.keys(filter.stats).length === 0 &&
+    Object.keys(filter.tags).length === 0
+  );
+}
+
+function toStringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((v) => typeof v === "string") : [];
+}
+
+/**
+ * Rebuild a filter from whatever is in storage, dropping anything that no
+ * longer exists (a retired regulation, a stat key we stopped supporting).
+ */
+function parsePersistedFilter(raw: string | null): PersistedDexFilter | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<PersistedDexFilter>;
+    if (!parsed || typeof parsed !== "object") return null;
+
+    const stats: StatRanges = {};
+    for (const [key, range] of Object.entries(parsed.stats ?? {})) {
+      if (!RANGE_STAT_KEY_SET.has(key)) continue;
+      if (!Array.isArray(range) || range.length !== 2) continue;
+      const [min, max] = range;
+      if (typeof min !== "number" || typeof max !== "number") continue;
+      stats[key as RangeStatKey] = [min, max];
+    }
+
+    const tags: DexTagState = {};
+    for (const [key, mode] of Object.entries(parsed.tags ?? {})) {
+      if (!DEX_TAG_SET.has(key)) continue;
+      if (mode !== "include" && mode !== "exclude") continue;
+      tags[key as DexTag] = mode;
+    }
+
+    return {
+      types: toStringArray(parsed.types) as PokemonType[],
+      generations: toStringArray(parsed.generations),
+      regulations: toStringArray(parsed.regulations).filter((id) =>
+        REGULATION_ID_SET.has(id),
+      ),
+      sort:
+        typeof parsed.sort === "string" && SORT_KEY_SET.has(parsed.sort)
+          ? (parsed.sort as DexSortKey)
+          : "dex",
+      sortDirection: parsed.sortDirection === "desc" ? "desc" : "asc",
+      stats,
+      tags,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function useDexFilter() {
   const [queryState, setQueryState] = useQueryStates(dexFilterParsers, {
     urlKeys: dexFilterUrlKeys,
@@ -233,6 +313,58 @@ export function useDexFilter() {
     },
     [setQueryState],
   );
+
+  // Restore the last-used panel + sort on the first visit of a session, but
+  // only when the URL carries no filter of its own — a shared link always wins.
+  const hasHydrated = useRef(false);
+  useEffect(() => {
+    if (hasHydrated.current) return;
+    hasHydrated.current = true;
+
+    const current: PersistedDexFilter = {
+      types: filter.types,
+      generations: filter.generations,
+      regulations: filter.regulations,
+      sort: filter.sort,
+      sortDirection: filter.sortDirection,
+      stats: filter.stats,
+      tags: filter.tags,
+    };
+    if (!isPersistedFilterEmpty(current)) return;
+
+    const stored = parsePersistedFilter(
+      localStorage.getItem(FILTER_STORAGE_KEY),
+    );
+    if (!stored || isPersistedFilterEmpty(stored)) return;
+
+    setFilter({ ...filter, ...stored });
+  }, [filter, setFilter]);
+
+  // Skips the mount pass so a fresh page load can't overwrite the stored
+  // filter with the empty one it starts from.
+  const isFirstPersist = useRef(true);
+  useEffect(() => {
+    if (isFirstPersist.current) {
+      isFirstPersist.current = false;
+      return;
+    }
+
+    const toPersist: PersistedDexFilter = {
+      types: filter.types,
+      generations: filter.generations,
+      regulations: filter.regulations,
+      sort: filter.sort,
+      sortDirection: filter.sortDirection,
+      stats: filter.stats,
+      tags: filter.tags,
+    };
+
+    if (isPersistedFilterEmpty(toPersist)) {
+      localStorage.removeItem(FILTER_STORAGE_KEY);
+      return;
+    }
+    localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(toPersist));
+  }, [filter]);
 
   return [filter, setFilter] as const;
 }
