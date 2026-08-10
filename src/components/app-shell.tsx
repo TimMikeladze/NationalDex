@@ -10,7 +10,6 @@ import {
   MapPin,
   MessageSquare,
   MoreHorizontal,
-  Package,
   Search,
   Settings,
   Users,
@@ -80,7 +79,6 @@ const desktopExtraNavItems = [
   { href: "/whos-that-pokemon", icon: CircleHelp, label: "quiz" },
   { href: "/comparison", icon: GitCompareArrows, label: "compare" },
   { href: "/locations", icon: MapPin, label: "locations" },
-  { href: "/items", icon: Package, label: "items" },
 ];
 
 // Items that stay in the "more" dropdown/sheet
@@ -99,7 +97,6 @@ const moreMenuItems = [
       quiz: "Who's That Pokemon?",
       compare: "Comparison",
       locations: "Locations",
-      items: "Items",
     };
     return { ...item, label: labelMap[item.label] ?? item.label };
   }),
