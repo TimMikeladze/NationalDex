@@ -16,6 +16,7 @@ import { PokemonCardSkeleton } from "@/components/pokemon/pokemon-card";
 import { TypeBadge } from "@/components/pokemon/type-badge";
 import { VirtualizedPokemonGrid } from "@/components/pokemon/virtualized-pokemon-grid";
 import { useGenerationPreference } from "@/hooks/use-generation-preference";
+import { useSpritePreferences } from "@/hooks/use-sprite-preferences";
 import { getDexPokemonList } from "@/lib/dex-pokemon";
 import { toID } from "@/lib/pkmn";
 import type { PokemonType } from "@/types/pokemon";
@@ -28,6 +29,7 @@ function HomeContent() {
   const { ref: itemsRef, inView: itemsInView } = useInView();
   const [filter, setFilter] = useDexFilter();
   const { preferredGeneration } = useGenerationPreference();
+  const { speciesCutoffGeneration } = useSpritePreferences();
   const [movesDisplayCount, setMovesDisplayCount] = useState(ITEMS_PER_PAGE);
   const [abilitiesDisplayCount, setAbilitiesDisplayCount] =
     useState(ITEMS_PER_PAGE);
@@ -86,12 +88,13 @@ function HomeContent() {
   const allPokemon = useMemo(() => {
     return getDexPokemonList(preferredGeneration, {
       forms: "distinct-sprites",
+      speciesCutoffGeneration,
     }).map((p) => ({
       name: p.name,
       id: p.id,
       types: p.types,
     }));
-  }, [preferredGeneration]);
+  }, [preferredGeneration, speciesCutoffGeneration]);
 
   const { filteredPokemon, hasActiveFilters: hasPokemonFilters } =
     useFilteredPokemon(filter);
