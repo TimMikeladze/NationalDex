@@ -80,6 +80,15 @@ import type {
 
 const _isAnimatedSprite = (src: string) => src.toLowerCase().endsWith(".gif");
 
+// Left summary rail. Once the layout splits into two columns it stays pinned
+// below the app chrome so sprite/types/stats remain visible while the long
+// moves and locations lists scroll. `main` is the scroll container, so the
+// rail's height is the viewport minus the fixed header/nav offsets (plus the
+// page's own 1.5rem top/bottom padding); anything taller scrolls inside the
+// rail itself.
+const SUMMARY_RAIL_CLASSES =
+  "space-y-6 md:col-span-5 lg:col-span-5 xl:col-span-5 2xl:col-span-4 md:self-start md:sticky md:top-6 md:max-h-[calc(100dvh-var(--app-top-offset)-var(--app-bottom-offset)-env(safe-area-inset-bottom,0px)-3rem)] md:overflow-y-auto md:overscroll-contain md:-mr-2 md:pr-2";
+
 // =============================================================================
 // Variant & Region Helpers
 // =============================================================================
@@ -813,8 +822,8 @@ export function PokemonPageClient({
   return (
     <div className="p-4 md:p-6">
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8">
-        {/* Summary rail (static on desktop) */}
-        <div className="space-y-6 md:col-span-5 lg:col-span-5 xl:col-span-5 2xl:col-span-4 md:self-start">
+        {/* Summary rail (pinned on desktop) */}
+        <div className={SUMMARY_RAIL_CLASSES}>
           {/* Core Header */}
           <section className="space-y-4">
             {/* Hero */}
@@ -2345,7 +2354,7 @@ function PokemonPageSkeleton() {
   return (
     <div className="p-4 md:p-6">
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8">
-        <div className="space-y-6 md:col-span-5 lg:col-span-5 xl:col-span-5 2xl:col-span-4 md:self-start">
+        <div className={SUMMARY_RAIL_CLASSES}>
           <section className="space-y-4">
             <div className="flex justify-between items-center">
               <Skeleton className="size-7" />
