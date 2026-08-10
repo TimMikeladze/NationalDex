@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useCardFavorites } from "@/hooks/use-card-favorites";
 import { type ExportedData, useDataExport } from "@/hooks/use-data-export";
 import { useFavorites } from "@/hooks/use-favorites";
 import { useGenerationPreference } from "@/hooks/use-generation-preference";
@@ -41,6 +42,7 @@ const MATCH_GENERATION = "match-generation";
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const { favorites, clearFavorites } = useFavorites();
+  const { favoriteCards, clearFavoriteCards } = useCardFavorites();
   const { lists } = useLists();
   const { teams } = useTeams();
   const { recentlyViewed, clearRecentlyViewed } = useRecentlyViewed();
@@ -209,6 +211,23 @@ export default function SettingsPage() {
               type="button"
               onClick={clearFavorites}
               disabled={favorites.length === 0}
+              className="text-xs px-3 py-1.5 border hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              clear
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between py-2 border-b">
+            <div>
+              <p className="text-sm">favorite cards</p>
+              <p className="text-xs text-muted-foreground">
+                {favoriteCards.length} saved
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={clearFavoriteCards}
+              disabled={favoriteCards.length === 0}
               className="text-xs px-3 py-1.5 border hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
             >
               clear

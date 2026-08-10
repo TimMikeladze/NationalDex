@@ -130,6 +130,8 @@ export function useSearchIndex() {
       abilities: true,
       types: true,
       items: true,
+      // Cards are searched against the card API rather than this local index.
+      cards: true,
     },
     totalItems: allItems.length,
   };

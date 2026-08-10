@@ -4,6 +4,7 @@ import { useCallback } from "react";
 
 const STORAGE_KEYS = {
   favorites: "pokedex-favorites",
+  cardFavorites: "pokedex-card-favorites",
   lists: "pokedex-lists",
   teams: "pokemon-teams",
   recentlyViewed: "pokedex-recently-viewed",
@@ -19,6 +20,8 @@ export interface ExportedData {
   version: number;
   exportedAt: string;
   favorites: number[];
+  /** Favourited trading cards; absent in backups made before cards existed. */
+  cardFavorites?: unknown[];
   lists: unknown[];
   teams: unknown[];
   recentlyViewed: unknown[];
@@ -45,6 +48,7 @@ export function useDataExport() {
       version: 1,
       exportedAt: new Date().toISOString(),
       favorites: getData(STORAGE_KEYS.favorites) || [],
+      cardFavorites: getData(STORAGE_KEYS.cardFavorites) || [],
       lists: getData(STORAGE_KEYS.lists) || [],
       teams: getData(STORAGE_KEYS.teams) || [],
       recentlyViewed: getData(STORAGE_KEYS.recentlyViewed) || [],
@@ -74,6 +78,14 @@ export function useDataExport() {
           localStorage.setItem(
             STORAGE_KEYS.favorites,
             JSON.stringify(data.favorites),
+          );
+        }
+
+        // Import favorite cards
+        if (Array.isArray(data.cardFavorites)) {
+          localStorage.setItem(
+            STORAGE_KEYS.cardFavorites,
+            JSON.stringify(data.cardFavorites),
           );
         }
 

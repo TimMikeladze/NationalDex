@@ -99,6 +99,8 @@ export default function ListDetailPage({ params }: PageProps) {
         return `/items/${item.id}`;
       case "type":
         return `/types/${item.id}`;
+      case "card":
+        return `/cards/${item.id.toLowerCase()}`;
       default:
         return "#";
     }
@@ -117,6 +119,7 @@ export default function ListDetailPage({ params }: PageProps) {
 
   const typeOrder: ListItemType[] = [
     "pokemon",
+    "card",
     "move",
     "ability",
     "item",
@@ -199,7 +202,7 @@ export default function ListDetailPage({ params }: PageProps) {
         <div className="py-16 text-center">
           <p className="text-sm text-muted-foreground">this list is empty</p>
           <p className="text-xs text-muted-foreground mt-1">
-            add items from pokemon, move, ability, or item pages
+            add items from pokemon, card, move, ability, or item pages
           </p>
         </div>
       ) : (
@@ -231,13 +234,22 @@ export default function ListDetailPage({ params }: PageProps) {
                             className="flex items-center gap-3 flex-1 min-w-0"
                           >
                             {sprite ? (
-                              <div className="size-10 rounded-md bg-muted flex items-center justify-center shrink-0">
+                              <div
+                                className={cn(
+                                  "rounded-md bg-muted flex items-center justify-center shrink-0",
+                                  // Cards are portrait, everything else is a
+                                  // square sprite.
+                                  item.type === "card" ? "h-12 w-9" : "size-10",
+                                )}
+                              >
                                 {/* biome-ignore lint/performance/noImgElement: external sprite URLs */}
                                 <img
                                   src={sprite}
                                   alt={item.name}
                                   className={cn(
-                                    "size-8",
+                                    item.type === "card"
+                                      ? "h-12 w-9 rounded-sm object-contain"
+                                      : "size-8",
                                     item.type === "pokemon" && "pixelated",
                                   )}
                                 />
@@ -260,6 +272,11 @@ export default function ListDetailPage({ params }: PageProps) {
                               {item.type === "pokemon" && (
                                 <p className="text-[10px] text-muted-foreground">
                                   #{item.id.padStart(3, "0")}
+                                </p>
+                              )}
+                              {item.type === "card" && (
+                                <p className="text-[10px] text-muted-foreground">
+                                  {item.id}
                                 </p>
                               )}
                             </div>

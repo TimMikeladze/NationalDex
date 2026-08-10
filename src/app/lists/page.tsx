@@ -56,8 +56,8 @@ export default function ListsPage() {
             <DialogHeader>
               <DialogTitle>create new list</DialogTitle>
               <DialogDescription>
-                Create a list to organize Pokemon, moves, abilities, items, and
-                types.
+                Create a list to organize Pokemon, cards, moves, abilities,
+                items, and types.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">

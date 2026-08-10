@@ -6,6 +6,7 @@ import {
   Grid3X3,
   Heart,
   Info,
+  Layers,
   ListPlus,
   MapPin,
   MessageSquare,
@@ -75,6 +76,7 @@ const navItems = [
 
 // Items promoted to desktop navbar (still shown in mobile "more" sheet)
 const desktopExtraNavItems = [
+  { href: "/cards", icon: Layers, label: "cards" },
   { href: "/lists", icon: ListPlus, label: "lists" },
   { href: "/whos-that-pokemon", icon: CircleHelp, label: "quiz" },
   { href: "/comparison", icon: GitCompareArrows, label: "compare" },
@@ -93,6 +95,7 @@ const moreMenuItems = [
   ...desktopExtraNavItems.map((item) => {
     // Restore original labels for mobile sheet
     const labelMap: Record<string, string> = {
+      cards: "Cards",
       lists: "Lists",
       quiz: "Who's That Pokemon?",
       compare: "Comparison",

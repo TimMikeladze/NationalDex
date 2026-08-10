@@ -22,6 +22,7 @@ import { PokemonImage } from "@/components/pokemon/pokemon-image";
 import { SpriteSetSelect } from "@/components/pokemon/sprite-set-select";
 import { StatBar } from "@/components/pokemon/stat-bar";
 import { TypeBadge } from "@/components/pokemon/type-badge";
+import { PokemonCardsSection } from "@/components/tcg";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -972,6 +973,12 @@ export function PokemonPageClient({
             encounters={encounters}
             isLoading={encountersLoading}
             activeGeneration={activeGeneration}
+          />
+
+          {/* Trading cards */}
+          <PokemonCardsSection
+            dexId={pokemon.id}
+            pokemonName={getBaseName(pokemon.name)}
           />
         </div>
       </div>

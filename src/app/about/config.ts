@@ -6,6 +6,7 @@ import {
   Github,
   Heart,
   HelpCircle,
+  Layers,
   ListChecks,
   MapPin,
   Moon,
@@ -158,6 +159,13 @@ export const aboutConfig: AboutPageConfig = {
       accent: "#a855f7",
     },
     {
+      icon: Layers,
+      title: "Trading Cards",
+      description:
+        "Browse every card from the Pokemon TCG and TCG Pocket — filter by set, energy type, rarity and HP, favorite them, and jump between a card and the Pokemon it depicts.",
+      accent: "#0ea5e9",
+    },
+    {
       icon: ListChecks,
       title: "Custom Lists",
       description:
@@ -231,6 +239,12 @@ export const aboutConfig: AboutPageConfig = {
         label: "pkmn/ps",
         href: "https://github.com/pkmn/ps",
         description: "Dex, learnsets and competitive data",
+      },
+      {
+        label: "TCGdex",
+        href: "https://tcgdex.dev",
+        description:
+          "Trading card data and artwork for the Pokemon TCG and TCG Pocket",
       },
     ],
     spriteSources: [
