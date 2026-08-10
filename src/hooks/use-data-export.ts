@@ -11,6 +11,7 @@ const STORAGE_KEYS = {
   pokedexPreference: "pokedex-entry-preference",
   generationPreference: "pokedex-generation-preference",
   whosThatPokemonBestStreak: "whos-that-pokemon-best-streak",
+  dexFilter: "pokedex-dex-filter",
   theme: "theme",
 };
 
@@ -25,6 +26,8 @@ export interface ExportedData {
   pokedexPreference: string | null;
   generationPreference: string | null;
   whosThatPokemonBestStreak: number;
+  /** Remembered dex filter panel + sort; absent in backups made before it existed. */
+  dexFilter?: unknown;
 }
 
 export function useDataExport() {
@@ -55,6 +58,7 @@ export function useDataExport() {
           localStorage.getItem(STORAGE_KEYS.whosThatPokemonBestStreak) || "0",
           10,
         ) || 0,
+      dexFilter: getData(STORAGE_KEYS.dexFilter) ?? undefined,
     };
   }, []);
 
@@ -120,6 +124,14 @@ export function useDataExport() {
           localStorage.setItem(
             STORAGE_KEYS.whosThatPokemonBestStreak,
             data.whosThatPokemonBestStreak.toString(),
+          );
+        }
+
+        // Import remembered dex filter
+        if (data.dexFilter) {
+          localStorage.setItem(
+            STORAGE_KEYS.dexFilter,
+            JSON.stringify(data.dexFilter),
           );
         }
 
