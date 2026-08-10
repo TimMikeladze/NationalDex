@@ -340,6 +340,33 @@ export function getSpriteSetGroups(): {
   return groups;
 }
 
+/**
+ * The set whose graphics belong to each generation's headline games, so the
+ * sprites can follow the generation the dex is being viewed as. Several sets
+ * share a generation — this picks the one the generation is named after
+ * (Gen III is "Ruby/Sapphire" in the picker, so it gets the RS sheet), except
+ * in Gen II where Crystal is the only Gold/Silver-era sheet with shinies.
+ */
+const SPRITE_SET_BY_GENERATION: Record<number, SpriteSetId> = {
+  1: "gen1rb",
+  2: "gen2",
+  3: "gen3rs",
+  4: "gen4dp",
+  5: "gen5ani",
+  6: "ani",
+  7: "dex",
+  8: "sword-shield",
+  9: "scarlet-violet",
+};
+
+/** Sprite set matching a viewed generation; the default for the National Dex. */
+export function spriteSetForGeneration(
+  generation: number | null | undefined,
+): SpriteSetId {
+  if (generation == null) return DEFAULT_SPRITE_SET;
+  return SPRITE_SET_BY_GENERATION[generation] ?? DEFAULT_SPRITE_SET;
+}
+
 const REGION_ADJECTIVES: Record<string, string> = {
   alola: "alolan",
   galar: "galarian",

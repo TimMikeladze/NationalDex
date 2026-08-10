@@ -483,7 +483,8 @@ export function PokemonPageClient({
   const { isFavorite, toggleFavorite } = useFavorites();
   const { isInComparison, toggleComparison, expandPanel } = useComparison();
   const setSecondaryToolbar = useSecondaryToolbar();
-  const { defaultPokemonSpriteGen } = useSpritePreferences();
+  const { defaultPokemonSpriteGen, speciesCutoffGeneration } =
+    useSpritePreferences();
   const { data: moves, isLoading: movesLoading } = usePokemonMoves(
     id,
     activeGeneration,
@@ -514,8 +515,12 @@ export function PokemonPageClient({
   // forms. Scoped to the generation being viewed, so prev/next walk that
   // generation's dex.
   const dexOrder = useMemo(
-    () => getDexPokemonList(activeGeneration, { forms: "none" }),
-    [activeGeneration],
+    () =>
+      getDexPokemonList(activeGeneration, {
+        forms: "none",
+        speciesCutoffGeneration,
+      }),
+    [activeGeneration, speciesCutoffGeneration],
   );
   const dexIndex = useMemo(() => {
     if (!pokemon) return -1;
