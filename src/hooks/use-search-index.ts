@@ -3,6 +3,7 @@
 import Fuse, { type IFuseOptions } from "fuse.js";
 import { useMemo } from "react";
 import { useGenerationPreference } from "@/hooks/use-generation-preference";
+import { useSpritePreferences } from "@/hooks/use-sprite-preferences";
 import { getDexPokemonList } from "@/lib/dex-pokemon";
 import {
   getAllAbilities,
@@ -39,6 +40,7 @@ const FUSE_OPTIONS: IFuseOptions<SearchResult> = {
 
 export function useSearchIndex() {
   const { preferredGeneration } = useGenerationPreference();
+  const { speciesCutoffGeneration } = useSpritePreferences();
 
   const { index, allItems } = useMemo(() => {
     const items: SearchResult[] = [];
@@ -48,6 +50,7 @@ export function useSearchIndex() {
     // Add Pokemon
     for (const p of getDexPokemonList(preferredGeneration, {
       forms: "distinct-sprites",
+      speciesCutoffGeneration,
     })) {
       items.push({
         id: `pokemon-${p.slug}`,
@@ -106,7 +109,7 @@ export function useSearchIndex() {
       index: new Fuse(items, FUSE_OPTIONS),
       allItems: items,
     };
-  }, [preferredGeneration]);
+  }, [preferredGeneration, speciesCutoffGeneration]);
 
   const search = (query: string, limit = 20): SearchResult[] => {
     if (!query.trim()) {

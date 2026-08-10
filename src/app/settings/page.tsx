@@ -32,8 +32,11 @@ import { useRecentlyViewed } from "@/hooks/use-recently-viewed";
 import { useSpritePreferences } from "@/hooks/use-sprite-preferences";
 import { useTeams } from "@/hooks/use-teams";
 import { GENERATIONS } from "@/lib/pkmn";
-import type { SpriteSetId } from "@/lib/sprites";
+import { getSpriteSet, type SpriteSetId } from "@/lib/sprites";
 import { cn } from "@/lib/utils";
+
+/** Sentinel for "no pinned set" — Select can't hold an empty value. */
+const MATCH_GENERATION = "match-generation";
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
@@ -41,7 +44,7 @@ export default function SettingsPage() {
   const { lists } = useLists();
   const { teams } = useTeams();
   const { recentlyViewed, clearRecentlyViewed } = useRecentlyViewed();
-  const { defaultPokemonSpriteGen, setDefaultPokemonSpriteGen } =
+  const { spriteSetOverride, generationSpriteSet, setSpriteSetOverride } =
     useSpritePreferences();
   const { preferredGeneration, setPreferredGeneration } =
     useGenerationPreference();
@@ -125,14 +128,23 @@ export default function SettingsPage() {
               <div>
                 <p className="text-sm">default pokemon avatar</p>
                 <p className="text-xs text-muted-foreground">
-                  Used across cards, evolutions, and pokemon pages
+                  Used across cards, evolutions, and pokemon pages. Follows the
+                  generation below ({getSpriteSet(generationSpriteSet).label})
+                  unless a set is pinned — a pinned set also hides Pokemon it
+                  never drew.
                 </p>
               </div>
               <SpriteSetSelect
-                value={defaultPokemonSpriteGen}
+                value={spriteSetOverride ?? MATCH_GENERATION}
                 onValueChange={(value) =>
-                  setDefaultPokemonSpriteGen(value as SpriteSetId)
+                  setSpriteSetOverride(
+                    value === MATCH_GENERATION ? null : (value as SpriteSetId),
+                  )
                 }
+                extraOption={{
+                  value: MATCH_GENERATION,
+                  label: "Match generation",
+                }}
               />
             </div>
           </div>

@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/popover";
 import { Slider } from "@/components/ui/slider";
 import { useGenerationPreference } from "@/hooks/use-generation-preference";
+import { useSpritePreferences } from "@/hooks/use-sprite-preferences";
 import {
   type DexPokemonListItem,
   getDexPokemonList,
@@ -402,9 +403,10 @@ export function DexFilter({
   collapsed = false,
 }: DexFilterProps) {
   const { preferredGeneration } = useGenerationPreference();
+  const { speciesCutoffGeneration } = useSpritePreferences();
   const statBounds = useMemo(
-    () => getStatBounds(preferredGeneration),
-    [preferredGeneration],
+    () => getStatBounds(preferredGeneration, speciesCutoffGeneration),
+    [preferredGeneration, speciesCutoffGeneration],
   );
   // Only offer the types that existed in the generation being viewed.
   const availableTypes = useMemo(
@@ -935,9 +937,14 @@ function comparePokemon(
 // Hook to get filtered Pokemon based on filter state
 export function useFilteredPokemon(filter: DexFilterState) {
   const { preferredGeneration } = useGenerationPreference();
+  const { speciesCutoffGeneration } = useSpritePreferences();
   const allPokemon = useMemo(
-    () => getDexPokemonList(preferredGeneration, { forms: "distinct-sprites" }),
-    [preferredGeneration],
+    () =>
+      getDexPokemonList(preferredGeneration, {
+        forms: "distinct-sprites",
+        speciesCutoffGeneration,
+      }),
+    [preferredGeneration, speciesCutoffGeneration],
   );
 
   const activeTags = useMemo(
