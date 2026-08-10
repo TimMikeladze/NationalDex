@@ -1,16 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { SpriteGen } from "@/lib/sprites";
+import {
+  DEFAULT_SPRITE_SET,
+  isSpriteSetId,
+  type SpriteSetId,
+} from "@/lib/sprites";
 
 const STORAGE_KEY = "pokedex-sprite-preferences";
 
 type SpritePreferences = {
-  defaultPokemonSpriteGen: SpriteGen;
+  defaultPokemonSpriteGen: SpriteSetId;
 };
 
 const DEFAULT_PREFERENCES: SpritePreferences = {
-  defaultPokemonSpriteGen: "ani",
+  defaultPokemonSpriteGen: DEFAULT_SPRITE_SET,
 };
 
 function parsePreferences(value: string | null): SpritePreferences | null {
@@ -18,9 +22,10 @@ function parsePreferences(value: string | null): SpritePreferences | null {
   try {
     const parsed = JSON.parse(value) as Partial<SpritePreferences>;
     return {
-      defaultPokemonSpriteGen:
-        parsed.defaultPokemonSpriteGen ??
-        DEFAULT_PREFERENCES.defaultPokemonSpriteGen,
+      // Guards against sprite set ids removed in a later release.
+      defaultPokemonSpriteGen: isSpriteSetId(parsed.defaultPokemonSpriteGen)
+        ? parsed.defaultPokemonSpriteGen
+        : DEFAULT_PREFERENCES.defaultPokemonSpriteGen,
     };
   } catch {
     return null;
@@ -43,7 +48,7 @@ export function useSpritePreferences() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
   }, [isLoaded, preferences]);
 
-  const setDefaultPokemonSpriteGen = useCallback((gen: SpriteGen) => {
+  const setDefaultPokemonSpriteGen = useCallback((gen: SpriteSetId) => {
     setPreferences((prev) => ({ ...prev, defaultPokemonSpriteGen: gen }));
   }, []);
 

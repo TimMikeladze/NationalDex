@@ -172,24 +172,40 @@ function Footer() {
             )}
           </div>
         </div>
-        <p className="text-[10px] text-muted-foreground/50 leading-relaxed">
-          data via{" "}
-          {attribution.dataSources.map((source: DataSource, index: number) => (
-            <span key={source.label}>
-              <a
-                href={source.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline underline-offset-2 hover:text-muted-foreground/80"
-              >
-                {source.label}
-              </a>
-              {index < attribution.dataSources.length - 1 && " & "}
-            </span>
-          ))}
-          {" · "}
-          {attribution.disclaimer}
-        </p>
+        <div className="space-y-3">
+          <div className="space-y-2">
+            <p className="text-[10px] text-muted-foreground/70 uppercase tracking-wider">
+              credits
+            </p>
+            <dl className="space-y-1.5 text-[10px] text-muted-foreground/60 leading-relaxed">
+              {[...attribution.dataSources, ...attribution.spriteSources].map(
+                (source: DataSource) => (
+                  <div
+                    key={source.label}
+                    className="flex flex-wrap gap-x-2 gap-y-0.5"
+                  >
+                    <dt className="shrink-0">
+                      <a
+                        href={source.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline underline-offset-2 hover:text-foreground transition-colors"
+                      >
+                        {source.label}
+                      </a>
+                    </dt>
+                    <dd className="text-muted-foreground/50">
+                      {source.description}
+                    </dd>
+                  </div>
+                ),
+              )}
+            </dl>
+          </div>
+          <p className="text-[10px] text-muted-foreground/50 leading-relaxed">
+            {attribution.disclaimer}
+          </p>
+        </div>
       </div>
     </footer>
   );

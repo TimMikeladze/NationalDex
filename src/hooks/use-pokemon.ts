@@ -120,11 +120,11 @@ export function usePokemon(
         name: species.name,
         types: genSpecies.types as PokemonType[],
         sprite:
-          pokemonSprite(species.name, { gen: defaultPokemonSpriteGen }) ||
+          pokemonSprite(species.name, { set: defaultPokemonSpriteGen }) ||
           pokemonSpriteById(species.num),
         spriteShiny:
           pokemonSprite(species.name, {
-            gen: defaultPokemonSpriteGen,
+            set: defaultPokemonSpriteGen,
             shiny: true,
           }) || pokemonSpriteById(species.num, { shiny: true }),
         height: 0, // Height not available in @pkmn/dex
@@ -379,7 +379,7 @@ export function useEvolutionChain(
           id: sp.num,
           name: sp.name,
           sprite:
-            pokemonSprite(sp.name, { gen: defaultPokemonSpriteGen }) ||
+            pokemonSprite(sp.name, { set: defaultPokemonSpriteGen }) ||
             pokemonSpriteById(sp.num),
           evolvesTo: evolutions,
           evolutionDetails,
@@ -504,7 +504,7 @@ export function useFullMoveDetail(
           id: entry.num,
           name: entry.name,
           sprite:
-            pokemonSprite(entry.name, { gen: defaultPokemonSpriteGen }) ||
+            pokemonSprite(entry.name, { set: defaultPokemonSpriteGen }) ||
             pokemonSpriteById(entry.num),
           types: (species?.types ?? []) as PokemonType[],
           learnMethods: entry.methods.map((method) => ({
@@ -562,7 +562,7 @@ export function useFullAbilityDetail(
               name: species.name,
               sprite:
                 pokemonSprite(species.name, {
-                  gen: defaultPokemonSpriteGen,
+                  set: defaultPokemonSpriteGen,
                 }) || pokemonSpriteById(species.num),
               types: species.types as PokemonType[],
               isHidden: slot === "H",
@@ -699,7 +699,7 @@ export function useFullTypeDetail(
             id: species.num,
             name: species.name,
             sprite:
-              pokemonSprite(species.name, { gen: defaultPokemonSpriteGen }) ||
+              pokemonSprite(species.name, { set: defaultPokemonSpriteGen }) ||
               pokemonSpriteById(species.num),
             types: species.types as PokemonType[],
             slot: (typeIndex + 1) as 1 | 2,
