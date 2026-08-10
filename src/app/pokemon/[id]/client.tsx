@@ -19,6 +19,7 @@ import { useSecondaryToolbar } from "@/components/app-shell";
 import { GenerationPicker } from "@/components/pokemon/generation-picker";
 import { GenerationScope } from "@/components/pokemon/generation-scope";
 import { PokemonImage } from "@/components/pokemon/pokemon-image";
+import { SpriteSetSelect } from "@/components/pokemon/sprite-set-select";
 import { StatBar } from "@/components/pokemon/stat-bar";
 import { TypeBadge } from "@/components/pokemon/type-badge";
 import { Button } from "@/components/ui/button";
@@ -68,7 +69,7 @@ import {
   toID,
 } from "@/lib/pkmn";
 import type { FormattedPokemonEncounter, PokedexEntry } from "@/lib/pokeapi";
-import { pokemonSprite, type SpriteGen } from "@/lib/sprites";
+import { getSpriteSet, pokemonSprite, type SpriteSetId } from "@/lib/sprites";
 import { cn } from "@/lib/utils";
 import type {
   EvolutionChainLink,
@@ -493,11 +494,19 @@ export function PokemonPageClient({
     usePokemonEncounters(pokemon?.id ?? null);
 
   const [spriteGenOverride, setSpriteGenOverride] = useState<
-    "default" | SpriteGen
+    "default" | SpriteSetId
   >("default");
   const [spriteShiny, setSpriteShiny] = useState(false);
   const [spriteBack, setSpriteBack] = useState(false);
   const [spriteFemale, setSpriteFemale] = useState(false);
+
+  const effectiveSpriteSetId =
+    spriteGenOverride === "default"
+      ? defaultPokemonSpriteGen
+      : spriteGenOverride;
+  // Not every sprite sheet has shiny/back/female variants (Gen 1 has no shiny
+  // at all), so the toggles follow what the selected set actually offers.
+  const activeSpriteSet = getSpriteSet(effectiveSpriteSetId);
 
   // Base species only, ordered by National Dex number, each with a unique
   // routable slug. Forms/formes share their base species' dex number, so
@@ -582,21 +591,14 @@ export function PokemonPageClient({
                   <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
                     sprite
                   </span>
-                  <Select
+                  <SpriteSetSelect
                     value={spriteGenOverride}
                     onValueChange={(v) =>
-                      setSpriteGenOverride(v as "default" | SpriteGen)
+                      setSpriteGenOverride(v as "default" | SpriteSetId)
                     }
-                  >
-                    <SelectTrigger className="h-8 w-44">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent align="end">
-                      <SelectItem value="default">Default</SelectItem>
-                      <SelectItem value="gen5">Gen 5 (static)</SelectItem>
-                      <SelectItem value="ani">Animated</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    extraOption={{ value: "default", label: "Default" }}
+                    className="h-8 w-44"
+                  />
                 </div>
 
                 <div className="grid grid-cols-3 gap-2">
@@ -604,7 +606,8 @@ export function PokemonPageClient({
                     <span className="text-xs">Shiny</span>
                     <Switch
                       aria-label="Toggle shiny sprite"
-                      checked={spriteShiny}
+                      disabled={!activeSpriteSet.shiny}
+                      checked={spriteShiny && activeSpriteSet.shiny}
                       onCheckedChange={setSpriteShiny}
                     />
                   </div>
@@ -612,7 +615,8 @@ export function PokemonPageClient({
                     <span className="text-xs">Back</span>
                     <Switch
                       aria-label="Toggle back sprite"
-                      checked={spriteBack}
+                      disabled={!activeSpriteSet.back}
+                      checked={spriteBack && activeSpriteSet.back}
                       onCheckedChange={setSpriteBack}
                     />
                   </div>
@@ -620,7 +624,8 @@ export function PokemonPageClient({
                     <span className="text-xs">Female</span>
                     <Switch
                       aria-label="Toggle female sprite"
-                      checked={spriteFemale}
+                      disabled={!activeSpriteSet.female}
+                      checked={spriteFemale && activeSpriteSet.female}
                       onCheckedChange={setSpriteFemale}
                     />
                   </div>
@@ -747,6 +752,7 @@ export function PokemonPageClient({
     handleRandomPokemon,
     isFavorite,
     isInComparison,
+    activeSpriteSet,
     spriteBack,
     spriteFemale,
     spriteGenOverride,
@@ -788,14 +794,9 @@ export function PokemonPageClient({
     return <PokemonPageSkeleton />;
   }
 
-  const effectiveGen =
-    spriteGenOverride === "default"
-      ? defaultPokemonSpriteGen
-      : spriteGenOverride;
-
   const currentHeroSprite =
     pokemonSprite(pokemon.name, {
-      gen: effectiveGen,
+      set: effectiveSpriteSetId,
       shiny: spriteShiny,
       female: spriteFemale,
       side: spriteBack ? "back" : "front",
@@ -2176,7 +2177,7 @@ function EvolutionNodeVariations({
   const otherVariations = variations.filter((v) => v !== baseVariation);
 
   const baseSprite =
-    pokemonSprite(baseVariation.name, { gen: defaultPokemonSpriteGen }) ?? "";
+    pokemonSprite(baseVariation.name, { set: defaultPokemonSpriteGen }) ?? "";
   const isBaseCurrentSlug = baseVariation.slug === currentSlug;
 
   return (
@@ -2194,7 +2195,7 @@ function EvolutionNodeVariations({
         <div className="flex flex-wrap justify-center gap-0.5 max-w-32">
           {otherVariations.map((v) => {
             const sprite =
-              pokemonSprite(v.name, { gen: defaultPokemonSpriteGen }) ?? "";
+              pokemonSprite(v.name, { set: defaultPokemonSpriteGen }) ?? "";
             const isCurrent = v.slug === currentSlug;
             return (
               <EvolutionNodeCard

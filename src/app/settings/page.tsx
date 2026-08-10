@@ -4,6 +4,7 @@ import { AlertTriangle, Download, Trash2, Upload } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useRef, useState } from "react";
 import { BuiltBy } from "@/components/built-by";
+import { SpriteSetSelect } from "@/components/pokemon";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,6 +32,7 @@ import { useRecentlyViewed } from "@/hooks/use-recently-viewed";
 import { useSpritePreferences } from "@/hooks/use-sprite-preferences";
 import { useTeams } from "@/hooks/use-teams";
 import { GENERATIONS } from "@/lib/pkmn";
+import type { SpriteSetId } from "@/lib/sprites";
 import { cn } from "@/lib/utils";
 
 export default function SettingsPage() {
@@ -126,20 +128,12 @@ export default function SettingsPage() {
                   Used across cards, evolutions, and pokemon pages
                 </p>
               </div>
-              <Select
+              <SpriteSetSelect
                 value={defaultPokemonSpriteGen}
                 onValueChange={(value) =>
-                  setDefaultPokemonSpriteGen(value as "gen5" | "ani")
+                  setDefaultPokemonSpriteGen(value as SpriteSetId)
                 }
-              >
-                <SelectTrigger className="w-44 justify-between">
-                  <SelectValue placeholder="Select" />
-                </SelectTrigger>
-                <SelectContent align="end">
-                  <SelectItem value="gen5">Gen 5 (static)</SelectItem>
-                  <SelectItem value="ani">Animated</SelectItem>
-                </SelectContent>
-              </Select>
+              />
             </div>
           </div>
         </section>

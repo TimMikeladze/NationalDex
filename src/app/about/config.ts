@@ -71,6 +71,7 @@ export interface AboutPageConfig {
   };
   attribution: {
     dataSources: DataSource[];
+    spriteSources: DataSource[];
     disclaimer: string;
   };
 }
@@ -144,9 +145,9 @@ export const aboutConfig: AboutPageConfig = {
     },
     {
       icon: Sparkles,
-      title: "Animated Sprites",
+      title: "Every Sprite Sheet",
       description:
-        "Toggle between static and animated sprites for every Pokemon.",
+        "Swap between Gen 1 through Gen 9 sprites — Red/Blue, Crystal, Emerald, HeartGold, animated Black/White and X/Y, Scarlet/Violet, HOME renders and more.",
       accent: "#f43f5e",
     },
     {
@@ -229,7 +230,35 @@ export const aboutConfig: AboutPageConfig = {
       {
         label: "pkmn/ps",
         href: "https://github.com/pkmn/ps",
-        description: "Sprites and competitive data",
+        description: "Dex, learnsets and competitive data",
+      },
+    ],
+    spriteSources: [
+      {
+        label: "Pokemon Showdown",
+        href: "https://play.pokemonshowdown.com/sprites/",
+        description: "Gen 1-6 game sprites, dex art, items and type icons",
+      },
+      {
+        label: "@pkmn/img",
+        href: "https://github.com/pkmn/ps/tree/main/img",
+        description: "Sprite URL resolution and per-generation fallbacks",
+      },
+      {
+        label: "PokemonDB",
+        href: "https://pokemondb.net/sprites",
+        description:
+          "Platinum, X/Y, Sword/Shield, Scarlet/Violet, HOME renders and official artwork",
+      },
+      {
+        label: "PokeAPI Sprites",
+        href: "https://github.com/PokeAPI/sprites",
+        description: "Fallback sprites and official artwork by dex number",
+      },
+      {
+        label: "Smogon Sprite Project",
+        href: "https://smogon.com/forums/threads/3647722/",
+        description: "Community-made sprites for forms the games never drew",
       },
     ],
     disclaimer:

@@ -184,7 +184,7 @@ function GridCard({ pokemon }: { pokemon: PokemonItem }) {
         id: pokemon.id,
         name: pokemon.name,
         sprite:
-          pokemonSprite(pokemon.name, { gen: defaultPokemonSpriteGen }) ||
+          pokemonSprite(pokemon.name, { set: defaultPokemonSpriteGen }) ||
           pokemonSpriteById(pokemon.id),
         types: pokemon.types,
       }}
