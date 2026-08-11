@@ -1,0 +1,168 @@
+"use client";
+
+import { Grid3X3, Heart } from "lucide-react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { useQueryStates } from "nuqs";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { TcgSwipeDeck } from "@/components/tcg";
+import { Button } from "@/components/ui/button";
+import { usePocketSetIds, useTcgCardSearch } from "@/hooks/use-tcg";
+import type { TcgLanguage } from "@/types/tcg";
+import {
+  DEFAULT_TCG_LANGUAGE,
+  isTcgLanguage,
+  withTcgLanguage,
+} from "@/types/tcg";
+import {
+  CARD_FILTER_PARSERS,
+  type GameFilter,
+  isGameFilter,
+  toCardSearchFilters,
+} from "../filters";
+
+// Sizing has to settle before the browser paints, but must not run on the
+// server.
+const useIsomorphicLayoutEffect =
+  typeof window === "undefined" ? useEffect : useLayoutEffect;
+
+export function SwipePageClient() {
+  return (
+    <Suspense fallback={<SwipeSkeleton />}>
+      <SwipeBrowser />
+    </Suspense>
+  );
+}
+
+/**
+ * The card catalogue, one card at a time. It reads the same query string the
+ * grid writes, so narrowing a search on `/cards` and then coming here deals you
+ * exactly the cards you were looking at.
+ */
+function SwipeBrowser() {
+  const [filters] = useQueryStates(CARD_FILTER_PARSERS, {
+    history: "replace",
+    clearOnDefault: true,
+  });
+  const searchParams = useSearchParams();
+
+  const language: TcgLanguage = isTcgLanguage(filters.lang)
+    ? filters.lang
+    : DEFAULT_TCG_LANGUAGE;
+  const game: GameFilter = isGameFilter(filters.game) ? filters.game : "all";
+
+  const pocketSetIds = usePocketSetIds(language);
+  const searchFilters = useMemo(() => toCardSearchFilters(filters), [filters]);
+
+  const { cards, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } =
+    useTcgCardSearch(searchFilters, { language });
+
+  const loadMore = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  // Everything that came from the URL, so it is obvious which deck this is.
+  const context = [
+    filters.q && `“${filters.q}”`,
+    filters.set,
+    game !== "all" && (game === "tcg" ? "TCG" : "Pocket"),
+    ...filters.types,
+    ...filters.rarities,
+  ].filter(Boolean) as string[];
+
+  // The app's scroll container is a flex item whose computed height is `auto`,
+  // so percentage heights under it collapse to nothing and the deck ends up
+  // sized by its own buttons. Measuring it is the only way to hand the card the
+  // room that is actually there. The class-based height is the pre-measurement
+  // fallback, and is close enough that the first paint does not jump.
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState<number | null>(null);
+
+  useIsomorphicLayoutEffect(() => {
+    const scroller = rootRef.current?.closest("main");
+    if (!scroller) return;
+
+    const measure = () => setHeight(scroller.clientHeight);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(scroller);
+    return () => observer.disconnect();
+  }, []);
+
+  const gridHref = withTcgLanguage("/cards", language);
+  // Going back to the grid keeps the whole search, not just the language, so
+  // the two views are the same query seen two ways.
+  const query = searchParams.toString();
+  const backToGrid = query ? `/cards?${query}` : gridHref;
+
+  return (
+    // `overflow-x-clip` rather than hidden: a thrown card travels well past the
+    // edge, and it must not be able to widen the page or raise a scrollbar on
+    // its way out — but clipping must not turn this into a scroll container.
+    <div
+      ref={rootRef}
+      style={height ? { height } : undefined}
+      className="mx-auto flex h-[calc(100dvh-9rem)] min-h-[26rem] w-full max-w-lg flex-col gap-3 overflow-x-clip px-4 py-3 md:px-6"
+    >
+      <div className="flex shrink-0 items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-medium">Swipe</p>
+          <p className="truncate text-xs text-muted-foreground">
+            {context.length > 0 ? context.join(" · ") : "Every card"}
+          </p>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-1">
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/favorites" title="Favorited cards">
+              <Heart className="size-4" />
+              <span className="sr-only sm:not-sr-only sm:ml-1.5">
+                favorites
+              </span>
+            </Link>
+          </Button>
+          <Button variant="ghost" size="sm" asChild>
+            <Link href={backToGrid} title="Back to the card grid">
+              <Grid3X3 className="size-4" />
+              <span className="sr-only sm:not-sr-only sm:ml-1.5">grid</span>
+            </Link>
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex min-h-0 flex-1">
+        <TcgSwipeDeck
+          cards={cards}
+          pocketSetIds={pocketSetIds}
+          language={language}
+          showGame={game === "all"}
+          isLoading={isLoading}
+          hasMore={hasNextPage}
+          onNeedMore={loadMore}
+          emptyMessage="No cards match these filters"
+          emptyAction={
+            <Button variant="outline" size="sm" asChild>
+              <Link href={gridHref}>change filters</Link>
+            </Button>
+          }
+        />
+      </div>
+    </div>
+  );
+}
+
+function SwipeSkeleton() {
+  return (
+    <div className="mx-auto flex h-full w-full max-w-lg flex-col items-center px-4 py-3 md:px-6">
+      <div className="aspect-[63/88] h-full max-w-full animate-pulse rounded-xl bg-muted" />
+    </div>
+  );
+}
