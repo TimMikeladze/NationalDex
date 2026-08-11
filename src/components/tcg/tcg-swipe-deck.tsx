@@ -35,6 +35,8 @@ import { TcgCardImage } from "./tcg-card-image";
 import {
   CORNER_RATIO,
   commitThreshold,
+  DEPTH_Y,
+  DEPTH_Z,
   DeckCard,
   type SwipeAction,
   type SwipeThrow,
@@ -63,6 +65,42 @@ const PERSPECTIVE = 1100;
 
 /** How far off the edge an undone card starts, as a share of the card's width. */
 const REWIND_DISTANCE = 1.2;
+
+/** The deepest card still drawn; the one behind it is fully faded out. */
+const DEEPEST_VISIBLE = 2;
+
+/** Breathing room under the stack, so it never quite reaches the buttons. */
+const STACK_CLEARANCE = 8;
+
+/**
+ * How far the stack hangs below the front card's bottom edge. The cards behind
+ * are pushed down and then pulled part of the way back up by the perspective,
+ * so it is worth working out rather than guessing — this is the room that has
+ * to stay clear, or the deck sits on top of the buttons under it.
+ */
+const DEEPEST_SCALE = PERSPECTIVE / (PERSPECTIVE + DEEPEST_VISIBLE * DEPTH_Z);
+const DEEPEST_DROP = DEEPEST_VISIBLE * DEPTH_Y;
+
+function stackOverhang(cardHeight: number) {
+  const bottom = (cardHeight / 2 + DEEPEST_DROP) * DEEPEST_SCALE;
+  return Math.max(0, bottom - cardHeight / 2);
+}
+
+/**
+ * The tallest card whose whole stack still fits in `available`. Solved rather
+ * than iterated: the overhang is itself a function of card height, so guessing
+ * a height and correcting once leaves the deck a few pixels over — which is
+ * exactly enough to sit on the buttons.
+ *
+ *   height + overhang(height) = available
+ *   height * (1 + scale) / 2 + drop * scale = available
+ */
+function fittingCardHeight(available: number) {
+  return Math.max(
+    0,
+    ((available - DEEPEST_DROP * DEEPEST_SCALE) * 2) / (1 + DEEPEST_SCALE),
+  );
+}
 
 // Measuring the stage has to happen before the browser paints, or the deck is
 // briefly the wrong size — but it must not run on the server.
@@ -210,11 +248,18 @@ export function TcgSwipeDeck({
     return () => observer.disconnect();
   }, []);
 
+  // Sized against the room the whole stack needs, not just the front card, so
+  // the cards behind have somewhere to sit that is not on top of the controls.
   const cardWidth =
     arena.width > 0 && arena.height > 0
-      ? Math.min(arena.width, arena.height * CARD_RATIO, MAX_CARD_WIDTH)
+      ? Math.min(
+          arena.width,
+          fittingCardHeight(arena.height - STACK_CLEARANCE) * CARD_RATIO,
+          MAX_CARD_WIDTH,
+        )
       : 0;
   const cardHeight = cardWidth / CARD_RATIO;
+  const overhang = cardWidth > 0 ? stackOverhang(cardHeight) : 0;
   const threshold = commitThreshold(cardWidth || 320);
   // The placeholders share the cards' cut corner, so nothing squares off.
   const radius = (cardWidth || 320) * CORNER_RATIO;
@@ -446,6 +491,9 @@ export function TcgSwipeDeck({
           style={{
             perspective: PERSPECTIVE,
             transformStyle: "preserve-3d",
+            // Centring counts the margin, so the whole stack lands inside the
+            // stage rather than the front card alone.
+            marginBottom: overhang,
             ...(cardWidth > 0
               ? { width: cardWidth, height: cardHeight }
               : undefined),

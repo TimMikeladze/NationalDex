@@ -26,17 +26,35 @@ import { TcgCardImage } from "./tcg-card-image";
 // =============================================================================
 
 /** Commit distance, as a share of the card's width. */
-const COMMIT_RATIO = 0.3;
-const MIN_COMMIT = 64;
-const MAX_COMMIT = 170;
+const COMMIT_RATIO = 0.18;
+const MIN_COMMIT = 42;
+const MAX_COMMIT = 104;
 
 /**
  * Seconds of travel added to the released offset before deciding. A short,
- * fast flick reads as intent just as much as a long, slow drag does.
+ * fast flick reads as intent just as much as a long, slow drag does, and this
+ * is the lever that decides how much a flick is worth: at a fifth of a second
+ * of projected travel, a quick sweep commits from almost anywhere.
  */
-const VELOCITY_WEIGHT = 0.16;
+const VELOCITY_WEIGHT = 0.28;
 
-/** Degrees of tilt once a card is a full commit-distance across. */
+// -----------------------------------------------------------------------------
+// How it looks, which is deliberately not how it commits.
+//
+// These are measured against the card's own width rather than the commit
+// distance. Tying them together means making the deck more sensitive also makes
+// it rotate faster per pixel — the card starts snapping about under a slow drag
+// and reads as twitchy rather than responsive. A card should turn by the same
+// amount for the same movement of your thumb, however little of it it now takes
+// to let one go.
+// -----------------------------------------------------------------------------
+
+/** Travel, as a share of card width, that earns a full tilt. */
+const TURN_RATIO = 0.3;
+/** Travel, as a share of card width, that earns a full turn in depth. */
+const YAW_RATIO = 0.6;
+
+/** Degrees of tilt once a card is a full turn-distance across. */
 const MAX_TILT = 14;
 const MAX_TILT_CLAMP = 30;
 
@@ -71,13 +89,13 @@ export const CORNER_RATIO = 3.2 / 63;
 // =============================================================================
 
 /** Z distance between one card in the stack and the next. */
-const DEPTH_Z = 62;
+export const DEPTH_Z = 62;
 /**
  * How far down each card behind is pushed. It has to beat the height the
  * perspective shrink already takes off the bottom edge, or the stack hides
  * perfectly behind its own front card and stops reading as a stack at all.
  */
-const DEPTH_Y = 34;
+export const DEPTH_Y = 34;
 
 /** Z the card rises to under a finger — the "picked up" reading. */
 const LIFT_Z = 46;
@@ -265,28 +283,20 @@ export function DeckCard({
 
   // --- How the card sits in the hand ---------------------------------------
 
+  const turn = width * TURN_RATIO;
+  const yawAt = width * YAW_RATIO;
+
   const tilt = useTransform<number, number>([x, grabDir], ([latestX, dir]) =>
     reduceMotion
       ? 0
-      : clamp(
-          (latestX / threshold) * MAX_TILT,
-          -MAX_TILT_CLAMP,
-          MAX_TILT_CLAMP,
-        ) * dir,
+      : clamp((latestX / turn) * MAX_TILT, -MAX_TILT_CLAMP, MAX_TILT_CLAMP) *
+        dir,
   );
 
   // Turning in depth as well as in plane. The leading edge falls away, which is
   // what a real card held between two fingers does.
-  const yaw = useTransform(
-    x,
-    [-threshold * 2, 0, threshold * 2],
-    [-MAX_YAW, 0, MAX_YAW],
-  );
-  const pitch = useTransform(
-    y,
-    [-threshold * 2, 0, threshold * 2],
-    [-MAX_PITCH, 0, MAX_PITCH],
-  );
+  const yaw = useTransform(x, [-yawAt, 0, yawAt], [-MAX_YAW, 0, MAX_YAW]);
+  const pitch = useTransform(y, [-yawAt, 0, yawAt], [-MAX_PITCH, 0, MAX_PITCH]);
 
   const liftZ = useTransform(lift, (l) => l * LIFT_Z);
 
@@ -338,12 +348,12 @@ export function DeckCard({
   // as laminated. It never fully leaves, so a card at rest still looks printed.
   const glossX = useTransform(
     x,
-    [-threshold * 2, threshold * 2],
+    [-yawAt, yawAt],
     [width * 0.85, -width * 0.85],
   );
   const glossOpacity = useTransform(
     x,
-    [-threshold * 1.6, 0, threshold * 1.6],
+    [-yawAt * 0.8, 0, yawAt * 0.8],
     [0.5, 0.08, 0.5],
   );
 
