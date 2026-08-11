@@ -74,9 +74,9 @@ export function ComparisonPageClient() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-3 flex-wrap">
-          <h1 className="text-lg font-medium">
+          <h2 className="text-lg font-medium">
             comparing {comparison.length} pokemon
-          </h1>
+          </h2>
           <GenerationScope
             activeGeneration={preferredGeneration}
             subject="Comparison"
