@@ -2,12 +2,7 @@
 
 import { X } from "lucide-react";
 import Link from "next/link";
-import {
-  parseAsArrayOf,
-  parseAsInteger,
-  parseAsString,
-  useQueryStates,
-} from "nuqs";
+import { useQueryStates } from "nuqs";
 import {
   Suspense,
   useCallback,
@@ -33,7 +28,7 @@ import {
 } from "@/hooks/use-tcg";
 import { resolveSpecies, toID } from "@/lib/pkmn";
 import { cn } from "@/lib/utils";
-import type { TcgLanguage, TcgVariantKey } from "@/types/tcg";
+import type { TcgLanguage } from "@/types/tcg";
 import {
   DEFAULT_TCG_LANGUAGE,
   gameForSetId,
@@ -44,10 +39,11 @@ import {
 } from "@/types/tcg";
 import { CardsFilterBar } from "./filter-bar";
 import {
+  CARD_FILTER_PARSERS,
   type CardFilterUpdate,
   type GameFilter,
   isGameFilter,
-  SORT_OPTIONS,
+  toCardSearchFilters,
 } from "./filters";
 
 export function CardsPageClient() {
@@ -60,29 +56,10 @@ export function CardsPageClient() {
 
 /** Filters live in the URL, so a card search can be shared or bookmarked. */
 function CardsBrowser() {
-  const [filters, setQueryFilters] = useQueryStates(
-    {
-      q: parseAsString.withDefault(""),
-      game: parseAsString.withDefault("all"),
-      set: parseAsString.withDefault(""),
-      types: parseAsArrayOf(parseAsString).withDefault([]),
-      rarities: parseAsArrayOf(parseAsString).withDefault([]),
-      category: parseAsString.withDefault(""),
-      stage: parseAsString.withDefault(""),
-      suffix: parseAsString.withDefault(""),
-      regulationMark: parseAsString.withDefault(""),
-      trainerType: parseAsString.withDefault(""),
-      energyType: parseAsString.withDefault(""),
-      variants: parseAsArrayOf(parseAsString).withDefault([]),
-      illustrator: parseAsString.withDefault(""),
-      hpMin: parseAsInteger,
-      hpMax: parseAsInteger,
-      dexId: parseAsInteger,
-      sort: parseAsString.withDefault("default"),
-      lang: parseAsString.withDefault(DEFAULT_TCG_LANGUAGE),
-    },
-    { history: "replace", clearOnDefault: true },
-  );
+  const [filters, setQueryFilters] = useQueryStates(CARD_FILTER_PARSERS, {
+    history: "replace",
+    clearOnDefault: true,
+  });
 
   const setFilters = useCallback(
     (next: CardFilterUpdate) => {
@@ -108,56 +85,9 @@ function CardsBrowser() {
   const { data: trainerTypes } = useTcgTrainerTypes(language);
   const { data: energyTypes } = useTcgEnergyTypes(language);
 
-  const sortOption =
-    SORT_OPTIONS.find((option) => option.value === filters.sort) ??
-    SORT_OPTIONS[0];
-
   const game: GameFilter = isGameFilter(filters.game) ? filters.game : "all";
 
-  const searchFilters = useMemo(
-    () => ({
-      name: filters.q || undefined,
-      game: game === "all" ? null : game,
-      setIds: filters.set ? [filters.set] : undefined,
-      types: filters.types.length > 0 ? filters.types : undefined,
-      rarities: filters.rarities.length > 0 ? filters.rarities : undefined,
-      category: filters.category || null,
-      stage: filters.stage || null,
-      suffix: filters.suffix || null,
-      regulationMark: filters.regulationMark || null,
-      trainerType: filters.trainerType || null,
-      energyType: filters.energyType || null,
-      variants:
-        filters.variants.length > 0
-          ? (filters.variants as TcgVariantKey[])
-          : undefined,
-      illustrator: filters.illustrator || null,
-      dexId: filters.dexId,
-      hpMin: filters.hpMin,
-      hpMax: filters.hpMax,
-      sortField: sortOption.field,
-      sortOrder: sortOption.order,
-    }),
-    [
-      filters.q,
-      filters.set,
-      filters.types,
-      filters.rarities,
-      filters.category,
-      filters.stage,
-      filters.suffix,
-      filters.regulationMark,
-      filters.trainerType,
-      filters.energyType,
-      filters.variants,
-      filters.illustrator,
-      filters.dexId,
-      filters.hpMin,
-      filters.hpMax,
-      game,
-      sortOption,
-    ],
-  );
+  const searchFilters = useMemo(() => toCardSearchFilters(filters), [filters]);
 
   const {
     cards,

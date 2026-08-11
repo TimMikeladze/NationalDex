@@ -1,7 +1,15 @@
 "use client";
 
-import { ChevronsUpDown, Layers, ListFilter, Search, X } from "lucide-react";
+import {
+  ChevronsUpDown,
+  Layers,
+  ListFilter,
+  Search,
+  WalletCards,
+  X,
+} from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Chip, FilterSection } from "@/components/tcg/tcg-chip";
 import { Button } from "@/components/ui/button";
@@ -94,6 +102,11 @@ export function CardsFilterBar({
   collapsed = false,
 }: CardsFilterBarProps) {
   const [searchInput, setSearchInput] = useState(filters.q);
+  const searchParams = useSearchParams();
+  const query = searchParams.toString();
+  const swipeHref = query
+    ? `/cards/swipe?${query}`
+    : withTcgLanguage("/cards/swipe", language);
 
   // Typing shouldn't fire a request per keystroke.
   useEffect(() => {
@@ -525,6 +538,17 @@ export function CardsFilterBar({
               </div>
             </PopoverContent>
           </Popover>
+
+          {/* The same search, dealt one card at a time — so the whole filter
+              state carries over rather than being set up twice. */}
+          <Link
+            href={swipeHref}
+            className="p-1 text-muted-foreground transition-colors hover:text-foreground"
+            title="Swipe through these cards"
+            aria-label="Swipe through these cards"
+          >
+            <WalletCards className="size-4" />
+          </Link>
 
           <Link
             href={withTcgLanguage("/cards/sets", language)}

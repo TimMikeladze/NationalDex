@@ -24,6 +24,9 @@ interface AddToListDialogProps {
   itemName: string;
   itemSprite?: string | null;
   trigger?: React.ReactNode;
+  /** Set both to drive the dialog from outside — e.g. opened by a gesture. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function AddToListDialog({
@@ -32,10 +35,18 @@ export function AddToListDialog({
   itemName,
   itemSprite,
   trigger,
+  open,
+  onOpenChange,
 }: AddToListDialogProps) {
   const { lists, isLoaded, createList, addItem, removeItem, isInList } =
     useLists();
-  const [isOpen, setIsOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const isControlled = open !== undefined;
+  const isOpen = isControlled ? open : uncontrolledOpen;
+  const setIsOpen = (next: boolean) => {
+    if (!isControlled) setUncontrolledOpen(next);
+    onOpenChange?.(next);
+  };
   const [isCreating, setIsCreating] = useState(false);
   const [newListName, setNewListName] = useState("");
 
@@ -67,17 +78,20 @@ export function AddToListDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        {trigger || (
-          <button
-            type="button"
-            className="text-muted-foreground hover:text-foreground transition-colors"
-            title="Add to list"
-          >
-            <ListPlus className="size-4" />
-          </button>
-        )}
-      </DialogTrigger>
+      {/* A dialog opened from outside has no trigger of its own to render */}
+      {!isControlled && (
+        <DialogTrigger asChild>
+          {trigger || (
+            <button
+              type="button"
+              className="text-muted-foreground hover:text-foreground transition-colors"
+              title="Add to list"
+            >
+              <ListPlus className="size-4" />
+            </button>
+          )}
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>add to list</DialogTitle>
