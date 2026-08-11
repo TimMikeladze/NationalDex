@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Cards",
+  title: "Pokémon Cards — TCG & TCG Pocket Search",
   description:
     "Browse every Pokemon trading card — the physical TCG and Pokemon TCG Pocket. Filter by set, energy type, rarity, stage and HP, and jump straight from a card to the Pokemon it depicts.",
   alternates: {

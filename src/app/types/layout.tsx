@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Types",
+  title: "Pokémon Type Chart — Weaknesses & Strengths",
   description:
     "Explore all Pokemon types — view type matchups, strengths, weaknesses, and resistances at a glance.",
   alternates: {

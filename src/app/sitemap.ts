@@ -7,10 +7,18 @@ import {
   getAllTypes,
   toID,
 } from "@/lib/pkmn";
+import { getAllRegions } from "@/lib/pokeapi";
+import { getTcgSeriesWithSets } from "@/lib/tcg";
 import { SITE_URL } from "@/lib/utils";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+/**
+ * `lastModified` is the build time rather than a per-page date: the dex data
+ * only changes when the app is rebuilt, so that is exactly when any of these
+ * pages can have changed.
+ */
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = SITE_URL;
+  const lastModified = new Date();
 
   const staticPages: MetadataRoute.Sitemap = [
     {
@@ -97,6 +105,26 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.6,
   }));
 
+  // Card sets and locations come from external catalogues. A failure there must
+  // not take the whole sitemap down with it, so each falls back to nothing.
+  const series = await getTcgSeriesWithSets().catch(() => []);
+  const cardSetPages: MetadataRoute.Sitemap = series
+    .flatMap((serie) => serie.sets ?? [])
+    .map((set) => ({
+      url: `${baseUrl}/cards/sets/${set.id.toLowerCase()}`,
+      changeFrequency: "monthly" as const,
+      priority: 0.5,
+    }));
+
+  const regions = await getAllRegions().catch(() => []);
+  const locationPages: MetadataRoute.Sitemap = regions
+    .flatMap((region) => region.locations)
+    .map((location) => ({
+      url: `${baseUrl}/locations/${location.name}`,
+      changeFrequency: "monthly" as const,
+      priority: 0.3,
+    }));
+
   return [
     ...staticPages,
     ...pokemonPages,
@@ -104,5 +132,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...abilityPages,
     ...itemPages,
     ...typePages,
-  ];
+    ...cardSetPages,
+    ...locationPages,
+  ].map((entry) => ({ lastModified, ...entry }));
 }

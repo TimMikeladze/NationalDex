@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Moves",
+  title: "Pokémon Moves — Power, Accuracy & Learnsets",
   description:
     "Browse all Pokemon moves — filter by type, category, power, accuracy, and PP. Find the perfect moves for your team.",
   alternates: {

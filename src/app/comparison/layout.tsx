@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Compare Pokemon",
+  title: "Compare Pokémon Side by Side",
   description:
     "Compare Pokemon side by side — stats, types, abilities, and more. Find the best Pokemon for your team.",
   alternates: {

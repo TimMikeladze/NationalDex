@@ -1185,7 +1185,7 @@ function AbilitiesSection({
       <Label>abilities</Label>
       <div className="flex flex-wrap gap-2">
         {pokemon.abilities.map((ability) => {
-          const slug = ability.name.toLowerCase().replace(/\s+/g, "-");
+          const slug = toID(ability.name);
           return (
             <Link
               key={ability.name}
@@ -1324,7 +1324,7 @@ function MoveGroup({
       <Label>{title}</Label>
       <div className="space-y-1">
         {moves.map((move, idx) => {
-          const slug = move.name.toLowerCase().replace(/\s+/g, "-");
+          const slug = toID(move.name);
           return (
             <Tooltip key={`${move.name}-${idx}`}>
               <TooltipTrigger asChild>

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Who's That Pokemon?",
+  title: "Who's That Pokémon? — Silhouette Quiz",
   description:
     "Test your Pokemon knowledge with the classic guessing game. Can you identify every Pokemon from their silhouette?",
   alternates: {

@@ -42,6 +42,20 @@ export const metadata: Metadata = {
     "pokemon comparison",
   ],
   manifest: "/manifest.json",
+  applicationName: "NationalDex",
+  // `max-image-preview: large` is what lets Google show a Pokemon's artwork
+  // next to the result instead of a thumbnail or nothing at all.
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
   openGraph: {
     siteName: "NationalDex",
     type: "website",

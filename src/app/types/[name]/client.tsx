@@ -77,12 +77,12 @@ export function TypeDetailClient({ name }: { name: string }) {
         {/* Header */}
         <section className="space-y-3">
           <div className="flex items-center gap-3 flex-wrap">
-            <span
+            <h1
               className="text-sm px-3 py-1.5 uppercase tracking-wider rounded font-medium"
               style={{ backgroundColor: color, color: "#fff" }}
             >
-              {type.name}
-            </span>
+              {type.name} type
+            </h1>
             <AddToListDialog
               itemType="type"
               itemId={name}
