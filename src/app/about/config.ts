@@ -2,11 +2,13 @@ import type { LucideIcon } from "lucide-react";
 import {
   Database,
   Download,
+  Gamepad2,
   GitCompareArrows,
   Github,
   Heart,
   HelpCircle,
   Layers,
+  Library,
   ListChecks,
   MapPin,
   Moon,
@@ -82,7 +84,7 @@ export const aboutConfig: AboutPageConfig = {
     title: "NationalDex",
     tagline: "The Pokedex App",
     description:
-      "A fast, beautiful, and feature-rich Pokedex built for trainers who want instant access to everything Pokemon.",
+      "A fast, beautiful, and feature-rich Pokedex built for trainers who want instant access to everything Pokemon — games and trading cards alike.",
     cta: {
       label: "Explore the Dex",
       href: "/",
@@ -94,14 +96,14 @@ export const aboutConfig: AboutPageConfig = {
       icon: Search,
       title: "Instant Search",
       description:
-        "Find any Pokemon, move, ability, or item in milliseconds with smart search.",
+        "Find any Pokemon, move, ability, item — or trading card — in milliseconds with smart search.",
       accent: "#6366f1",
     },
     {
       icon: Heart,
       title: "Favorites",
       description:
-        "Save your favorite Pokemon for quick access anytime, anywhere.",
+        "Save favorite Pokemon and trading cards for quick access anytime, anywhere.",
       accent: "#ec4899",
     },
     {
@@ -117,6 +119,13 @@ export const aboutConfig: AboutPageConfig = {
       description:
         "Side-by-side stat comparisons to find the perfect fit for your team.",
       accent: "#f97316",
+    },
+    {
+      icon: Gamepad2,
+      title: "Play by Game",
+      description:
+        "Lock the dex to a single game — stats, learnsets, sprites and availability all follow the generation you picked.",
+      accent: "#3b82f6",
     },
     {
       icon: MapPin,
@@ -159,10 +168,17 @@ export const aboutConfig: AboutPageConfig = {
       accent: "#a855f7",
     },
     {
+      icon: Library,
+      title: "Card Sets",
+      description:
+        "Every set from both games, newest first — expansion symbols, release dates and full card checklists.",
+      accent: "#f59e0b",
+    },
+    {
       icon: Layers,
       title: "Trading Cards",
       description:
-        "Browse every card from the Pokemon TCG and TCG Pocket — filter by set, energy type, rarity and HP, favorite them, and jump between a card and the Pokemon it depicts.",
+        "Browse every card from the Pokemon TCG and TCG Pocket. Filter by set, energy type, rarity, HP, stage, regulation mark, illustrator or printing, sort however you like, zoom into the artwork, favorite cards, and jump between a card and the Pokemon it depicts.",
       accent: "#0ea5e9",
     },
     {
@@ -183,7 +199,7 @@ export const aboutConfig: AboutPageConfig = {
       icon: Download,
       title: "Data Backup",
       description:
-        "Export and import all your data — favorites, teams, lists, and settings.",
+        "Export and import all your data — favorite Pokemon and cards, teams, lists, and settings.",
       accent: "#10b981",
     },
     {
