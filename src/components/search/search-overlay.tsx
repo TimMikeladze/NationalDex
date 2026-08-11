@@ -1,8 +1,15 @@
 "use client";
 
-import { FlaskConical, Loader2, Sparkles, Swords, Zap } from "lucide-react";
+import {
+  FlaskConical,
+  Layers,
+  Loader2,
+  Sparkles,
+  Swords,
+  Zap,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNav } from "@/components/navigation/nav-provider";
 import {
   CommandDialog,
@@ -13,8 +20,14 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { useSearchIndex } from "@/hooks/use-search-index";
+import { useTcgCardQuickSearch } from "@/hooks/use-tcg";
 import { TYPE_COLORS } from "@/types/pokemon";
-import type { SearchResult, SearchResultType } from "@/types/search";
+import type {
+  CardSearchResult,
+  SearchResult,
+  SearchResultType,
+} from "@/types/search";
+import { cardImageUrl, formatLocalId } from "@/types/tcg";
 
 const TYPE_LABELS: Record<SearchResultType, string> = {
   pokemon: "Pokémon",
@@ -22,6 +35,7 @@ const TYPE_LABELS: Record<SearchResultType, string> = {
   ability: "Abilities",
   type: "Types",
   item: "Items",
+  card: "Cards",
 };
 
 const TYPE_ICONS: Record<SearchResultType, React.ReactNode> = {
@@ -30,19 +44,44 @@ const TYPE_ICONS: Record<SearchResultType, React.ReactNode> = {
   ability: <Sparkles className="size-4" />,
   type: <Zap className="size-4" />,
   item: null, // Use sprite instead
+  card: null, // Use card art instead
 };
 
 export function SearchOverlay() {
   const { searchOpen, setSearchOpen } = useNav();
   const router = useRouter();
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const { search, isLoading, isReady, totalItems } = useSearchIndex();
+
+  // The card database lives behind an API, so typing is debounced before it
+  // turns into a request.
+  useEffect(() => {
+    const timeout = setTimeout(() => setDebouncedQuery(query), 250);
+    return () => clearTimeout(timeout);
+  }, [query]);
+
+  const { data: cardMatches, isFetching: cardsFetching } =
+    useTcgCardQuickSearch(debouncedQuery);
 
   // Search results
   const results = useMemo(() => {
     if (!isReady) return [];
     return search(query, 50);
   }, [query, isReady, search]);
+
+  const cardResults = useMemo<CardSearchResult[]>(
+    () =>
+      (cardMatches ?? []).map((card) => ({
+        id: `card-${card.id}`,
+        name: card.name,
+        type: "card",
+        url: `/cards/${card.id.toLowerCase()}`,
+        sprite: cardImageUrl(card.image, "low"),
+        localId: card.localId,
+      })),
+    [cardMatches],
+  );
 
   // Group results by type
   const groupedResults = useMemo(() => {
@@ -52,6 +91,7 @@ export function SearchOverlay() {
       ability: [],
       type: [],
       item: [],
+      card: cardResults,
     };
 
     for (const result of results) {
@@ -61,6 +101,7 @@ export function SearchOverlay() {
     // Return only non-empty groups, in preferred order
     const order: SearchResultType[] = [
       "pokemon",
+      "card",
       "move",
       "ability",
       "type",
@@ -73,7 +114,7 @@ export function SearchOverlay() {
         label: TYPE_LABELS[type],
         results: groups[type].slice(0, 10), // Limit per category
       }));
-  }, [results]);
+  }, [results, cardResults]);
 
   const handleSelect = (result: SearchResult) => {
     setSearchOpen(false);
@@ -81,13 +122,15 @@ export function SearchOverlay() {
     router.push(result.url);
   };
 
+  const hasResults = results.length > 0 || cardResults.length > 0;
+
   return (
     <CommandDialog open={searchOpen} onOpenChange={setSearchOpen}>
       <CommandInput
         placeholder={
           isLoading
             ? "Loading search index..."
-            : `Search ${totalItems.toLocaleString()} items...`
+            : `Search ${totalItems.toLocaleString()} items and every card...`
         }
         value={query}
         onValueChange={setQuery}
@@ -99,7 +142,7 @@ export function SearchOverlay() {
             Building search index...
           </div>
         )}
-        {isReady && results.length === 0 && query && (
+        {isReady && !hasResults && query && !cardsFetching && (
           <CommandEmpty>No results found for "{query}"</CommandEmpty>
         )}
         {groupedResults.map((group) => (
@@ -107,7 +150,7 @@ export function SearchOverlay() {
             {group.results.map((result) => (
               <CommandItem
                 key={result.id}
-                value={`${result.type}-${result.name}`}
+                value={`${result.type}-${result.name}-${result.id}`}
                 onSelect={() => handleSelect(result)}
                 className="flex items-center gap-3"
               >
@@ -133,6 +176,20 @@ function ResultIcon({ result }: { result: SearchResult }) {
           alt={result.name}
           className="size-6 pixelated"
         />
+      );
+    case "card":
+      return result.sprite ? (
+        // biome-ignore lint/performance/noImgElement: external card art URLs
+        <img
+          src={result.sprite}
+          alt={result.name}
+          className="h-8 w-6 object-contain"
+          onError={(e) => {
+            e.currentTarget.style.visibility = "hidden";
+          }}
+        />
+      ) : (
+        <Layers className="size-4 text-muted-foreground" />
       );
     case "item":
       return result.sprite ? (
@@ -168,6 +225,14 @@ function ResultMeta({ result }: { result: SearchResult }) {
       return (
         <span className="ml-auto text-xs text-muted-foreground tabular-nums">
           #{result.pokemonId.toString().padStart(3, "0")}
+        </span>
+      );
+    case "card":
+      // The set-prefixed id is long and unreadable mid-list; the printed
+      // number is what identifies a card at a glance.
+      return (
+        <span className="ml-auto text-xs text-muted-foreground tabular-nums">
+          {result.localId ? `#${formatLocalId(result.localId)}` : null}
         </span>
       );
     case "type":

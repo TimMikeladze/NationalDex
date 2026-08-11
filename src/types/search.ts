@@ -1,6 +1,12 @@
 import type { ItemPocket, PokemonType } from "./pokemon";
 
-export type SearchResultType = "pokemon" | "move" | "ability" | "type" | "item";
+export type SearchResultType =
+  | "pokemon"
+  | "move"
+  | "ability"
+  | "type"
+  | "item"
+  | "card";
 
 export interface SearchResultBase {
   id: string;
@@ -39,12 +45,22 @@ export interface ItemSearchResult extends SearchResultBase {
   pocket?: ItemPocket;
 }
 
+/** A trading card. Matches come from the card API rather than the local index. */
+export interface CardSearchResult extends SearchResultBase {
+  type: "card";
+  /** Rendered image URL, or null when the card has no scan. */
+  sprite?: string | null;
+  /** Card number within its set. */
+  localId?: string;
+}
+
 export type SearchResult =
   | PokemonSearchResult
   | MoveSearchResult
   | AbilitySearchResult
   | TypeSearchResult
-  | ItemSearchResult;
+  | ItemSearchResult
+  | CardSearchResult;
 
 export interface SearchIndexState {
   isLoading: boolean;
@@ -55,6 +71,7 @@ export interface SearchIndexState {
     abilities: boolean;
     types: boolean;
     items: boolean;
+    cards: boolean;
   };
   totalItems: number;
 }

@@ -1,8 +1,14 @@
-export type ListItemType = "pokemon" | "move" | "ability" | "item" | "type";
+export type ListItemType =
+  | "pokemon"
+  | "move"
+  | "ability"
+  | "item"
+  | "type"
+  | "card";
 
 export interface ListItem {
   type: ListItemType;
-  id: string; // For pokemon: numeric id, for others: slug name
+  id: string; // For pokemon: numeric id, for cards: card id, for others: slug name
   name: string;
   sprite?: string | null; // Optional sprite URL
   addedAt: number;
@@ -23,6 +29,7 @@ export const LIST_ITEM_TYPE_LABELS: Record<ListItemType, string> = {
   ability: "Ability",
   item: "Item",
   type: "Type",
+  card: "Card",
 };
 
 export const LIST_ITEM_TYPE_COLORS: Record<ListItemType, string> = {
@@ -31,4 +38,5 @@ export const LIST_ITEM_TYPE_COLORS: Record<ListItemType, string> = {
   ability: "#8B5CF6", // purple
   item: "#F59E0B", // amber
   type: "#22C55E", // green
+  card: "#0EA5E9", // sky
 };

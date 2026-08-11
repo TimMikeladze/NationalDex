@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { PokemonImage } from "@/components/pokemon/pokemon-image";
 import { TypeBadge } from "@/components/pokemon/type-badge";
+import { TcgCardGrid } from "@/components/tcg";
 import { Card } from "@/components/ui/card";
 import {
   Select,
@@ -14,15 +15,125 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useCardFavorites } from "@/hooks/use-card-favorites";
 import { useFavorites } from "@/hooks/use-favorites";
 import { useGenerationPreference } from "@/hooks/use-generation-preference";
 import { usePokemon } from "@/hooks/use-pokemon";
+import { usePocketSetIds } from "@/hooks/use-tcg";
 import { toID } from "@/lib/pkmn";
 import { cn } from "@/lib/utils";
 
 type SortOption = "added" | "dex" | "name";
+type CardSortOption = "added" | "name";
 
 export default function FavoritesPage() {
+  const { favoriteCards, isLoaded: cardsLoaded } = useCardFavorites();
+
+  return (
+    <Tabs defaultValue="pokemon" className="p-4 md:p-6">
+      <TabsList className="mb-4">
+        <TabsTrigger value="pokemon">pokemon</TabsTrigger>
+        <TabsTrigger value="cards">
+          cards
+          {cardsLoaded && favoriteCards.length > 0
+            ? ` (${favoriteCards.length})`
+            : ""}
+        </TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="pokemon">
+        <FavoritePokemonTab />
+      </TabsContent>
+
+      <TabsContent value="cards">
+        <FavoriteCardsTab />
+      </TabsContent>
+    </Tabs>
+  );
+}
+
+function FavoriteCardsTab() {
+  const { favoriteCards, isLoaded, clearFavoriteCards } = useCardFavorites();
+  const pocketSetIds = usePocketSetIds();
+  const [sortBy, setSortBy] = useState<CardSortOption>("added");
+
+  const sortedCards = useMemo(() => {
+    const cards = [...favoriteCards];
+    if (sortBy === "name") {
+      return cards.sort((a, b) => a.name.localeCompare(b.name));
+    }
+    // Most recently added first
+    return cards.sort((a, b) => b.addedAt - a.addedAt);
+  }, [favoriteCards, sortBy]);
+
+  if (!isLoaded) {
+    return <TcgCardGrid cards={[]} isLoading />;
+  }
+
+  if (favoriteCards.length === 0) {
+    return (
+      <div className="py-16 text-center">
+        <p className="text-sm text-muted-foreground">no favorite cards yet</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          click the heart on any{" "}
+          <Link href="/cards" className="underline">
+            trading card
+          </Link>{" "}
+          to save it
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-4">
+        <p className="text-xs text-muted-foreground">
+          {favoriteCards.length} card{favoriteCards.length !== 1 ? "s" : ""}
+        </p>
+        <div className="flex items-center gap-2">
+          <ArrowUpDown className="size-3 text-muted-foreground" />
+          <Select
+            value={sortBy}
+            onValueChange={(v) => setSortBy(v as CardSortOption)}
+          >
+            <SelectTrigger className="h-8 w-36">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent align="end">
+              <SelectItem value="added">
+                <span className="flex items-center gap-2">
+                  <Hash className="size-3" />
+                  Recently Added
+                </span>
+              </SelectItem>
+              <SelectItem value="name">
+                <span className="flex items-center gap-2">
+                  <ArrowDownAZ className="size-3" />
+                  Name
+                </span>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          <button
+            type="button"
+            onClick={() => {
+              if (confirm("Remove every favorite card?")) clearFavoriteCards();
+            }}
+            className="text-xs text-muted-foreground transition-colors hover:text-destructive"
+          >
+            clear
+          </button>
+        </div>
+      </div>
+
+      <TcgCardGrid cards={sortedCards} pocketSetIds={pocketSetIds} />
+    </div>
+  );
+}
+
+function FavoritePokemonTab() {
   const { favorites, isLoaded, removeFavorite } = useFavorites();
   const [sortBy, setSortBy] = useState<SortOption>("added");
 
@@ -38,7 +149,7 @@ export default function FavoritesPage() {
   }, [favorites, sortBy]);
 
   return (
-    <div className="p-4 md:p-6">
+    <>
       {!isLoaded ? (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -113,7 +224,7 @@ export default function FavoritesPage() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
