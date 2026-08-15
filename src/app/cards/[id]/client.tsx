@@ -38,6 +38,7 @@ import {
   formatReleaseDate,
   gameForCardId,
   mergedVariants,
+  setIdFromCardId,
   TCG_VARIANT_KEYS,
   variantFullLabel,
   variantKey,
@@ -113,6 +114,10 @@ export function CardDetailClient({
       ) {
         return;
       }
+
+      // An open dialog owns the arrow keys — the enlarged scan should not
+      // leave for the next card behind it.
+      if (document.querySelector('[role="dialog"][data-state="open"]')) return;
 
       if (event.key === "ArrowLeft" && previousCard) {
         router.push(
@@ -241,21 +246,23 @@ export function CardDetailClient({
     <div className="p-4 md:p-6">
       {/* Same twelve-column, full-bleed grid a Pokemon page uses, so the two
           detail pages line up when you move between them. */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-12 md:gap-8">
+      {/* `auto` on the artwork row keeps the print details directly beneath the
+          scan — without it the taller card text stretches row one and opens a
+          hole under the artwork. */}
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-12 md:grid-rows-[auto_1fr] md:gap-8">
         {/* Artwork first everywhere; on desktop it stays put while text scrolls */}
         <div className="order-1 md:col-start-1 md:row-start-1 md:col-span-5 lg:col-span-5 xl:col-span-5 2xl:col-span-4">
           <TcgCardZoom
-            image={card.image}
-            alt={card.name}
+            card={card}
+            language={language}
             setName={card.set.name}
-            localId={card.localId}
-            className="mx-auto max-w-[17rem] sm:max-w-xs md:sticky md:top-4 md:mx-0 md:max-w-sm"
+            className="mx-auto max-w-[17rem] sm:max-w-xs md:mx-0 md:max-w-sm lg:max-w-[24rem] xl:max-w-[26rem] 2xl:max-w-[30rem]"
           />
         </div>
 
         {/* Print details. On a phone they follow the card's own text, which is
             what someone holding the card came to read. */}
-        <div className="order-3 md:col-start-1 md:row-start-2 md:col-span-5 lg:col-span-5 xl:col-span-5 2xl:col-span-4">
+        <div className="order-3 self-start md:col-start-1 md:row-start-2 md:col-span-5 lg:col-span-5 xl:col-span-5 2xl:col-span-4">
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-px overflow-hidden border bg-border text-center">
               <Fact label="number">
@@ -414,7 +421,7 @@ export function CardDetailClient({
                       </span>
                     </div>
                     {ability.effect && (
-                      <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+                      <p className="mt-1.5 max-w-[75ch] text-xs leading-relaxed text-muted-foreground">
                         {ability.effect}
                       </p>
                     )}
@@ -442,7 +449,7 @@ export function CardDetailClient({
                       )}
                     </div>
                     {attack.effect && (
-                      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                      <p className="mt-2 max-w-[75ch] text-xs leading-relaxed text-muted-foreground">
                         {attack.effect}
                       </p>
                     )}
@@ -499,21 +506,23 @@ export function CardDetailClient({
               <SectionLabel>
                 {card.trainerType ?? card.category} effect
               </SectionLabel>
-              <p className="text-sm leading-relaxed">{card.effect}</p>
+              <p className="max-w-[75ch] text-sm leading-relaxed">
+                {card.effect}
+              </p>
             </section>
           )}
 
           {card.item && (
             <section className="space-y-2">
               <SectionLabel>held item — {card.item.name}</SectionLabel>
-              <p className="text-sm leading-relaxed text-muted-foreground">
+              <p className="max-w-[75ch] text-sm leading-relaxed text-muted-foreground">
                 {card.item.effect}
               </p>
             </section>
           )}
 
           {card.description && (
-            <p className="border-l-2 pl-3 text-sm italic leading-relaxed text-muted-foreground">
+            <p className="max-w-[75ch] border-l-2 pl-3 text-sm italic leading-relaxed text-muted-foreground">
               {card.description}
             </p>
           )}
@@ -710,7 +719,7 @@ function VariantRow({
     variant.type,
   );
   const searchParams = new URLSearchParams({
-    set: cardId.split("-").slice(0, -1).join("-"),
+    set: setIdFromCardId(cardId),
     variants: variant.type,
   });
 

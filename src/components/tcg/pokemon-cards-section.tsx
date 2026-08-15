@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useCardsByDexId, usePocketSetIds } from "@/hooks/use-tcg";
 import type { TcgGame } from "@/types/tcg";
 import { TCG_GAME_FULL_LABELS, TCG_GAME_LABELS } from "@/types/tcg";
+import { TcgCardLightbox } from "./tcg-card-lightbox";
 import { TcgCardTile } from "./tcg-card-tile";
 import { Chip, SectionLabel } from "./tcg-chip";
 
@@ -39,6 +40,7 @@ export function PokemonCardsSection({
   const pocketSetIds = usePocketSetIds();
   const { cards, byGame, isLoading, isError } = useCardsByDexId(dexId);
   const [game, setGame] = useState<GameFilter>("all");
+  const [peekIndex, setPeekIndex] = useState<number | null>(null);
 
   const availableGames = useMemo(() => {
     const games: GameFilter[] = ["all"];
@@ -111,12 +113,13 @@ export function PokemonCardsSection({
                   <Skeleton className="h-3 w-3/4" />
                 </div>
               ))
-            : shown.map((card) => (
+            : shown.map((card, index) => (
                 <TcgCardTile
                   key={card.id}
                   card={card}
                   pocketSetIds={pocketSetIds}
                   showGame={game === "all"}
+                  onPeek={() => setPeekIndex(index)}
                   className="w-28 shrink-0 snap-start sm:w-32"
                 />
               ))}
@@ -133,6 +136,21 @@ export function PokemonCardsSection({
           )}
         </div>
       </div>
+
+      <TcgCardLightbox
+        card={peekIndex === null ? null : (shown[peekIndex] ?? null)}
+        onClose={() => setPeekIndex(null)}
+        onPrevious={
+          peekIndex !== null && peekIndex > 0
+            ? () => setPeekIndex(peekIndex - 1)
+            : undefined
+        }
+        onNext={
+          peekIndex !== null && peekIndex < shown.length - 1
+            ? () => setPeekIndex(peekIndex + 1)
+            : undefined
+        }
+      />
     </section>
   );
 }

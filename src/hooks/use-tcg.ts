@@ -32,6 +32,7 @@ import {
   DEFAULT_TCG_LANGUAGE,
   FALLBACK_POCKET_SET_IDS,
   gameForCardId,
+  gameForSetId,
 } from "@/types/tcg";
 
 /** Card data is versioned by set release, so it can be cached aggressively. */
@@ -62,6 +63,50 @@ export function useTcgSets(language: TcgLanguage = DEFAULT_TCG_LANGUAGE) {
     staleTime: DAY,
     gcTime: DAY,
   });
+}
+
+/**
+ * How many of the newest sets a default browse opens on. Twelve is roughly the
+ * last two years of releases in the physical game, and every Pocket set there
+ * has ever been.
+ */
+export const LATEST_SET_COUNT = 12;
+
+/**
+ * Cards below which a set is a promo drop rather than an expansion. Promo sets
+ * are mostly uncatalogued — TCGdex has no scan for them — so letting them into
+ * the opening browse fills the first screen with stand-ins.
+ */
+const EXPANSION_MIN_CARDS = 30;
+
+/**
+ * The newest sets of a game, as ids to search within. Browsing the catalogue in
+ * printed order opens on 1999 promos — cards TCGdex mostly has no scan of —
+ * which is nobody's starting point. TCGdex lists sets oldest-first, so the
+ * newest ones are the tail.
+ *
+ * `isReady` is false until the set list has arrived: a search fired before then
+ * would be the unscoped one, and its results would flash on screen.
+ */
+export function useLatestSetIds(
+  game: "all" | TcgGame,
+  language: TcgLanguage = DEFAULT_TCG_LANGUAGE,
+  count = LATEST_SET_COUNT,
+) {
+  const { data: sets } = useTcgSets(language);
+  const pocketSetIds = usePocketSetIds(language);
+
+  return useMemo(() => {
+    if (!sets) return { setIds: [] as string[], isReady: false };
+
+    const scoped = sets.filter((set) => {
+      if (set.cardCount.official < EXPANSION_MIN_CARDS) return false;
+      if (game === "all") return true;
+      return gameForSetId(set.id, pocketSetIds) === game;
+    });
+
+    return { setIds: scoped.slice(-count).map((set) => set.id), isReady: true };
+  }, [sets, game, pocketSetIds, count]);
 }
 
 export function useTcgSeriesWithSets(

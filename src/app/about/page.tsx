@@ -111,6 +111,40 @@ function Features() {
   );
 }
 
+/** One labelled list of who a part of the app is built on. */
+function CreditGroup({
+  label,
+  sources,
+}: {
+  label: string;
+  sources: DataSource[];
+}) {
+  return (
+    <div className="space-y-2">
+      <p className="text-[10px] text-muted-foreground/70 uppercase tracking-wider">
+        {label}
+      </p>
+      <dl className="space-y-1.5 text-[10px] text-muted-foreground/60 leading-relaxed">
+        {sources.map((source: DataSource) => (
+          <div key={source.label} className="flex flex-wrap gap-x-2 gap-y-0.5">
+            <dt className="shrink-0">
+              <a
+                href={source.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-2 hover:text-foreground transition-colors"
+              >
+                {source.label}
+              </a>
+            </dt>
+            <dd className="text-muted-foreground/50">{source.description}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
+
 function Footer() {
   const { footerLinks, attribution, contact } = aboutConfig;
 
@@ -172,36 +206,32 @@ function Footer() {
             )}
           </div>
         </div>
-        <div className="space-y-3">
-          <div className="space-y-2">
-            <p className="text-[10px] text-muted-foreground/70 uppercase tracking-wider">
-              credits
-            </p>
-            <dl className="space-y-1.5 text-[10px] text-muted-foreground/60 leading-relaxed">
-              {[...attribution.dataSources, ...attribution.spriteSources].map(
-                (source: DataSource) => (
-                  <div
-                    key={source.label}
-                    className="flex flex-wrap gap-x-2 gap-y-0.5"
-                  >
-                    <dt className="shrink-0">
-                      <a
-                        href={source.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="underline underline-offset-2 hover:text-foreground transition-colors"
-                      >
-                        {source.label}
-                      </a>
-                    </dt>
-                    <dd className="text-muted-foreground/50">
-                      {source.description}
-                    </dd>
-                  </div>
-                ),
-              )}
-            </dl>
+        <div className="space-y-6">
+          <CreditGroup
+            label="data and sprites"
+            sources={[...attribution.dataSources, ...attribution.spriteSources]}
+          />
+
+          {/* Card scans are somebody else's artwork, so where they come from
+              and what may be done with them is spelled out rather than filed
+              under a one-line credit. */}
+          <div className="space-y-3">
+            <CreditGroup
+              label="trading cards"
+              sources={attribution.cardSources}
+            />
+            <div className="space-y-2">
+              {attribution.cardNotes.map((note: string) => (
+                <p
+                  key={note}
+                  className="text-[10px] text-muted-foreground/50 leading-relaxed"
+                >
+                  {note}
+                </p>
+              ))}
+            </div>
           </div>
+
           <p className="text-[10px] text-muted-foreground/50 leading-relaxed">
             {attribution.disclaimer}
           </p>

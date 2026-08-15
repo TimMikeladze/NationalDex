@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import type { TcgCardBrief, TcgLanguage } from "@/types/tcg";
+import { TcgCardLightbox } from "./tcg-card-lightbox";
 import { TcgCardTile, TcgCardTileSkeleton } from "./tcg-card-tile";
 
 const SKELETON_KEYS = Array.from(
@@ -33,6 +35,11 @@ export function TcgCardGrid({
   emptyAction,
   className,
 }: TcgCardGridProps) {
+  // The grid doubles as a viewer: a card can be read full size and the rest of
+  // the results walked from there, without losing your place in the scroll.
+  const [peekIndex, setPeekIndex] = useState<number | null>(null);
+  const peeked = peekIndex === null ? null : (cards[peekIndex] ?? null);
+
   const gridClasses = cn(
     "grid grid-cols-2 gap-2 sm:grid-cols-3 md:gap-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8",
     className,
@@ -58,17 +65,36 @@ export function TcgCardGrid({
   }
 
   return (
-    <div className={gridClasses}>
-      {cards.map((card, index) => (
-        <TcgCardTile
-          key={card.id}
-          card={card}
-          pocketSetIds={pocketSetIds}
-          showGame={showGame}
-          language={language}
-          priority={index < 6}
-        />
-      ))}
-    </div>
+    <>
+      <div className={gridClasses}>
+        {cards.map((card, index) => (
+          <TcgCardTile
+            key={card.id}
+            card={card}
+            pocketSetIds={pocketSetIds}
+            showGame={showGame}
+            language={language}
+            priority={index < 6}
+            onPeek={() => setPeekIndex(index)}
+          />
+        ))}
+      </div>
+
+      <TcgCardLightbox
+        card={peeked}
+        language={language}
+        onClose={() => setPeekIndex(null)}
+        onPrevious={
+          peekIndex !== null && peekIndex > 0
+            ? () => setPeekIndex(peekIndex - 1)
+            : undefined
+        }
+        onNext={
+          peekIndex !== null && peekIndex < cards.length - 1
+            ? () => setPeekIndex(peekIndex + 1)
+            : undefined
+        }
+      />
+    </>
   );
 }

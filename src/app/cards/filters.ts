@@ -25,8 +25,47 @@ export interface CardFilterState {
   hpMax: number | null;
   dexId: number | null;
   sort: string;
+  /** How much of the catalogue is in play — the newest sets, or all of it. */
+  scope: string;
   /** Which language's catalogue is being browsed. */
   lang: string;
+}
+
+/**
+ * Browsing opens on the newest sets rather than on 1999 promos. Widening to the
+ * whole catalogue is one tap, and lives in the URL so the choice survives a
+ * share or a move between the grid and the deck.
+ */
+export type CardScope = "latest" | "all";
+
+export const CARD_SCOPE_OPTIONS: {
+  id: CardScope;
+  label: string;
+  title: string;
+}[] = [
+  {
+    id: "latest",
+    label: "Newest sets",
+    title: "Cards from the most recent expansions",
+  },
+  { id: "all", label: "All sets", title: "Every card ever printed" },
+];
+
+export function isCardScope(value: string): value is CardScope {
+  return value === "latest" || value === "all";
+}
+
+/**
+ * Whether narrowing to the newest sets means anything here. Asking for a set,
+ * a name or a Pokemon is asking about the whole catalogue, so those searches
+ * always run against all of it.
+ */
+export function scopeApplies(filters: CardFilterState): boolean {
+  return (
+    filters.set.length === 0 &&
+    filters.q.trim().length === 0 &&
+    filters.dexId === null
+  );
 }
 
 /** Null clears a filter, which is also how it leaves the URL. */
@@ -106,6 +145,7 @@ export const CARD_FILTER_PARSERS = {
   hpMax: parseAsInteger,
   dexId: parseAsInteger,
   sort: parseAsString.withDefault("default"),
+  scope: parseAsString.withDefault("latest"),
   lang: parseAsString.withDefault(DEFAULT_TCG_LANGUAGE),
 };
 
@@ -115,15 +155,33 @@ export function sortOptionFor(value: string) {
   );
 }
 
-/** Turns the URL's filter state into the query the card API is asked. */
-export function toCardSearchFilters(filters: CardFilterState): TcgCardFilters {
+/**
+ * Turns the URL's filter state into the query the card API is asked.
+ *
+ * `latestSetIds` is what the newest-sets scope searches within; leave it out to
+ * search the whole catalogue. It is only used where a scope makes sense — a
+ * name search or a chosen set always means the whole catalogue.
+ */
+export function toCardSearchFilters(
+  filters: CardFilterState,
+  latestSetIds?: string[],
+): TcgCardFilters {
   const game: GameFilter = isGameFilter(filters.game) ? filters.game : "all";
   const sort = sortOptionFor(filters.sort);
+  const scopedToLatest =
+    filters.scope !== "all" &&
+    scopeApplies(filters) &&
+    latestSetIds !== undefined &&
+    latestSetIds.length > 0;
 
   return {
     name: filters.q || undefined,
     game: game === "all" ? null : game,
-    setIds: filters.set ? [filters.set] : undefined,
+    setIds: filters.set
+      ? [filters.set]
+      : scopedToLatest
+        ? latestSetIds
+        : undefined,
     types: filters.types.length > 0 ? filters.types : undefined,
     rarities: filters.rarities.length > 0 ? filters.rarities : undefined,
     category: filters.category || null,

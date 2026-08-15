@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   CARDS_PER_PAGE,
+  useLatestSetIds,
   usePocketSetIds,
   useTcgCardSearch,
   useTcgEnergyTypes,
@@ -41,8 +42,11 @@ import { CardsFilterBar } from "./filter-bar";
 import {
   CARD_FILTER_PARSERS,
   type CardFilterUpdate,
+  type CardScope,
   type GameFilter,
+  isCardScope,
   isGameFilter,
+  scopeApplies,
   toCardSearchFilters,
 } from "./filters";
 
@@ -86,8 +90,23 @@ function CardsBrowser() {
   const { data: energyTypes } = useTcgEnergyTypes(language);
 
   const game: GameFilter = isGameFilter(filters.game) ? filters.game : "all";
+  const scope: CardScope = isCardScope(filters.scope)
+    ? filters.scope
+    : "latest";
 
-  const searchFilters = useMemo(() => toCardSearchFilters(filters), [filters]);
+  // A plain browse opens on the newest sets. Searching by name or asking for a
+  // set is asking about the whole catalogue, so the scope steps aside there.
+  const scopeMatters = scopeApplies(filters);
+  const scopeIsLive = scope === "latest" && scopeMatters;
+  const { setIds: latestSetIds, isReady: latestSetsReady } = useLatestSetIds(
+    game,
+    language,
+  );
+
+  const searchFilters = useMemo(
+    () => toCardSearchFilters(filters, scopeIsLive ? latestSetIds : undefined),
+    [filters, latestSetIds, scopeIsLive],
+  );
 
   const {
     cards,
@@ -97,7 +116,16 @@ function CardsBrowser() {
     hasNextPage,
     fetchNextPage,
     isError,
-  } = useTcgCardSearch(searchFilters, { language });
+  } = useTcgCardSearch(searchFilters, {
+    language,
+    // Firing before the set list lands would search everything and flash
+    // twenty-year-old promos onto the screen.
+    enabled: !scopeIsLive || latestSetsReady,
+  });
+
+  // Waiting on the set list reads as loading, because that is what it is: the
+  // search cannot be asked until the newest sets are known.
+  const isLoadingCards = isLoading || (scopeIsLive && !latestSetsReady);
 
   // Re-filtering keeps the old results on screen; dimming them says the list
   // being read is about to be replaced.
@@ -325,7 +353,7 @@ function CardsBrowser() {
     });
 
   const resultLabel =
-    isLoading && cards.length === 0
+    isLoadingCards && cards.length === 0
       ? "loading..."
       : `${cards.length}${hasNextPage ? "+" : ""} cards`;
 
@@ -336,6 +364,8 @@ function CardsBrowser() {
           filters={filters}
           setFilters={setFilters}
           game={game}
+          scope={scope}
+          scopeMatters={scopeMatters}
           sets={availableSets}
           selectedSet={selectedSet}
           language={language}
@@ -440,11 +470,25 @@ function CardsBrowser() {
               language={language}
               pocketSetIds={pocketSetIds}
               showGame={game === "all"}
-              isLoading={isLoading}
+              isLoading={isLoadingCards}
               skeletonCount={CARDS_PER_PAGE}
-              emptyMessage="No cards match these filters"
+              emptyMessage={
+                scopeIsLive
+                  ? "No cards in the newest sets match these filters"
+                  : "No cards match these filters"
+              }
               emptyAction={
-                panelFilterCount > 0 ? (
+                // Inside the newest sets, widening is the likelier fix — the
+                // filters may well have matches further back in the catalogue.
+                scopeIsLive ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setFilters({ scope: "all" })}
+                  >
+                    search every set
+                  </Button>
+                ) : panelFilterCount > 0 ? (
                   <Button variant="outline" size="sm" onClick={clearAll}>
                     clear filters
                   </Button>
@@ -461,10 +505,21 @@ function CardsBrowser() {
               </div>
             ) : (
               cards.length > 0 && (
-                <p className="py-8 text-center text-xs tabular-nums text-muted-foreground">
-                  end of results — {cards.length} card
-                  {cards.length === 1 ? "" : "s"}
-                </p>
+                <div className="flex flex-col items-center gap-2 py-8">
+                  <p className="text-center text-xs tabular-nums text-muted-foreground">
+                    {scopeIsLive ? "end of the newest sets" : "end of results"}{" "}
+                    — {cards.length} card{cards.length === 1 ? "" : "s"}
+                  </p>
+                  {scopeIsLive && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setFilters({ scope: "all" })}
+                    >
+                      keep going through every set
+                    </Button>
+                  )}
+                </div>
               )
             )}
           </div>

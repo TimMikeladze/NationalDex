@@ -15,7 +15,11 @@ import {
 } from "react";
 import { TcgSwipeDeck } from "@/components/tcg";
 import { Button } from "@/components/ui/button";
-import { usePocketSetIds, useTcgCardSearch } from "@/hooks/use-tcg";
+import {
+  useLatestSetIds,
+  usePocketSetIds,
+  useTcgCardSearch,
+} from "@/hooks/use-tcg";
 import type { TcgLanguage } from "@/types/tcg";
 import {
   DEFAULT_TCG_LANGUAGE,
@@ -24,8 +28,11 @@ import {
 } from "@/types/tcg";
 import {
   CARD_FILTER_PARSERS,
+  type CardScope,
   type GameFilter,
+  isCardScope,
   isGameFilter,
+  scopeApplies,
   toCardSearchFilters,
 } from "../filters";
 
@@ -60,14 +67,52 @@ function SwipeBrowser() {
   const game: GameFilter = isGameFilter(filters.game) ? filters.game : "all";
 
   const pocketSetIds = usePocketSetIds(language);
-  const searchFilters = useMemo(() => toCardSearchFilters(filters), [filters]);
 
-  const { cards, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } =
-    useTcgCardSearch(searchFilters, { language });
+  // The deck opens where the grid does — on the newest sets — because the two
+  // read the same query string.
+  const scope: CardScope = isCardScope(filters.scope)
+    ? filters.scope
+    : "latest";
+  const scopeIsLive = scope === "latest" && scopeApplies(filters);
+  const { setIds: latestSetIds, isReady: latestSetsReady } = useLatestSetIds(
+    game,
+    language,
+  );
+
+  const searchFilters = useMemo(
+    () => toCardSearchFilters(filters, scopeIsLive ? latestSetIds : undefined),
+    [filters, latestSetIds, scopeIsLive],
+  );
+
+  const {
+    cards: dealtCards,
+    isLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = useTcgCardSearch(searchFilters, {
+    language,
+    enabled: !scopeIsLive || latestSetsReady,
+  });
+
+  // A card with no scan is nothing to look at, and looking is the whole point
+  // of the deck — those are left in the grid, where the stand-in at least says
+  // which card is missing.
+  const cards = useMemo(
+    () => dealtCards.filter((card) => Boolean(card.image)),
+    [dealtCards],
+  );
 
   const loadMore = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  // Pages that were entirely scanless leave the deck short of cards it could
+  // deal, so the next page is asked for straight away rather than waiting for
+  // a swipe that may never come.
+  useEffect(() => {
+    if (cards.length === 0 && dealtCards.length > 0) loadMore();
+  }, [cards.length, dealtCards.length, loadMore]);
 
   // Everything that came from the URL, so it is obvious which deck this is.
   const context = [
@@ -76,6 +121,7 @@ function SwipeBrowser() {
     game !== "all" && (game === "tcg" ? "TCG" : "Pocket"),
     ...filters.types,
     ...filters.rarities,
+    scopeIsLive && "newest sets",
   ].filter(Boolean) as string[];
 
   // The app's scroll container is a flex item whose computed height is `auto`,
@@ -102,6 +148,13 @@ function SwipeBrowser() {
   // the two views are the same query seen two ways.
   const query = searchParams.toString();
   const backToGrid = query ? `/cards?${query}` : gridHref;
+
+  // The same deck, widened to the whole catalogue.
+  const everySetHref = useMemo(() => {
+    const params = new URLSearchParams(query);
+    params.set("scope", "all");
+    return `/cards/swipe?${params.toString()}`;
+  }, [query]);
 
   return (
     // `overflow-x-clip` rather than hidden: a thrown card travels well past the
@@ -144,7 +197,9 @@ function SwipeBrowser() {
           pocketSetIds={pocketSetIds}
           language={language}
           showGame={game === "all"}
-          isLoading={isLoading}
+          // Waiting on the set list is still loading, and the deck must not
+          // report an empty search in the meantime.
+          isLoading={isLoading || (scopeIsLive && !latestSetsReady)}
           hasMore={hasNextPage}
           onNeedMore={loadMore}
           emptyMessage="No cards match these filters"
@@ -152,6 +207,15 @@ function SwipeBrowser() {
             <Button variant="outline" size="sm" asChild>
               <Link href={gridHref}>change filters</Link>
             </Button>
+          }
+          // Reaching the end of the newest sets is a good moment to offer the
+          // rest of the catalogue, rather than only "start over".
+          exhaustedAction={
+            scopeIsLive ? (
+              <Button variant="ghost" size="sm" asChild>
+                <Link href={everySetHref}>keep swiping through every set</Link>
+              </Button>
+            ) : undefined
           }
         />
       </div>

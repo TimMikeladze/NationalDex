@@ -40,14 +40,23 @@ export function TcgCardImage({
 }: TcgCardImageProps) {
   const src = cardImageUrl(image, quality);
   const [failed, setFailed] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const imageRef = useRef<HTMLImageElement>(null);
   const prevSrc = useRef(src);
 
   useEffect(() => {
     if (src !== prevSrc.current) {
       prevSrc.current = src;
       setFailed(false);
+      setLoaded(false);
     }
   }, [src]);
+
+  // A cached scan can finish decoding before React attaches `onLoad`, which
+  // would leave the card faded out for good.
+  useEffect(() => {
+    if (imageRef.current?.complete) setLoaded(true);
+  }, []);
 
   if (!src || failed) {
     return (
@@ -81,14 +90,23 @@ export function TcgCardImage({
 
   return (
     <Image
+      ref={imageRef}
       src={src}
       alt={alt}
       width={width}
       height={height}
-      className={cn("aspect-[63/88] w-full object-contain", className)}
+      // Scans come straight from TCGdex at their own pace, so the artwork fades
+      // up over whatever plate it sits on instead of snapping in — a screenful
+      // of cards arriving one by one reads as loading, not as broken.
+      className={cn(
+        "aspect-[63/88] w-full object-contain transition-opacity duration-300",
+        loaded ? "opacity-100" : "opacity-0",
+        className,
+      )}
       loading={priority ? undefined : "lazy"}
       priority={priority}
       unoptimized
+      onLoad={() => setLoaded(true)}
       onError={() => setFailed(true)}
     />
   );

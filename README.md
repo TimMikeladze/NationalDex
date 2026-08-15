@@ -9,7 +9,8 @@ NationalDex is a modern web-based Pokedex covering the full National Dex across 
 ### Key features
 
 - **Instant search** across Pokemon, moves, abilities, items, and cards
-- **Trading cards** from both the Pokemon TCG and Pokemon TCG Pocket — browse and filter every card by set, energy type, rarity, stage and HP, open a card's own page, and cross-reference between a card and the Pokemon it depicts
+- **Trading cards** from both the Pokemon TCG and Pokemon TCG Pocket — browsing opens on the newest sets with the whole catalogue one tap away, filter every card by set, energy type, rarity, stage and HP, hold any card up full size and walk the results with the arrow keys, open a card's own page, and cross-reference between a card and the Pokemon it depicts
+- **Swipe through cards** — the same search dealt one card at a time: right to favorite, left to pass, up to file it in a list
 - **Game-relative view** — read the entire dex as any generation's games: learnsets, base stats, types, abilities, items, moves, evolutions, type charts, and search all scoped to the games you're playing
 - **Team builder** with type coverage analysis and Showdown import/export
 - **Pokemon comparison** with side-by-side stat breakdowns

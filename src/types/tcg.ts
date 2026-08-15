@@ -316,6 +316,11 @@ export function gameForCardId(
     : "tcg";
 }
 
+/** The set a card was printed in, read off its id: `base1-4` is `base1`. */
+export function setIdFromCardId(cardId: string): string {
+  return cardId.split("-").slice(0, -1).join("-");
+}
+
 export function gameForSetId(
   setId: string,
   pocketSetIds: string[] = FALLBACK_POCKET_SET_IDS,

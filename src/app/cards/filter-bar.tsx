@@ -48,8 +48,10 @@ import {
   withTcgLanguage,
 } from "@/types/tcg";
 import {
+  CARD_SCOPE_OPTIONS,
   type CardFilterState,
   type CardFilterUpdate,
+  type CardScope,
   GAME_OPTIONS,
   type GameFilter,
   HP_PRESETS,
@@ -60,6 +62,10 @@ interface CardsFilterBarProps {
   filters: CardFilterState;
   setFilters: (next: CardFilterUpdate) => void;
   game: GameFilter;
+  /** How much of the catalogue is in play. */
+  scope: CardScope;
+  /** Whether the choice decides anything here — a name search ignores it. */
+  scopeMatters: boolean;
   sets: TcgSetBrief[];
   selectedSet: TcgSetBrief | null;
   /** The catalogue being browsed — sets and rarities differ between them. */
@@ -87,6 +93,8 @@ export function CardsFilterBar({
   filters,
   setFilters,
   game,
+  scope,
+  scopeMatters,
   sets,
   selectedSet,
   language,
@@ -592,6 +600,27 @@ export function CardsFilterBar({
                 </Chip>
               ))}
             </div>
+
+            {/* How far back the browse reaches. Only shown while it decides
+                anything — a name search reads the whole catalogue regardless. */}
+            {scopeMatters && (
+              <div className="flex gap-1">
+                {CARD_SCOPE_OPTIONS.map((option) => (
+                  <Chip
+                    key={option.id}
+                    selected={scope === option.id}
+                    title={option.title}
+                    onClick={() =>
+                      setFilters({
+                        scope: option.id === "latest" ? null : option.id,
+                      })
+                    }
+                  >
+                    {option.label}
+                  </Chip>
+                ))}
+              </div>
+            )}
 
             {/* Which catalogue is being read. Not a translation toggle: the
                 Japanese catalogue holds 173 sets English never printed, so

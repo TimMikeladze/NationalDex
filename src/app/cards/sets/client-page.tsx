@@ -253,6 +253,9 @@ function SerieSection({
               )}
               className="group flex items-center gap-3 border-b py-3 transition-colors hover:bg-muted/50"
             >
+              {/* Promo sets often have neither logo nor symbol on file; the
+                  set's own code keeps the column aligned and still says which
+                  set the row is. */}
               <div className="flex size-10 shrink-0 items-center justify-center">
                 {logo ? (
                   // biome-ignore lint/performance/noImgElement: external set logo
@@ -270,7 +273,11 @@ function SerieSection({
                     className="size-7 object-contain"
                     loading="lazy"
                   />
-                ) : null}
+                ) : (
+                  <span className="flex size-8 items-center justify-center border border-dashed text-[9px] uppercase tracking-wider text-muted-foreground">
+                    {set.id.slice(0, 4)}
+                  </span>
+                )}
               </div>
 
               <div className="min-w-0 flex-1">

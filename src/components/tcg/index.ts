@@ -4,6 +4,7 @@ export { LatestSetsRail } from "./latest-sets-rail";
 export { PokemonCardsSection } from "./pokemon-cards-section";
 export { TcgCardGrid } from "./tcg-card-grid";
 export { TcgCardImage } from "./tcg-card-image";
+export { TcgCardLightbox } from "./tcg-card-lightbox";
 export { TcgCardTile, TcgCardTileSkeleton } from "./tcg-card-tile";
 export { TcgCardZoom } from "./tcg-card-zoom";
 export { Chip, FilterSection, SectionLabel } from "./tcg-chip";

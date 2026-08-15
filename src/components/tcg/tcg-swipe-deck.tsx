@@ -20,18 +20,11 @@ import {
 } from "react";
 import { AddToListDialog } from "@/components/add-to-list-dialog";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useCardFavorites } from "@/hooks/use-card-favorites";
 import { cn } from "@/lib/utils";
 import type { TcgCardBrief, TcgLanguage } from "@/types/tcg";
-import {
-  cardImageUrl,
-  DEFAULT_TCG_LANGUAGE,
-  formatLocalId,
-  gameForCardId,
-  withTcgLanguage,
-} from "@/types/tcg";
-import { TcgCardImage } from "./tcg-card-image";
+import { cardImageUrl, DEFAULT_TCG_LANGUAGE, gameForCardId } from "@/types/tcg";
+import { TcgCardLightbox } from "./tcg-card-lightbox";
 import {
   CORNER_RATIO,
   commitThreshold,
@@ -165,6 +158,8 @@ interface TcgSwipeDeckProps {
   onNeedMore?: () => void;
   emptyMessage?: string;
   emptyAction?: React.ReactNode;
+  /** Offered alongside "start over" once the whole deck has been swiped. */
+  exhaustedAction?: React.ReactNode;
   className?: string;
 }
 
@@ -204,6 +199,7 @@ export function TcgSwipeDeck({
   onNeedMore,
   emptyMessage = "No cards match these filters",
   emptyAction,
+  exhaustedAction,
   className,
 }: TcgSwipeDeckProps) {
   const { isFavoriteCard, addFavoriteCard, removeFavoriteCard } =
@@ -472,6 +468,13 @@ export function TcgSwipeDeck({
             transition={{ type: "spring", stiffness: 220, damping: 30 }}
           />
         </div>
+        {/* What this sitting has come to so far — a swipe that counts for
+            something reads better than one that only advances a number. */}
+        {kept > 0 && (
+          <span className="shrink-0 text-[10px] tabular-nums text-rose-500">
+            {kept} kept
+          </span>
+        )}
         <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
           {Math.min(index + 1, cards.length)} / {cards.length}
           {hasMore ? "+" : ""}
@@ -526,7 +529,7 @@ export function TcgSwipeDeck({
                     {kept} of {history.length} card
                     {history.length === 1 ? "" : "s"} kept
                   </p>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap justify-center gap-2">
                     <Button size="sm" variant="outline" onClick={restart}>
                       start over
                     </Button>
@@ -534,6 +537,7 @@ export function TcgSwipeDeck({
                       <Link href="/favorites">see favorites</Link>
                     </Button>
                   </div>
+                  {exhaustedAction}
                 </>
               )}
             </div>
@@ -637,42 +641,11 @@ export function TcgSwipeDeck({
       </p>
 
       {/* A closer look, in place — leaving the page would lose the deck */}
-      <Dialog open={zoomed !== null} onOpenChange={() => setZoomed(null)}>
-        <DialogContent className="max-w-[min(100vw-1.5rem,30rem)] border-0 bg-transparent p-0 shadow-none">
-          <DialogTitle className="sr-only">{zoomed?.name}</DialogTitle>
-          {zoomed && (
-            <div className="space-y-3">
-              <TcgCardImage
-                image={zoomed.image}
-                alt={zoomed.name}
-                localId={zoomed.localId}
-                quality="high"
-                width={900}
-                height={1238}
-                priority
-                className="max-h-[78dvh] w-full object-contain"
-              />
-              <div className="flex items-center justify-between gap-3 bg-background/90 px-3 py-2 backdrop-blur">
-                <p className="min-w-0 truncate text-sm font-medium">
-                  {zoomed.name}{" "}
-                  <span className="text-xs tabular-nums text-muted-foreground">
-                    {formatLocalId(zoomed.localId)}
-                  </span>
-                </p>
-                <Link
-                  href={withTcgLanguage(
-                    `/cards/${zoomed.id.toLowerCase()}`,
-                    language,
-                  )}
-                  className="shrink-0 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
-                >
-                  full card →
-                </Link>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <TcgCardLightbox
+        card={zoomed}
+        language={language}
+        onClose={() => setZoomed(null)}
+      />
 
       {/* Opened by an up-swipe; the card has already moved on behind it */}
       {listing && (

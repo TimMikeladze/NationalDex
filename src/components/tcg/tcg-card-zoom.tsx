@@ -2,79 +2,63 @@
 
 import { Maximize2 } from "lucide-react";
 import { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import type { TcgCardBrief, TcgLanguage } from "@/types/tcg";
 import { TcgCardImage } from "./tcg-card-image";
+import { TcgCardLightbox } from "./tcg-card-lightbox";
 
 /**
  * The artwork on a card's page. Card text is printed small, so tapping the
- * scan opens it as large as the screen allows — the way you would hold a card
- * up to read it.
+ * scan opens the same viewer the grid uses — as large as the screen allows,
+ * the way you would hold a card up to read it.
  */
 export function TcgCardZoom({
-  image,
-  alt,
+  card,
+  language,
   setName,
-  localId,
   className,
 }: {
-  image?: string | null;
-  alt: string;
+  card: TcgCardBrief;
+  language?: TcgLanguage;
   setName?: string;
-  localId?: string;
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <button
-          type="button"
-          className={cn(
-            "group relative block w-full cursor-zoom-in outline-none",
-            className,
-          )}
-          title="Enlarge card"
-        >
-          <TcgCardImage
-            image={image}
-            alt={alt}
-            setName={setName}
-            localId={localId}
-            quality="high"
-            width={600}
-            height={825}
-            priority
-            className="shadow-lg transition-transform duration-200 group-active:scale-[0.99]"
-          />
-          <span className="absolute bottom-2 right-2 flex size-7 items-center justify-center bg-background/85 text-muted-foreground backdrop-blur transition-colors group-hover:text-foreground">
-            <Maximize2 className="size-3.5" />
-          </span>
-        </button>
-      </DialogTrigger>
-      <DialogContent
-        showCloseButton
-        className="max-w-[min(100vw-1.5rem,32rem)] border-0 bg-transparent p-0 shadow-none sm:max-w-md"
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className={cn(
+          "group relative block w-full cursor-zoom-in outline-none",
+          className,
+        )}
+        title={`Enlarge ${card.name}`}
       >
-        <DialogTitle className="sr-only">{alt}</DialogTitle>
         <TcgCardImage
-          image={image}
-          alt={alt}
+          image={card.image}
+          alt={card.name}
           setName={setName}
-          localId={localId}
+          localId={card.localId}
           quality="high"
-          width={900}
-          height={1238}
+          width={600}
+          height={825}
           priority
-          className="max-h-[85dvh] w-full object-contain"
+          className="shadow-lg transition-transform duration-200 group-active:scale-[0.99]"
         />
-      </DialogContent>
-    </Dialog>
+        <span className="absolute bottom-2 right-2 flex size-7 items-center justify-center bg-background/85 text-muted-foreground backdrop-blur transition-colors group-hover:text-foreground">
+          <Maximize2 className="size-3.5" />
+        </span>
+      </button>
+
+      <TcgCardLightbox
+        card={open ? card : null}
+        language={language}
+        setName={setName}
+        linkToCard={false}
+        onClose={() => setOpen(false)}
+      />
+    </>
   );
 }
