@@ -5,10 +5,6 @@ import { LocationsPageClient } from "./client-page";
 
 export default async function LocationsPage() {
   const regions = await getAllRegions().catch(() => []);
-  const locationCount = regions.reduce(
-    (total, region) => total + region.locations.length,
-    0,
-  );
 
   const jsonLd = [
     breadcrumbJsonLd([{ name: "Locations", path: "/locations" }]),
@@ -25,17 +21,9 @@ export default async function LocationsPage() {
     <>
       <JsonLd data={jsonLd} />
 
-      <div className="border-b px-4 py-5 md:px-6 space-y-2">
-        <h1 className="text-lg font-medium">
-          Pokémon locations — where to catch every Pokémon
-        </h1>
-        <p className="text-sm text-muted-foreground max-w-3xl">
-          {locationCount > 0
-            ? `${locationCount} routes, caves, towns and other locations across every region`
-            : "Routes, caves, towns and other locations across every region"}
-          , with the Pokémon found in each and the games they appear in.
-        </p>
-      </div>
+      <h1 className="sr-only">
+        Pokémon locations — where to catch every Pokémon
+      </h1>
 
       <LocationsPageClient />
 

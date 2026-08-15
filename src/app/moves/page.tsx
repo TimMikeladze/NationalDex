@@ -29,17 +29,9 @@ export default function MovesPage() {
     <>
       <JsonLd data={jsonLd} />
 
-      <div className="border-b px-4 py-5 md:px-6 space-y-2">
-        <h1 className="text-lg font-medium">
-          Pokémon moves — every move, with power, accuracy and learnsets
-        </h1>
-        <p className="text-sm text-muted-foreground max-w-3xl">
-          All {moves.length} moves across every generation. Filter by type,
-          physical/special/status category, base power, accuracy, PP, priority
-          and contact, then open a move to see exactly which Pokémon learn it
-          and how.
-        </p>
-      </div>
+      <h1 className="sr-only">
+        Pokémon moves — every move, with power, accuracy and learnsets
+      </h1>
 
       <MovesPageClient />
 

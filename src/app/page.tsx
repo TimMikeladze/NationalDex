@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { getAllSpecies, getAllTypes, toID } from "@/lib/pkmn";
 import { faqJsonLd, itemListJsonLd, JsonLd } from "@/lib/seo";
 import { SITE_URL } from "@/lib/utils";
@@ -72,24 +71,9 @@ export default function HomePage() {
     <>
       <JsonLd data={jsonLd} />
 
-      <div className="border-b px-4 py-5 md:px-6 space-y-2">
-        <h1 className="text-lg font-medium">
-          National Pokédex — every Pokémon, every generation
-        </h1>
-        <p className="text-sm text-muted-foreground max-w-3xl">
-          Base stats, full learnsets, abilities, held items, type matchups,
-          evolution lines and trading cards for all {speciesCount} Pokémon.
-          Switch the dex to any generation from Red/Blue to Scarlet/Violet,{" "}
-          <Link href="/comparison" className="underline underline-offset-4">
-            compare two Pokémon side by side
-          </Link>
-          , or{" "}
-          <Link href="/teams" className="underline underline-offset-4">
-            build a team
-          </Link>{" "}
-          and check its type coverage.
-        </p>
-      </div>
+      <h1 className="sr-only">
+        National Pokédex — every Pokémon, every generation
+      </h1>
 
       <DexBrowser />
 

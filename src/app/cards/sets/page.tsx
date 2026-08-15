@@ -25,16 +25,9 @@ export default async function CardSetsPage() {
     <>
       <JsonLd data={jsonLd} />
 
-      <div className="border-b px-4 py-5 md:px-6 space-y-2">
-        <h1 className="text-lg font-medium">
-          Pokémon card sets — every expansion, newest first
-        </h1>
-        <p className="text-sm text-muted-foreground max-w-3xl">
-          All {allSets.length} expansions across the Pokémon Trading Card Game
-          and Pokémon TCG Pocket, grouped by series, with release dates and card
-          counts.
-        </p>
-      </div>
+      <h1 className="sr-only">
+        Pokémon card sets — every expansion, newest first
+      </h1>
 
       <CardSetsPageClient />
 

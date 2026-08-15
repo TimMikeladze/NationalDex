@@ -35,10 +35,10 @@ export function TypesPageClient() {
       <div className="space-y-6">
         <section className="flex items-start justify-between gap-4">
           <div className="space-y-2">
-            <h1 className="text-xl font-medium">Pokémon type chart</h1>
+            <h1 className="text-xl font-medium">Types</h1>
             <p className="text-sm text-muted-foreground">
               {preferredGeneration === null
-                ? `All ${types?.length ?? 18} Pokemon types, with every strength, weakness, resistance and immunity`
+                ? `All ${types?.length ?? 18} Pokemon types with their damage relations`
                 : `The ${types?.length ?? 0} types of ${getGenerationName(preferredGeneration)} (${getGenerationGames(preferredGeneration)}) with that generation's damage relations`}
             </p>
           </div>

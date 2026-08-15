@@ -38,18 +38,7 @@ export default function ComparisonPage() {
         ])}
       />
 
-      <div className="border-b px-4 py-5 md:px-6 space-y-2">
-        <h1 className="text-lg font-medium">Compare Pokémon side by side</h1>
-        <p className="text-sm text-muted-foreground max-w-3xl">
-          Put any two or more Pokémon next to each other and compare base stats,
-          types, abilities and type matchups in one view — useful when you are
-          deciding which of two similar Pokémon earns a slot on your{" "}
-          <Link href="/teams" className="underline underline-offset-4">
-            team
-          </Link>
-          .
-        </p>
-      </div>
+      <h1 className="sr-only">Compare Pokémon side by side</h1>
 
       <ComparisonPageClient />
 

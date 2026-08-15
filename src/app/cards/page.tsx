@@ -24,20 +24,7 @@ export default async function CardsPage() {
     <>
       <JsonLd data={jsonLd} />
 
-      <div className="border-b px-4 py-5 md:px-6 space-y-2">
-        <h1 className="text-lg font-medium">
-          Pokémon cards — search the TCG and TCG Pocket
-        </h1>
-        <p className="text-sm text-muted-foreground max-w-3xl">
-          Every card from the physical Pokémon Trading Card Game and Pokémon TCG
-          Pocket, searchable by name, set, energy type, rarity, stage and HP.
-          Each card links straight through to the{" "}
-          <Link href="/" className="underline underline-offset-4">
-            Pokédex entry
-          </Link>{" "}
-          for the Pokémon it depicts.
-        </p>
-      </div>
+      <h1 className="sr-only">Pokémon cards — search the TCG and TCG Pocket</h1>
 
       <CardsPageClient />
 

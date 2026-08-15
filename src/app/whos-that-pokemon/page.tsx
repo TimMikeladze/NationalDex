@@ -33,20 +33,9 @@ export default function WhosThatPokemonPage() {
     <>
       <JsonLd data={jsonLd} />
 
-      <div className="border-b px-4 py-5 md:px-6 space-y-2">
-        <h1 className="text-lg font-medium">
-          Who&rsquo;s That Pokémon? — the silhouette guessing game
-        </h1>
-        <p className="text-sm text-muted-foreground max-w-3xl">
-          Guess the Pokémon from its silhouette, the way the anime did it.
-          Choose a difficulty, narrow the quiz to a single generation, and build
-          a streak. Every answer links back to its{" "}
-          <Link href="/" className="underline underline-offset-4">
-            Pokédex entry
-          </Link>
-          , so a miss is a chance to learn the stats.
-        </p>
-      </div>
+      <h1 className="sr-only">
+        Who&rsquo;s That Pokémon? — the silhouette guessing game
+      </h1>
 
       <WhosThatPokemonClient />
 
