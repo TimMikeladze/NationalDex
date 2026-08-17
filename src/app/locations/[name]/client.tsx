@@ -65,7 +65,7 @@ export function LocationDetailClient({ name }: { name: string }) {
 
   if (error || !location) {
     return (
-      <div className="min-h-screen p-4 md:p-6">
+      <div className="p-4 md:p-6">
         <div className="text-center py-12">
           <MapPin
             className="size-12 text-muted-foreground mb-4 mx-auto"
@@ -98,7 +98,7 @@ export function LocationDetailClient({ name }: { name: string }) {
   );
 
   return (
-    <div className="min-h-screen p-4 md:p-6">
+    <div className="p-4 md:p-6">
       <div className="space-y-6">
         {/* Header */}
         <section className="space-y-2">
@@ -467,7 +467,7 @@ function AreasSkeleton({ count }: { count: number }) {
 
 function LocationDetailSkeleton() {
   return (
-    <div className="min-h-screen p-4 md:p-6">
+    <div className="p-4 md:p-6">
       <div className="space-y-6">
         {/* Back link */}
         <Skeleton className="h-3 w-20" />

@@ -192,7 +192,7 @@ export function CardsFilterBar({
             </PopoverTrigger>
             <PopoverContent
               align="end"
-              className="max-h-[70vh] w-80 overflow-y-auto p-3"
+              className="max-h-[70dvh] w-80 overflow-y-auto p-3"
             >
               <div className="space-y-4">
                 <FilterSection

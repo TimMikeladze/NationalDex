@@ -43,7 +43,7 @@ export function ItemDetailClient({ name }: { name: string }) {
 
   if (error || !item) {
     return (
-      <div className="min-h-screen p-4 md:p-6">
+      <div className="p-4 md:p-6">
         <div className="text-center py-12">
           <p className="text-muted-foreground">Item not found</p>
         </div>
@@ -54,7 +54,7 @@ export function ItemDetailClient({ name }: { name: string }) {
   const pocketColor = ITEM_POCKET_COLORS[item.pocket];
 
   return (
-    <div className="min-h-screen p-4 md:p-6">
+    <div className="p-4 md:p-6">
       <div className="space-y-6">
         {/* Header */}
         <section className="space-y-3">
@@ -374,7 +374,7 @@ function ItemDetailSkeleton() {
     (_, i) => `pokemon-skeleton-${i}`,
   );
   return (
-    <div className="min-h-screen p-4 md:p-6">
+    <div className="p-4 md:p-6">
       <div className="space-y-6">
         <section className="space-y-3">
           <div className="flex items-center gap-4">

@@ -44,7 +44,7 @@ export function AbilityDetailClient({ name }: { name: string }) {
 
   if (error || !ability) {
     return (
-      <div className="min-h-screen p-4 md:p-6">
+      <div className="p-4 md:p-6">
         <div className="text-center py-12">
           <p className="text-muted-foreground">Ability not found</p>
         </div>
@@ -53,7 +53,7 @@ export function AbilityDetailClient({ name }: { name: string }) {
   }
 
   return (
-    <div className="min-h-screen p-4 md:p-6">
+    <div className="p-4 md:p-6">
       <div className="space-y-6">
         {/* Header */}
         <section className="space-y-3">
@@ -342,7 +342,7 @@ function AbilityDetailSkeleton() {
     (_, i) => `pokemon-skeleton-${i}`,
   );
   return (
-    <div className="min-h-screen p-4 md:p-6">
+    <div className="p-4 md:p-6">
       <div className="space-y-6">
         <section className="space-y-3">
           <Skeleton className="h-7 w-40" />

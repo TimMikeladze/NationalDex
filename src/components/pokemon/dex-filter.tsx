@@ -631,7 +631,7 @@ export function DexFilter({
                 </button>
               </PopoverTrigger>
               <PopoverContent
-                className="w-72 max-h-[70vh] overflow-y-auto p-3"
+                className="w-72 max-h-[70dvh] overflow-y-auto p-3"
                 align="end"
               >
                 <div className="space-y-4">
