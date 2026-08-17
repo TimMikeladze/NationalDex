@@ -31,7 +31,7 @@ export function TypesPageClient() {
   const [viewMode, setViewMode] = useState<ViewMode>("cards");
 
   return (
-    <div className="min-h-screen p-4 md:p-6">
+    <div className="p-4 md:p-6">
       <div className="space-y-6">
         <section className="flex items-start justify-between gap-4">
           <div className="space-y-2">

@@ -130,7 +130,7 @@ export function LocationsPageClient() {
   }
 
   return (
-    <div className="min-h-screen p-4 md:p-6">
+    <div className="p-4 md:p-6">
       {/* Search & Filter Controls */}
       <div className="mb-6 space-y-4">
         <div className="flex gap-2">
@@ -361,7 +361,7 @@ const SKELETON_KEYS = Array.from({ length: 12 }, (_, i) => `skel-${i}`);
 
 function LocationsPageSkeleton() {
   return (
-    <div className="min-h-screen p-4 md:p-6">
+    <div className="p-4 md:p-6">
       {/* Search */}
       <div className="mb-6">
         <Skeleton className="h-10 w-full" />

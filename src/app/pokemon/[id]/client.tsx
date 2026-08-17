@@ -88,7 +88,7 @@ const _isAnimatedSprite = (src: string) => src.toLowerCase().endsWith(".gif");
 // page's own 1.5rem top/bottom padding); anything taller scrolls inside the
 // rail itself.
 const SUMMARY_RAIL_CLASSES =
-  "space-y-6 md:col-span-5 lg:col-span-5 xl:col-span-5 2xl:col-span-4 md:self-start md:sticky md:top-6 md:max-h-[calc(100dvh-var(--app-top-offset)-var(--app-bottom-offset)-env(safe-area-inset-bottom,0px)-3rem)] md:overflow-y-auto md:overscroll-contain md:-mr-2 md:pr-2";
+  "space-y-6 md:col-span-5 lg:col-span-5 xl:col-span-5 2xl:col-span-4 md:self-start md:sticky md:top-6 md:max-h-[calc(var(--app-content-height)-3rem)] md:overflow-y-auto md:overscroll-contain md:-mr-2 md:pr-2";
 
 // =============================================================================
 // Variant & Region Helpers

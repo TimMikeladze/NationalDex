@@ -297,7 +297,10 @@ export function AppShell({ children }: AppShellProps) {
   return (
     <SecondaryToolbarContext.Provider value={secondaryToolbarValue}>
       <div
-        className="app-shell min-h-screen flex flex-col"
+        // The shell is exactly one viewport tall and never scrolls itself, so
+        // `main` is the only thing that can scroll and the page can never grow
+        // a second scrollbar behind the fixed chrome.
+        className="app-shell h-[100dvh] overflow-hidden flex flex-col"
         data-secondary={secondaryToolbar?.content ? "true" : "false"}
       >
         {/* Desktop Header */}
@@ -404,18 +407,12 @@ export function AppShell({ children }: AppShellProps) {
 
         <main
           ref={mainRef}
-          className={cn(
-            // Keep content constrained between fixed toolbars.
-            // Height = viewport minus top/bottom chrome (and safe-area bottom).
-            // In PWA mode, pwa-main-height and pwa-pt-safe handle safe areas.
-            "flex-1 min-h-0 pwa-pt-safe pwa-main-height",
-            "overflow-y-auto overflow-x-hidden",
-            "h-[calc(100dvh-var(--app-top-offset)-var(--app-bottom-offset)-env(safe-area-inset-bottom,0px))]",
-            "max-h-[calc(100dvh-var(--app-top-offset)-var(--app-bottom-offset)-env(safe-area-inset-bottom,0px))]",
-            // On mobile: use padding-top for offset (pwa-pt-safe overrides in PWA mode)
-            // On desktop (lg+): use margin-top so scroll container starts below header
-            "pt-(--app-top-offset) lg:pt-0 lg:mt-(--app-top-offset)",
-          )}
+          // `app-main` (globals.css) owns the geometry: it slots the scroll
+          // container into the space the fixed chrome leaves, on every
+          // breakpoint and in standalone mode alike. Sizing it here as well is
+          // how the two got out of step and left a strip of background above
+          // the bottom nav.
+          className="app-main overflow-y-auto overflow-x-hidden"
         >
           <div className="w-full min-h-full">{children}</div>
         </main>

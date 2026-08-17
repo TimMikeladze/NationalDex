@@ -4,15 +4,7 @@ import { Grid3X3, Heart } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useQueryStates } from "nuqs";
-import {
-  Suspense,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { Suspense, useCallback, useEffect, useMemo } from "react";
 import { TcgSwipeDeck } from "@/components/tcg";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,11 +27,6 @@ import {
   scopeApplies,
   toCardSearchFilters,
 } from "../filters";
-
-// Sizing has to settle before the browser paints, but must not run on the
-// server.
-const useIsomorphicLayoutEffect =
-  typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 export function SwipePageClient() {
   return (
@@ -124,25 +111,6 @@ function SwipeBrowser() {
     scopeIsLive && "newest sets",
   ].filter(Boolean) as string[];
 
-  // The app's scroll container is a flex item whose computed height is `auto`,
-  // so percentage heights under it collapse to nothing and the deck ends up
-  // sized by its own buttons. Measuring it is the only way to hand the card the
-  // room that is actually there. The class-based height is the pre-measurement
-  // fallback, and is close enough that the first paint does not jump.
-  const rootRef = useRef<HTMLDivElement>(null);
-  const [height, setHeight] = useState<number | null>(null);
-
-  useIsomorphicLayoutEffect(() => {
-    const scroller = rootRef.current?.closest("main");
-    if (!scroller) return;
-
-    const measure = () => setHeight(scroller.clientHeight);
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(scroller);
-    return () => observer.disconnect();
-  }, []);
-
   const gridHref = withTcgLanguage("/cards", language);
   // Going back to the grid keeps the whole search, not just the language, so
   // the two views are the same query seen two ways.
@@ -157,14 +125,16 @@ function SwipeBrowser() {
   }, [query]);
 
   return (
+    // `--app-content-height` is the room the shell has already worked out for
+    // this device and this chrome, so the deck fills the screen exactly rather
+    // than guessing at the toolbars. The floor keeps the deck usable but can
+    // never outgrow that room: a short landscape phone deals a smaller card
+    // instead of one you would have to scroll to.
+    //
     // `overflow-x-clip` rather than hidden: a thrown card travels well past the
     // edge, and it must not be able to widen the page or raise a scrollbar on
     // its way out — but clipping must not turn this into a scroll container.
-    <div
-      ref={rootRef}
-      style={height ? { height } : undefined}
-      className="mx-auto flex h-[calc(100dvh-9rem)] min-h-[26rem] w-full max-w-lg flex-col gap-3 overflow-x-clip px-4 py-3 md:px-6"
-    >
+    <div className="mx-auto flex h-(--app-content-height) min-h-[min(26rem,var(--app-content-height))] w-full max-w-lg flex-col gap-3 overflow-x-clip px-4 py-3 md:px-6">
       <div className="flex shrink-0 items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-medium">Swipe</p>

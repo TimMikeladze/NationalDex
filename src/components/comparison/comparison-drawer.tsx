@@ -57,7 +57,9 @@ export function ComparisonDrawer() {
         "left-0 right-0",
         isExpanded
           ? "bottom-0 lg:bottom-0 top-0 lg:top-14"
-          : "bottom-12 lg:bottom-0",
+          : // Sit on top of the bottom nav, home indicator included, rather
+            // than on top of a guess at how tall the nav is.
+            "bottom-(--app-bottom-inset) lg:bottom-0",
       )}
     >
       {/* Backdrop when expanded */}
@@ -75,7 +77,7 @@ export function ComparisonDrawer() {
         className={cn(
           "absolute left-0 right-0 bottom-0 bg-background border-t shadow-lg transition-all duration-300 ease-in-out",
           isExpanded
-            ? "h-full lg:h-[70vh] max-h-[calc(100vh-3rem)] lg:max-h-[70vh] rounded-t-xl"
+            ? "h-full lg:h-[70dvh] max-h-[calc(100dvh-3rem)] lg:max-h-[70dvh] rounded-t-xl"
             : "h-auto",
         )}
       >

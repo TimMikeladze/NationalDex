@@ -178,8 +178,12 @@
   padding-top: env(safe-area-inset-top, 0px);
 }
 
+/* Clears the bottom nav. Derived, so it cannot drift from the real one. */
 .pb-nav {
-  padding-bottom: calc(3rem + env(safe-area-inset-bottom, 0px));
+  padding-bottom: var(
+    --app-bottom-inset,
+    calc(3rem + env(safe-area-inset-bottom, 0px))
+  );
 }
 
 /* App chrome height (desktop header + optional secondary toolbar) */
@@ -187,6 +191,20 @@
   --app-secondary-height: 3.5rem; /* 56px */
   --app-top-offset: 0px; /* mobile default (no desktop header) */
   --app-bottom-offset: 3rem; /* mobile bottom nav (h-12) */
+  /* Everything the chrome eats, safe areas included. The two are kept apart
+     because the scroll container needs to know where it starts as well as how
+     tall it is. */
+  --app-top-inset: calc(var(--app-top-offset) + env(safe-area-inset-top, 0px));
+  --app-bottom-inset: calc(
+    var(--app-bottom-offset) +
+    env(safe-area-inset-bottom, 0px)
+  );
+  /* The one height every page is measured against. */
+  --app-content-height: calc(
+    100dvh -
+    var(--app-top-inset) -
+    var(--app-bottom-inset)
+  );
 }
 
 .app-shell[data-secondary="true"] {
@@ -202,6 +220,24 @@
   .app-shell[data-secondary="true"] {
     --app-top-offset: 7rem; /* desktop header + secondary */
   }
+}
+
+/*
+ * The app's single scroll container.
+ *
+ * The header, the optional secondary toolbar and the bottom nav are all
+ * `fixed`, so they take up no space in flow: the gap they leave has to be
+ * spelled out here, and it has to be spelled out exactly once. `margin-top`
+ * rather than `padding-top` so that the box the browser scrolls is the box the
+ * user can actually see — that keeps `h-full` children honest, keeps
+ * `sticky top-0` toolbars pinned below the chrome instead of behind it, and
+ * makes the leftover-space arithmetic impossible to get wrong: top inset +
+ * height + bottom inset is always exactly one viewport.
+ */
+.app-shell .app-main {
+  margin-top: var(--app-top-inset);
+  height: var(--app-content-height);
+  max-height: var(--app-content-height);
 }
 
 /* PWA standalone mode - only applies on mobile/tablet (below lg breakpoint) */
@@ -241,28 +277,6 @@
     backdrop-filter: inherit;
     -webkit-backdrop-filter: inherit;
   }
-
-  /* Main content padding - just needs small gap when no secondary toolbar */
-  .app-shell .pwa-pt-safe {
-    padding-top: calc(
-      var(--app-top-offset, 0px) +
-      env(safe-area-inset-top, 0px)
-    );
-  }
-
-  /* Main content height accounting for safe areas - no extra safe area top since header covers it */
-  .app-shell .pwa-main-height {
-    height: calc(
-      100dvh -
-      var(--app-bottom-offset, 0px) -
-      env(safe-area-inset-bottom, 0px)
-    );
-    max-height: calc(
-      100dvh -
-      var(--app-bottom-offset, 0px) -
-      env(safe-area-inset-bottom, 0px)
-    );
-  }
 }
 
 /* iOS Safari standalone fallback using supports */
@@ -298,26 +312,6 @@
       background: inherit;
       backdrop-filter: inherit;
       -webkit-backdrop-filter: inherit;
-    }
-
-    .app-shell .pwa-pt-safe {
-      padding-top: calc(
-        var(--app-top-offset, 0px) +
-        env(safe-area-inset-top, 0px)
-      );
-    }
-
-    .app-shell .pwa-main-height {
-      height: calc(
-        100dvh -
-        var(--app-bottom-offset, 0px) -
-        env(safe-area-inset-bottom, 0px)
-      );
-      max-height: calc(
-        100dvh -
-        var(--app-bottom-offset, 0px) -
-        env(safe-area-inset-bottom, 0px)
-      );
     }
   }
 }
