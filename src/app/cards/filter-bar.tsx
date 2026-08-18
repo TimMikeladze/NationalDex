@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ArrowUpDown,
   ChevronsUpDown,
   Layers,
   ListFilter,
@@ -22,6 +23,14 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Popover,
@@ -56,7 +65,16 @@ import {
   HP_PRESETS,
   RANDOM_SORT_VALUE,
   SORT_OPTIONS,
+  sortOptionFor,
 } from "./filters";
+
+/**
+ * A chip that goes somewhere rather than narrowing something. It borrows the
+ * unselected chip's shape so the row reads as one strip, and earns a hover
+ * because unlike a filter it is a link.
+ */
+const WAY_IN_CHIP =
+  "inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground";
 
 interface CardsFilterBarProps {
   filters: CardFilterState;
@@ -115,6 +133,10 @@ export function CardsFilterBar({
   const swipeHref = query
     ? `/cards/swipe?${query}`
     : withTcgLanguage("/cards/swipe", language);
+
+  // The order is only named in the icon's tooltip now, so it has to say what
+  // the control would otherwise have shown.
+  const orderLabel = isRandom ? "Random" : sortOptionFor(filters.sort).label;
 
   // Typing shouldn't fire a request per keystroke.
   useEffect(() => {
@@ -195,6 +217,37 @@ export function CardsFilterBar({
               className="max-h-[70dvh] w-80 overflow-y-auto p-3"
             >
               <div className="space-y-4">
+                {/* Which catalogue is being read. Not a translation toggle: the
+                    Japanese catalogue holds 173 sets English never printed, so
+                    changing it changes which cards exist at all — and drops the
+                    set and rarity filters, which are catalogue-specific. It
+                    leads the panel because everything below it is scoped to
+                    whatever it says. */}
+                <FilterSection label="Catalogue">
+                  <Select
+                    value={language}
+                    onValueChange={(value) =>
+                      setFilters({
+                        lang: value === DEFAULT_TCG_LANGUAGE ? null : value,
+                        set: null,
+                        rarities: null,
+                        illustrator: null,
+                      })
+                    }
+                  >
+                    <SelectTrigger size="sm" className="h-8 w-full text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent align="start">
+                      {TCG_LANGUAGES.map((option) => (
+                        <SelectItem key={option.code} value={option.code}>
+                          {option.native}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FilterSection>
+
                 <FilterSection
                   label="Set"
                   onClear={
@@ -547,16 +600,48 @@ export function CardsFilterBar({
             </PopoverContent>
           </Popover>
 
-          {/* The same search, dealt one card at a time — so the whole filter
-              state carries over rather than being set up twice. */}
-          <Link
-            href={swipeHref}
-            className="p-1 text-muted-foreground transition-colors hover:text-foreground"
-            title="Swipe through these cards"
-            aria-label="Swipe through these cards"
-          >
-            <WalletCards className="size-4" />
-          </Link>
+          {/* What order the cards come in. An icon rather than a named select:
+              the row below was overflowing on a phone, and the order is
+              something you set once and then read off the cards themselves. */}
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              className={cn(
+                "p-1 transition-colors",
+                isRandom || filters.sort !== "default"
+                  ? "text-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+              title={`Order: ${orderLabel}`}
+              aria-label={`Order: ${orderLabel}`}
+            >
+              <ArrowUpDown className="size-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                order
+              </DropdownMenuLabel>
+              <DropdownMenuRadioGroup
+                value={isRandom ? RANDOM_SORT_VALUE : filters.sort}
+                onValueChange={onOrderChange}
+              >
+                {SORT_OPTIONS.map((option) => (
+                  <DropdownMenuRadioItem
+                    key={option.value}
+                    value={option.value}
+                    className="cursor-pointer text-xs"
+                  >
+                    {option.label}
+                  </DropdownMenuRadioItem>
+                ))}
+                <DropdownMenuRadioItem
+                  value={RANDOM_SORT_VALUE}
+                  className="cursor-pointer text-xs"
+                >
+                  Random
+                </DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* The dex's shuffle, on the card catalogue: it deals the results in
               a random order and, on an unfiltered browse, draws them from sets
@@ -582,7 +667,7 @@ export function CardsFilterBar({
         </div>
       </div>
 
-      {/* Game and sort — collapsible, the way the dex toolbar behaves */}
+      {/* Game and the other ways in — collapsible, like the dex toolbar */}
       <div
         className={cn(
           "grid transition-all duration-200 ease-in-out",
@@ -592,8 +677,11 @@ export function CardsFilterBar({
         )}
       >
         <div className="min-h-0 overflow-hidden">
-          <div className="flex items-center gap-2">
-            <div className="flex gap-1">
+          {/* Wraps rather than clips: the collapse container hides its
+              overflow, so anything that does not fit on one line is cut in
+              half rather than pushed out of reach. */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex min-w-0 flex-wrap gap-1">
               {GAME_OPTIONS.filter(
                 (option) => hasPocket || option.id !== "pocket",
               ).map((option) => (
@@ -613,75 +701,32 @@ export function CardsFilterBar({
                 </Chip>
               ))}
 
-              {/* Reading the catalogue set by set is a different way in from
-                  filtering it, so it sits beside the games rather than being
-                  buried in the panel. */}
+              {/* Two other ways to read the same catalogue — set by set, or
+                  one card at a time. Both are places to go rather than filters,
+                  so they sit together at the end of the row. The deck keeps the
+                  whole query string, so a search carries into it. */}
               <Link
                 href={withTcgLanguage("/cards/sets", language)}
                 title="Browse every set, by series"
-                className="inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground"
+                className={WAY_IN_CHIP}
               >
                 <Layers className="size-3.5" />
                 Set list
               </Link>
-            </div>
 
-            {/* Which catalogue is being read. Not a translation toggle: the
-                Japanese catalogue holds 173 sets English never printed, so
-                changing it changes which cards exist at all — and drops the
-                set and rarity filters, which are catalogue-specific. */}
-            <Select
-              value={language}
-              onValueChange={(value) =>
-                setFilters({
-                  lang: value === DEFAULT_TCG_LANGUAGE ? null : value,
-                  set: null,
-                  rarities: null,
-                  illustrator: null,
-                })
-              }
-            >
-              <SelectTrigger
-                size="sm"
-                className="h-8 w-28 shrink-0 border-0 bg-muted text-xs"
-                title="Card catalogue language"
+              <Link
+                href={swipeHref}
+                title="Swipe through these cards, one at a time"
+                className={WAY_IN_CHIP}
               >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent align="start">
-                {TCG_LANGUAGES.map((option) => (
-                  <SelectItem key={option.code} value={option.code}>
-                    {option.native}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                <WalletCards className="size-3.5" />
+                Swipe
+              </Link>
+            </div>
 
             <span className="ml-auto hidden shrink-0 text-xs tabular-nums text-muted-foreground sm:block">
               {resultLabel}
             </span>
-
-            {/* Order is one choice, so shuffling shows here too rather than
-                leaving the control naming a sort the cards are not in. */}
-            <Select
-              value={isRandom ? RANDOM_SORT_VALUE : filters.sort}
-              onValueChange={onOrderChange}
-            >
-              <SelectTrigger
-                size="sm"
-                className="ml-auto h-8 w-36 shrink-0 border-0 bg-muted text-xs sm:ml-0"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent align="end">
-                {SORT_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-                <SelectItem value={RANDOM_SORT_VALUE}>Random</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
 
           {/* Energy is the facet a TCG player reaches for first, so it sits in
