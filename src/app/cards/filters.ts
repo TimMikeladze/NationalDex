@@ -111,6 +111,14 @@ export const SORT_OPTIONS: {
   },
 ];
 
+/**
+ * A shuffle, as the sort control names it. The API has no random order, so
+ * this is not one of `SORT_OPTIONS` — it is applied to the results instead,
+ * and choosing it clears whatever sort field was set. Order is one choice
+ * though, so the control has to be able to say "random".
+ */
+export const RANDOM_SORT_VALUE = "random";
+
 export function isGameFilter(value: string): value is GameFilter {
   return value === "all" || value === "tcg" || value === "pocket";
 }

@@ -54,6 +54,7 @@ import {
   GAME_OPTIONS,
   type GameFilter,
   HP_PRESETS,
+  RANDOM_SORT_VALUE,
   SORT_OPTIONS,
 } from "./filters";
 
@@ -63,8 +64,8 @@ interface CardsFilterBarProps {
   game: GameFilter;
   /** Whether the results are currently being dealt in a random order. */
   isRandom: boolean;
-  /** Shuffles the results, or puts them back in set order. */
-  onToggleRandom: () => void;
+  /** Sets the order — a `SORT_OPTIONS` value, or `RANDOM_SORT_VALUE`. */
+  onOrderChange: (value: string) => void;
   sets: TcgSetBrief[];
   selectedSet: TcgSetBrief | null;
   /** The catalogue being browsed — sets and rarities differ between them. */
@@ -93,7 +94,7 @@ export function CardsFilterBar({
   setFilters,
   game,
   isRandom,
-  onToggleRandom,
+  onOrderChange,
   sets,
   selectedSet,
   language,
@@ -559,10 +560,13 @@ export function CardsFilterBar({
 
           {/* The dex's shuffle, on the card catalogue: it deals the results in
               a random order and, on an unfiltered browse, draws them from sets
-              picked at random rather than the newest ones. */}
+              picked at random rather than the newest ones. It is the same
+              choice the sort control makes, reached in one press. */}
           <button
             type="button"
-            onClick={onToggleRandom}
+            onClick={() =>
+              onOrderChange(isRandom ? "default" : RANDOM_SORT_VALUE)
+            }
             aria-pressed={isRandom}
             className={cn(
               "p-1 transition-colors",
@@ -657,11 +661,11 @@ export function CardsFilterBar({
               {resultLabel}
             </span>
 
+            {/* Order is one choice, so shuffling shows here too rather than
+                leaving the control naming a sort the cards are not in. */}
             <Select
-              value={filters.sort}
-              onValueChange={(value) =>
-                setFilters({ sort: value === "default" ? null : value })
-              }
+              value={isRandom ? RANDOM_SORT_VALUE : filters.sort}
+              onValueChange={onOrderChange}
             >
               <SelectTrigger
                 size="sm"
@@ -675,6 +679,7 @@ export function CardsFilterBar({
                     {option.label}
                   </SelectItem>
                 ))}
+                <SelectItem value={RANDOM_SORT_VALUE}>Random</SelectItem>
               </SelectContent>
             </Select>
           </div>

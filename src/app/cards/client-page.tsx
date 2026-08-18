@@ -42,6 +42,7 @@ import {
   type CardFilterUpdate,
   type GameFilter,
   isGameFilter,
+  RANDOM_SORT_VALUE,
   toCardSearchFilters,
 } from "./filters";
 import { useCardScope } from "./use-card-scope";
@@ -90,8 +91,14 @@ function CardsBrowser() {
   // A plain browse opens on the newest sets, and a shuffle draws from sets
   // picked at random. Searching by name or asking for a set is asking about the
   // whole catalogue, so both step aside there.
-  const { scopeIsLive, randomIsLive, scopedSetIds, shuffleSeed, isReady } =
-    useCardScope(filters, game, language);
+  const {
+    scopeIsLive,
+    randomIsLive,
+    scopedSetIds,
+    fanOutSetIds,
+    shuffleSeed,
+    isReady,
+  } = useCardScope(filters, game, language);
 
   const searchFilters = useMemo(
     () => toCardSearchFilters(filters, scopedSetIds),
@@ -109,6 +116,7 @@ function CardsBrowser() {
   } = useTcgCardSearch(searchFilters, {
     language,
     shuffleSeed,
+    fanOutSetIds,
     // Firing before the set list lands would search everything and flash
     // twenty-year-old promos onto the screen.
     enabled: isReady,
@@ -322,11 +330,20 @@ function CardsBrowser() {
 
   const panelFilterCount = activeChips.length;
 
-  // The dex's shuffle is a toggle rather than a re-roll, and this one matches
-  // it: pressing it again puts the catalogue back in set order.
-  const toggleRandom = useCallback(() => {
-    setFilters({ seed: filters.seed === null ? Date.now() : null });
-  }, [filters.seed, setFilters]);
+  // Sorting and shuffling are the same question — what order are these cards
+  // in — so they are answered in one place. A shuffle clears the sort field,
+  // because the API has no random order to ask for and sorting the results
+  // before shuffling them only decides which page they were drawn from.
+  const setOrder = useCallback(
+    (value: string) => {
+      if (value === RANDOM_SORT_VALUE) {
+        setFilters({ seed: Date.now(), sort: null });
+        return;
+      }
+      setFilters({ sort: value === "default" ? null : value, seed: null });
+    },
+    [setFilters],
+  );
 
   const clearAll = () =>
     setFilters({
@@ -359,7 +376,7 @@ function CardsBrowser() {
           setFilters={setFilters}
           game={game}
           isRandom={filters.seed !== null}
-          onToggleRandom={toggleRandom}
+          onOrderChange={setOrder}
           sets={availableSets}
           selectedSet={selectedSet}
           language={language}
@@ -466,7 +483,11 @@ function CardsBrowser() {
                 // Inside the newest sets, widening is the likelier fix — the
                 // filters may well have matches further back in the catalogue.
                 randomIsLive ? (
-                  <Button variant="outline" size="sm" onClick={toggleRandom}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setOrder("default")}
+                  >
                     back to set order
                   </Button>
                 ) : scopeIsLive ? (

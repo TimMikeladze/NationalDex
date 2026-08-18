@@ -51,8 +51,14 @@ function SwipeBrowser() {
 
   // The deck opens where the grid does — on the newest sets, or on the same
   // shuffle — because the two read the same query string.
-  const { scopeIsLive, randomIsLive, scopedSetIds, shuffleSeed, isReady } =
-    useCardScope(filters, game, language);
+  const {
+    scopeIsLive,
+    randomIsLive,
+    scopedSetIds,
+    fanOutSetIds,
+    shuffleSeed,
+    isReady,
+  } = useCardScope(filters, game, language);
 
   const searchFilters = useMemo(
     () => toCardSearchFilters(filters, scopedSetIds),
@@ -68,6 +74,7 @@ function SwipeBrowser() {
   } = useTcgCardSearch(searchFilters, {
     language,
     shuffleSeed,
+    fanOutSetIds,
     enabled: isReady,
   });
 

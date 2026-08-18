@@ -35,6 +35,12 @@ export interface CardScopeState {
   randomIsLive: boolean;
   /** The sets the search runs within, or undefined for the whole catalogue. */
   scopedSetIds: string[] | undefined;
+  /**
+   * Sets a page should be drawn evenly from rather than in one query. Only a
+   * shuffle asks for this: without it a page is whichever of its sets sorts
+   * first, and shuffling that only reorders one set's cards.
+   */
+  fanOutSetIds: string[] | undefined;
   /** Seed the results are dealt in, or null to read them in set order. */
   shuffleSeed: number | null;
   /** False while the set list a scope depends on is still loading. */
@@ -102,6 +108,7 @@ export function useCardScope(
     scopeIsLive,
     randomIsLive,
     scopedSetIds,
+    fanOutSetIds: randomIsLive ? randomSetIds : undefined,
     // Shuffling the results themselves works whatever else is narrowing them,
     // so a shuffle inside a single set still reorders that set.
     shuffleSeed: seed,
