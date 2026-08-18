@@ -230,7 +230,7 @@ export function CardsFilterBar({
             </PopoverTrigger>
             <PopoverContent
               align="end"
-              className="max-h-[70dvh] w-80 overflow-y-auto p-3"
+              className="max-h-[70dvh] w-[min(20rem,calc(100vw-1.5rem))] overflow-y-auto p-3"
             >
               <div className="space-y-4">
                 {/* Which catalogue is being read. Not a translation toggle: the
@@ -290,7 +290,10 @@ export function CardsFilterBar({
                             <ChevronsUpDown className="size-3.5 opacity-50" />
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent align="start" className="w-72 p-0">
+                        <PopoverContent
+                          align="start"
+                          className="w-[min(18rem,calc(100vw-1.5rem))] p-0"
+                        >
                           <Command>
                             <CommandInput placeholder="Find a set..." />
                             <CommandList>

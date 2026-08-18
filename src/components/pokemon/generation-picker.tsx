@@ -1,16 +1,13 @@
 "use client";
 
-import { Gamepad2 } from "lucide-react";
-import { Fragment } from "react";
+import { ChevronLeft, ChevronRight, Gamepad2 } from "lucide-react";
+import { Fragment, useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useGenerationPreference } from "@/hooks/use-generation-preference";
@@ -63,8 +60,18 @@ export function GenerationPicker({
   const isAvailable = (genNum: number) =>
     !availableGenerations || availableGenerations.includes(genNum);
 
+  // The sprite sets used to fly out beside the menu. There is no room beside
+  // anything on a phone — a 15rem menu and a 14rem flyout do not fit in 24rem
+  // of screen — so the second level opens in place instead, and the menu is
+  // never wider than the viewport it has to sit in.
+  const [spritesOpen, setSpritesOpen] = useState(false);
+
   return (
-    <DropdownMenu>
+    <DropdownMenu
+      onOpenChange={(next) => {
+        if (!next) setSpritesOpen(false);
+      }}
+    >
       {trigger ? (
         <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
       ) : (
@@ -89,58 +96,35 @@ export function GenerationPicker({
           </span>
         </DropdownMenuTrigger>
       )}
-      <DropdownMenuContent align={align} className="w-60">
-        <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
-          view as
-        </DropdownMenuLabel>
-        <DropdownMenuItem
-          onSelect={() => setPreferredGeneration(null)}
-          className={cn(
-            "cursor-pointer",
-            preferredGeneration === null && "bg-muted",
-          )}
-        >
-          National Dex
-          <span className="ml-auto text-xs text-muted-foreground">latest</span>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        {GENERATIONS.map((generation) => (
-          <DropdownMenuItem
-            key={generation.num}
-            disabled={!isAvailable(generation.num)}
-            onSelect={() => setPreferredGeneration(generation.num)}
-            className={cn(
-              "cursor-pointer",
-              preferredGeneration === generation.num && "bg-muted",
-            )}
-          >
-            {generation.name}
-            <span className="ml-auto text-xs text-muted-foreground">
-              {generation.label}
-            </span>
-          </DropdownMenuItem>
-        ))}
-
-        <DropdownMenuSeparator />
-        <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
-          sprites
-        </DropdownMenuLabel>
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger className="cursor-pointer">
-            <span className="flex-1 truncate">
-              {getSpriteSet(spriteSetOverride ?? generationSpriteSet).label}
-            </span>
-            <span className="text-xs text-muted-foreground whitespace-nowrap">
-              {followsGeneration ? "matched" : "pinned"}
-            </span>
-          </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent className="w-56 max-h-80 overflow-y-auto">
+      <DropdownMenuContent
+        align={align}
+        // Never wider than the screen it has to fit inside, and never pressed
+        // against the edge of it.
+        className="max-h-[70dvh] w-[min(15rem,calc(100vw-1.5rem))] overflow-y-auto"
+        collisionPadding={12}
+      >
+        {spritesOpen ? (
+          <>
+            <DropdownMenuItem
+              onSelect={(event) => {
+                // Going back a level is not a choice — the menu stays open.
+                event.preventDefault();
+                setSpritesOpen(false);
+              }}
+              className="cursor-pointer"
+            >
+              <ChevronLeft className="size-4 opacity-50" />
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                sprites
+              </span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem
               onSelect={() => setSpriteSetOverride(null)}
               className={cn("cursor-pointer", followsGeneration && "bg-muted")}
             >
               <span className="whitespace-nowrap">Match generation</span>
-              <span className="ml-auto text-xs text-muted-foreground truncate">
+              <span className="ml-auto truncate text-xs text-muted-foreground">
                 {getSpriteSet(generationSpriteSet).label}
               </span>
             </DropdownMenuItem>
@@ -164,8 +148,63 @@ export function GenerationPicker({
                 ))}
               </Fragment>
             ))}
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
+          </>
+        ) : (
+          <>
+            <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              view as
+            </DropdownMenuLabel>
+            <DropdownMenuItem
+              onSelect={() => setPreferredGeneration(null)}
+              className={cn(
+                "cursor-pointer",
+                preferredGeneration === null && "bg-muted",
+              )}
+            >
+              National Dex
+              <span className="ml-auto text-xs text-muted-foreground">
+                latest
+              </span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {GENERATIONS.map((generation) => (
+              <DropdownMenuItem
+                key={generation.num}
+                disabled={!isAvailable(generation.num)}
+                onSelect={() => setPreferredGeneration(generation.num)}
+                className={cn(
+                  "cursor-pointer",
+                  preferredGeneration === generation.num && "bg-muted",
+                )}
+              >
+                {generation.name}
+                <span className="ml-auto truncate text-xs text-muted-foreground">
+                  {generation.label}
+                </span>
+              </DropdownMenuItem>
+            ))}
+
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              sprites
+            </DropdownMenuLabel>
+            <DropdownMenuItem
+              onSelect={(event) => {
+                event.preventDefault();
+                setSpritesOpen(true);
+              }}
+              className="cursor-pointer"
+            >
+              <span className="min-w-0 flex-1 truncate">
+                {getSpriteSet(spriteSetOverride ?? generationSpriteSet).label}
+              </span>
+              <span className="whitespace-nowrap text-xs text-muted-foreground">
+                {followsGeneration ? "matched" : "pinned"}
+              </span>
+              <ChevronRight className="size-3.5 shrink-0 opacity-50" />
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
