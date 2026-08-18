@@ -30,6 +30,12 @@ export interface GenerationPickerProps {
   size?: "default" | "compact";
   align?: "start" | "end";
   className?: string;
+  /**
+   * Replaces the default pill with something else to press — used where the
+   * picker is a settings row rather than a toolbar button, so the whole row
+   * opens the menu instead of just the icon at its end.
+   */
+  trigger?: React.ReactNode;
 }
 
 /**
@@ -43,6 +49,7 @@ export function GenerationPicker({
   size = "default",
   align = "end",
   className,
+  trigger,
 }: GenerationPickerProps) {
   const { preferredGeneration, setPreferredGeneration } =
     useGenerationPreference();
@@ -58,26 +65,30 @@ export function GenerationPicker({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        className={cn(
-          "flex items-center gap-1.5 rounded-md transition-colors hover:bg-muted",
-          size === "compact" ? "h-8 px-2" : "px-3 py-1.5",
-          preferredGeneration !== null
-            ? "text-foreground"
-            : "text-muted-foreground hover:text-foreground",
-          className,
-        )}
-        title="View the dex as a specific generation's games, and pick its sprites"
-      >
-        <Gamepad2 className="size-4" strokeWidth={1.5} />
-        {/* On narrow screens the icon stands alone, like the toolbar's other
-            actions — the active generation is still named on the page itself. */}
-        <span className="hidden sm:inline text-xs lowercase whitespace-nowrap">
-          {preferredGeneration !== null
-            ? getGenerationName(preferredGeneration)
-            : "national"}
-        </span>
-      </DropdownMenuTrigger>
+      {trigger ? (
+        <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+      ) : (
+        <DropdownMenuTrigger
+          className={cn(
+            "flex items-center gap-1.5 rounded-md transition-colors hover:bg-muted",
+            size === "compact" ? "h-8 px-2" : "px-3 py-1.5",
+            preferredGeneration !== null
+              ? "text-foreground"
+              : "text-muted-foreground hover:text-foreground",
+            className,
+          )}
+          title="View the dex as a specific generation's games, and pick its sprites"
+        >
+          <Gamepad2 className="size-4" strokeWidth={1.5} />
+          {/* On narrow screens the icon stands alone, like the toolbar's other
+              actions — the active generation is still named on the page itself. */}
+          <span className="hidden sm:inline text-xs lowercase whitespace-nowrap">
+            {preferredGeneration !== null
+              ? getGenerationName(preferredGeneration)
+              : "national"}
+          </span>
+        </DropdownMenuTrigger>
+      )}
       <DropdownMenuContent align={align} className="w-60">
         <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
           view as

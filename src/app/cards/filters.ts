@@ -27,6 +27,12 @@ export interface CardFilterState {
   sort: string;
   /** How much of the catalogue is in play — the newest sets, or all of it. */
   scope: string;
+  /**
+   * Seed for a shuffled browse; null when the catalogue is read in order. It
+   * lives in the URL so a shuffle can be shared, reloaded, or handed to the
+   * swipe deck and still deal the same cards.
+   */
+  seed: number | null;
   /** Which language's catalogue is being browsed. */
   lang: string;
 }
@@ -37,19 +43,6 @@ export interface CardFilterState {
  * share or a move between the grid and the deck.
  */
 export type CardScope = "latest" | "all";
-
-export const CARD_SCOPE_OPTIONS: {
-  id: CardScope;
-  label: string;
-  title: string;
-}[] = [
-  {
-    id: "latest",
-    label: "Newest sets",
-    title: "Cards from the most recent expansions",
-  },
-  { id: "all", label: "All sets", title: "Every card ever printed" },
-];
 
 export function isCardScope(value: string): value is CardScope {
   return value === "latest" || value === "all";
@@ -146,6 +139,7 @@ export const CARD_FILTER_PARSERS = {
   dexId: parseAsInteger,
   sort: parseAsString.withDefault("default"),
   scope: parseAsString.withDefault("latest"),
+  seed: parseAsInteger,
   lang: parseAsString.withDefault(DEFAULT_TCG_LANGUAGE),
 };
 
@@ -158,29 +152,25 @@ export function sortOptionFor(value: string) {
 /**
  * Turns the URL's filter state into the query the card API is asked.
  *
- * `latestSetIds` is what the newest-sets scope searches within; leave it out to
- * search the whole catalogue. It is only used where a scope makes sense — a
- * name search or a chosen set always means the whole catalogue.
+ * `scopedSetIds` narrows the search to a slice of the catalogue — the newest
+ * sets, or the sets a shuffle drew. Leave it out to search all of it. Deciding
+ * whether a scope applies at all is the caller's job, because it depends on
+ * data (the set list) the filter state does not carry.
  */
 export function toCardSearchFilters(
   filters: CardFilterState,
-  latestSetIds?: string[],
+  scopedSetIds?: string[],
 ): TcgCardFilters {
   const game: GameFilter = isGameFilter(filters.game) ? filters.game : "all";
   const sort = sortOptionFor(filters.sort);
-  const scopedToLatest =
-    filters.scope !== "all" &&
-    scopeApplies(filters) &&
-    latestSetIds !== undefined &&
-    latestSetIds.length > 0;
 
   return {
     name: filters.q || undefined,
     game: game === "all" ? null : game,
     setIds: filters.set
       ? [filters.set]
-      : scopedToLatest
-        ? latestSetIds
+      : scopedSetIds && scopedSetIds.length > 0
+        ? scopedSetIds
         : undefined,
     types: filters.types.length > 0 ? filters.types : undefined,
     rarities: filters.rarities.length > 0 ? filters.rarities : undefined,

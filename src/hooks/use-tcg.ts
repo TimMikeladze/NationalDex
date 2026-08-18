@@ -19,6 +19,7 @@ import {
   searchTcgCards,
   type TcgCardFilters,
 } from "@/lib/tcg";
+import { seededShuffle } from "@/lib/utils";
 import type {
   TcgCard,
   TcgCardBrief,
@@ -77,7 +78,7 @@ export const LATEST_SET_COUNT = 12;
  * are mostly uncatalogued — TCGdex has no scan for them — so letting them into
  * the opening browse fills the first screen with stand-ins.
  */
-const EXPANSION_MIN_CARDS = 30;
+export const EXPANSION_MIN_CARDS = 30;
 
 /**
  * The newest sets of a game, as ids to search within. Browsing the catalogue in
@@ -166,11 +167,14 @@ export function useTcgCardSearch(
     enabled?: boolean;
     itemsPerPage?: number;
     language?: TcgLanguage;
+    /** Deals the results in a seeded random order instead of set order. */
+    shuffleSeed?: number | null;
   },
 ) {
   const language = options?.language ?? DEFAULT_TCG_LANGUAGE;
   const pocketSetIds = usePocketSetIds(language);
   const itemsPerPage = options?.itemsPerPage ?? CARDS_PER_PAGE;
+  const shuffleSeed = options?.shuffleSeed ?? null;
 
   const query = useInfiniteQuery({
     queryKey: ["tcg", "cards", filters, pocketSetIds, itemsPerPage, language],
@@ -203,10 +207,16 @@ export function useTcgCardSearch(
     staleTime: DAY,
   });
 
-  const cards = useMemo(
-    () => query.data?.pages.flatMap((page) => page.cards) ?? [],
-    [query.data?.pages],
-  );
+  const cards = useMemo(() => {
+    const pages = query.data?.pages ?? [];
+    if (shuffleSeed === null) return pages.flatMap((page) => page.cards);
+
+    // Each page is shuffled on its own rather than the list as a whole, so
+    // scrolling to the next page never rearranges the cards already on screen.
+    return pages.flatMap((page, index) =>
+      seededShuffle(page.cards, shuffleSeed + index),
+    );
+  }, [query.data?.pages, shuffleSeed]);
 
   return { ...query, cards };
 }

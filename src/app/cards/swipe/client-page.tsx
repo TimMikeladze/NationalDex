@@ -7,11 +7,7 @@ import { useQueryStates } from "nuqs";
 import { Suspense, useCallback, useEffect, useMemo } from "react";
 import { TcgSwipeDeck } from "@/components/tcg";
 import { Button } from "@/components/ui/button";
-import {
-  useLatestSetIds,
-  usePocketSetIds,
-  useTcgCardSearch,
-} from "@/hooks/use-tcg";
+import { usePocketSetIds, useTcgCardSearch } from "@/hooks/use-tcg";
 import type { TcgLanguage } from "@/types/tcg";
 import {
   DEFAULT_TCG_LANGUAGE,
@@ -20,13 +16,11 @@ import {
 } from "@/types/tcg";
 import {
   CARD_FILTER_PARSERS,
-  type CardScope,
   type GameFilter,
-  isCardScope,
   isGameFilter,
-  scopeApplies,
   toCardSearchFilters,
 } from "../filters";
+import { useCardScope } from "../use-card-scope";
 
 export function SwipePageClient() {
   return (
@@ -55,20 +49,14 @@ function SwipeBrowser() {
 
   const pocketSetIds = usePocketSetIds(language);
 
-  // The deck opens where the grid does — on the newest sets — because the two
-  // read the same query string.
-  const scope: CardScope = isCardScope(filters.scope)
-    ? filters.scope
-    : "latest";
-  const scopeIsLive = scope === "latest" && scopeApplies(filters);
-  const { setIds: latestSetIds, isReady: latestSetsReady } = useLatestSetIds(
-    game,
-    language,
-  );
+  // The deck opens where the grid does — on the newest sets, or on the same
+  // shuffle — because the two read the same query string.
+  const { scopeIsLive, randomIsLive, scopedSetIds, shuffleSeed, isReady } =
+    useCardScope(filters, game, language);
 
   const searchFilters = useMemo(
-    () => toCardSearchFilters(filters, scopeIsLive ? latestSetIds : undefined),
-    [filters, latestSetIds, scopeIsLive],
+    () => toCardSearchFilters(filters, scopedSetIds),
+    [filters, scopedSetIds],
   );
 
   const {
@@ -79,7 +67,8 @@ function SwipeBrowser() {
     fetchNextPage,
   } = useTcgCardSearch(searchFilters, {
     language,
-    enabled: !scopeIsLive || latestSetsReady,
+    shuffleSeed,
+    enabled: isReady,
   });
 
   // A card with no scan is nothing to look at, and looking is the whole point
@@ -109,6 +98,7 @@ function SwipeBrowser() {
     ...filters.types,
     ...filters.rarities,
     scopeIsLive && "newest sets",
+    randomIsLive && "shuffled",
   ].filter(Boolean) as string[];
 
   const gridHref = withTcgLanguage("/cards", language);
@@ -169,7 +159,7 @@ function SwipeBrowser() {
           showGame={game === "all"}
           // Waiting on the set list is still loading, and the deck must not
           // report an empty search in the meantime.
-          isLoading={isLoading || (scopeIsLive && !latestSetsReady)}
+          isLoading={isLoading || !isReady}
           hasMore={hasNextPage}
           onNeedMore={loadMore}
           emptyMessage="No cards match these filters"

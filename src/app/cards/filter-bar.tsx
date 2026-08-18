@@ -5,6 +5,7 @@ import {
   Layers,
   ListFilter,
   Search,
+  Shuffle,
   WalletCards,
   X,
 } from "lucide-react";
@@ -48,10 +49,8 @@ import {
   withTcgLanguage,
 } from "@/types/tcg";
 import {
-  CARD_SCOPE_OPTIONS,
   type CardFilterState,
   type CardFilterUpdate,
-  type CardScope,
   GAME_OPTIONS,
   type GameFilter,
   HP_PRESETS,
@@ -62,10 +61,10 @@ interface CardsFilterBarProps {
   filters: CardFilterState;
   setFilters: (next: CardFilterUpdate) => void;
   game: GameFilter;
-  /** How much of the catalogue is in play. */
-  scope: CardScope;
-  /** Whether the choice decides anything here — a name search ignores it. */
-  scopeMatters: boolean;
+  /** Whether the results are currently being dealt in a random order. */
+  isRandom: boolean;
+  /** Shuffles the results, or puts them back in set order. */
+  onToggleRandom: () => void;
   sets: TcgSetBrief[];
   selectedSet: TcgSetBrief | null;
   /** The catalogue being browsed — sets and rarities differ between them. */
@@ -93,8 +92,8 @@ export function CardsFilterBar({
   filters,
   setFilters,
   game,
-  scope,
-  scopeMatters,
+  isRandom,
+  onToggleRandom,
   sets,
   selectedSet,
   language,
@@ -558,14 +557,24 @@ export function CardsFilterBar({
             <WalletCards className="size-4" />
           </Link>
 
-          <Link
-            href={withTcgLanguage("/cards/sets", language)}
-            className="p-1 text-muted-foreground transition-colors hover:text-foreground"
-            title="Browse sets"
-            aria-label="Browse card sets"
+          {/* The dex's shuffle, on the card catalogue: it deals the results in
+              a random order and, on an unfiltered browse, draws them from sets
+              picked at random rather than the newest ones. */}
+          <button
+            type="button"
+            onClick={onToggleRandom}
+            aria-pressed={isRandom}
+            className={cn(
+              "p-1 transition-colors",
+              isRandom
+                ? "text-foreground"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+            title={isRandom ? "Back to set order" : "Shuffle these cards"}
+            aria-label={isRandom ? "Back to set order" : "Shuffle these cards"}
           >
-            <Layers className="size-4" />
-          </Link>
+            <Shuffle className="size-4" />
+          </button>
         </div>
       </div>
 
@@ -599,28 +608,19 @@ export function CardsFilterBar({
                   {option.label}
                 </Chip>
               ))}
-            </div>
 
-            {/* How far back the browse reaches. Only shown while it decides
-                anything — a name search reads the whole catalogue regardless. */}
-            {scopeMatters && (
-              <div className="flex gap-1">
-                {CARD_SCOPE_OPTIONS.map((option) => (
-                  <Chip
-                    key={option.id}
-                    selected={scope === option.id}
-                    title={option.title}
-                    onClick={() =>
-                      setFilters({
-                        scope: option.id === "latest" ? null : option.id,
-                      })
-                    }
-                  >
-                    {option.label}
-                  </Chip>
-                ))}
-              </div>
-            )}
+              {/* Reading the catalogue set by set is a different way in from
+                  filtering it, so it sits beside the games rather than being
+                  buried in the panel. */}
+              <Link
+                href={withTcgLanguage("/cards/sets", language)}
+                title="Browse every set, by series"
+                className="inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground"
+              >
+                <Layers className="size-3.5" />
+                Set list
+              </Link>
+            </div>
 
             {/* Which catalogue is being read. Not a translation toggle: the
                 Japanese catalogue holds 173 sets English never printed, so

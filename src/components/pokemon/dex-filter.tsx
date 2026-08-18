@@ -49,6 +49,7 @@ import {
   LATEST_GEN,
   toID,
 } from "@/lib/pkmn";
+import { seededShuffle } from "@/lib/utils";
 import type { PokemonType } from "@/types/pokemon";
 
 export type DexCategory = "pokemon" | "moves" | "abilities" | "items";
@@ -894,27 +895,6 @@ export function DexFilter({
       )}
     </div>
   );
-}
-
-// Seeded random shuffle function using Fisher-Yates algorithm
-function seededShuffle<T>(array: T[], seed: number): T[] {
-  const shuffled = [...array];
-  let currentSeed = seed;
-
-  // Simple seeded random number generator (mulberry32)
-  const random = () => {
-    currentSeed |= 0;
-    currentSeed = (currentSeed + 0x6d2b79f5) | 0;
-    let t = Math.imul(currentSeed ^ (currentSeed >>> 15), 1 | currentSeed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  return shuffled;
 }
 
 function matchesSearch(pokemon: DexPokemonListItem, searchLower: string) {
