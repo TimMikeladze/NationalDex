@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { breadcrumbJsonLd, itemListJsonLd, JsonLd } from "@/lib/seo";
 import { getTcgSeriesWithSets } from "@/lib/tcg";
-import { CardsPageClient } from "./client-page";
+import { CardBrowser } from "./card-browser";
 
 export default async function CardsPage() {
   const series = await getTcgSeriesWithSets().catch(() => []);
@@ -26,7 +26,7 @@ export default async function CardsPage() {
 
       <h1 className="sr-only">Pokémon cards — search the TCG and TCG Pocket</h1>
 
-      <CardsPageClient />
+      <CardBrowser />
 
       {/* The card grid is fetched and paged in the browser, so this is the
           crawlable route into the set pages. */}

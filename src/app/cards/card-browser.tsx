@@ -28,7 +28,7 @@ import {
 } from "@/hooks/use-tcg";
 import { resolveSpecies, toID } from "@/lib/pkmn";
 import { cn } from "@/lib/utils";
-import type { TcgLanguage } from "@/types/tcg";
+import type { TcgLanguage, TcgSetBrief } from "@/types/tcg";
 import {
   DEFAULT_TCG_LANGUAGE,
   gameForSetId,
@@ -47,20 +47,52 @@ import {
 } from "./filters";
 import { useCardScope } from "./use-card-scope";
 
-export function CardsPageClient() {
+export interface CardBrowserProps {
+  /**
+   * Pins the browse to one set, which is what a set's own page is. The set
+   * stops being something to pick and becomes the subject, so the controls
+   * that would change it — the games, the set picker, the catalogue — step
+   * aside and everything else narrows within it.
+   */
+  lockedSet?: TcgSetBrief | null;
+  /**
+   * The catalogue the page is fixed to. A set page was reached through one
+   * catalogue's set list and its ids only mean anything there, so the browse
+   * cannot be free to switch.
+   */
+  lockedLanguage?: TcgLanguage;
+}
+
+/**
+ * The card catalogue, filtered. Used whole on `/cards`, and pinned to a single
+ * set on a set's page — one browser rather than a real one and a lesser copy,
+ * so a set page filters by rarity, printing, HP and the rest exactly as the
+ * card browser does.
+ */
+export function CardBrowser(props: CardBrowserProps) {
   return (
     <Suspense fallback={<CardsPageSkeleton />}>
-      <CardsBrowser />
+      <CardsBrowser {...props} />
     </Suspense>
   );
 }
 
 /** Filters live in the URL, so a card search can be shared or bookmarked. */
-function CardsBrowser() {
-  const [filters, setQueryFilters] = useQueryStates(CARD_FILTER_PARSERS, {
+function CardsBrowser({ lockedSet, lockedLanguage }: CardBrowserProps) {
+  const [urlFilters, setQueryFilters] = useQueryStates(CARD_FILTER_PARSERS, {
     history: "replace",
     clearOnDefault: true,
   });
+
+  // A pinned set is the page, not a filter the URL carries — it cannot be
+  // changed or cleared from in here, so it is folded in rather than written.
+  const filters = useMemo(
+    () =>
+      lockedSet
+        ? { ...urlFilters, set: lockedSet.id, game: "all" }
+        : urlFilters,
+    [urlFilters, lockedSet],
+  );
 
   const setFilters = useCallback(
     (next: CardFilterUpdate) => {
@@ -73,9 +105,9 @@ function CardsBrowser() {
   const [toolbarCollapsed, setToolbarCollapsed] = useState(false);
 
   // Each language is its own catalogue of sets, not a translation of one.
-  const language: TcgLanguage = isTcgLanguage(filters.lang)
-    ? filters.lang
-    : DEFAULT_TCG_LANGUAGE;
+  const language: TcgLanguage =
+    lockedLanguage ??
+    (isTcgLanguage(filters.lang) ? filters.lang : DEFAULT_TCG_LANGUAGE);
 
   const pocketSetIds = usePocketSetIds(language);
   const { data: sets } = useTcgSets(language);
@@ -183,8 +215,8 @@ function CardsBrowser() {
   );
 
   const selectedSet = useMemo(
-    () => sets?.find((set) => set.id === filters.set) ?? null,
-    [sets, filters.set],
+    () => lockedSet ?? sets?.find((set) => set.id === filters.set) ?? null,
+    [lockedSet, sets, filters.set],
   );
 
   // Sets narrow to the chosen game so the picker matches the rest of the page.
@@ -204,7 +236,11 @@ function CardsBrowser() {
   const activeChips = useMemo(() => {
     const chips: { key: string; label: string; clear: CardFilterUpdate }[] = [];
 
-    if (selectedSet) {
+    // A pinned set is the page's subject, so it is not offered as something
+    // to remove — the header already says which set this is.
+    if (lockedSet) {
+      // nothing to show
+    } else if (selectedSet) {
       chips.push({
         key: "set",
         label: selectedSet.name,
@@ -326,6 +362,7 @@ function CardsBrowser() {
     filters.variants,
     filters.types,
     selectedSet,
+    lockedSet,
   ]);
 
   const panelFilterCount = activeChips.length;
@@ -347,7 +384,10 @@ function CardsBrowser() {
 
   const clearAll = () =>
     setFilters({
-      set: null,
+      // A pinned set is not in the URL to begin with, so a reset has nothing
+      // to clear there — and must not write a cleared `set` that would then
+      // fight the lock.
+      ...(lockedSet ? null : { set: null }),
       types: null,
       rarities: null,
       category: null,
@@ -390,6 +430,7 @@ function CardsBrowser() {
           panelFilterCount={panelFilterCount}
           resultLabel={resultLabel}
           collapsed={toolbarCollapsed}
+          lockedSet={lockedSet ?? null}
         />
       </div>
 
