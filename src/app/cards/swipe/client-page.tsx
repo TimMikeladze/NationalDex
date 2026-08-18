@@ -1,6 +1,6 @@
 "use client";
 
-import { Grid3X3, Heart } from "lucide-react";
+import { Grid3X3 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useQueryStates } from "nuqs";
@@ -51,14 +51,8 @@ function SwipeBrowser() {
 
   // The deck opens where the grid does — on the newest sets, or on the same
   // shuffle — because the two read the same query string.
-  const {
-    scopeIsLive,
-    randomIsLive,
-    scopedSetIds,
-    fanOutSetIds,
-    shuffleSeed,
-    isReady,
-  } = useCardScope(filters, game, language);
+  const { scopeIsLive, scopedSetIds, fanOutSetIds, shuffleSeed, isReady } =
+    useCardScope(filters, game, language);
 
   const searchFilters = useMemo(
     () => toCardSearchFilters(filters, scopedSetIds),
@@ -97,17 +91,6 @@ function SwipeBrowser() {
     if (cards.length === 0 && dealtCards.length > 0) loadMore();
   }, [cards.length, dealtCards.length, loadMore]);
 
-  // Everything that came from the URL, so it is obvious which deck this is.
-  const context = [
-    filters.q && `“${filters.q}”`,
-    filters.set,
-    game !== "all" && (game === "tcg" ? "TCG" : "Pocket"),
-    ...filters.types,
-    ...filters.rarities,
-    scopeIsLive && "newest sets",
-    randomIsLive && "shuffled",
-  ].filter(Boolean) as string[];
-
   const gridHref = withTcgLanguage("/cards", language);
   // Going back to the grid keeps the whole search, not just the language, so
   // the two views are the same query seen two ways.
@@ -132,30 +115,16 @@ function SwipeBrowser() {
     // edge, and it must not be able to widen the page or raise a scrollbar on
     // its way out — but clipping must not turn this into a scroll container.
     <div className="mx-auto flex h-(--app-content-height) min-h-[min(26rem,var(--app-content-height))] w-full max-w-lg flex-col gap-3 overflow-x-clip px-4 py-3 md:px-6">
-      <div className="flex shrink-0 items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm font-medium">Swipe</p>
-          <p className="truncate text-xs text-muted-foreground">
-            {context.length > 0 ? context.join(" · ") : "Every card"}
-          </p>
-        </div>
-
-        <div className="flex shrink-0 items-center gap-1">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/favorites" title="Favorited cards">
-              <Heart className="size-4" />
-              <span className="sr-only sm:not-sr-only sm:ml-1.5">
-                favorites
-              </span>
-            </Link>
-          </Button>
-          <Button variant="ghost" size="sm" asChild>
-            <Link href={backToGrid} title="Back to the card grid">
-              <Grid3X3 className="size-4" />
-              <span className="sr-only sm:not-sr-only sm:ml-1.5">grid</span>
-            </Link>
-          </Button>
-        </div>
+      {/* The way back, and nothing else. The title said what the screen you
+          are looking at plainly is, and favorites is a tab away in the bottom
+          nav — both were taking room from the card, which is the whole screen. */}
+      <div className="flex shrink-0 items-center justify-end">
+        <Button variant="ghost" size="sm" asChild>
+          <Link href={backToGrid} title="Back to the card grid">
+            <Grid3X3 className="size-4" />
+            <span className="sr-only sm:not-sr-only sm:ml-1.5">grid</span>
+          </Link>
+        </Button>
       </div>
 
       <div className="flex min-h-0 flex-1">

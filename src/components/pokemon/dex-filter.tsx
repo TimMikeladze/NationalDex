@@ -18,6 +18,9 @@ import {
 } from "nuqs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TypeBadge } from "@/components/pokemon/type-badge";
+// The card browser's chip, which is the dex's chip — the two toolbars are the
+// same toolbar, so they share the component rather than each having a pill.
+import { Chip } from "@/components/tcg/tcg-chip";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -562,37 +565,9 @@ export function DexFilter({
 
   return (
     <div className="space-y-3">
-      {/* Category Chips - collapsible */}
-      <div
-        className={`grid transition-all duration-200 ease-in-out ${
-          collapsed
-            ? "grid-rows-[0fr] opacity-0"
-            : "grid-rows-[1fr] opacity-100"
-        }`}
-      >
-        <div className="min-h-0 overflow-hidden">
-          <div className="flex flex-wrap gap-2 pb-3">
-            {(["pokemon", "moves", "abilities", "items"] as const).map(
-              (cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => handleCategoryChange(cat)}
-                  className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-                    filter.category === cat
-                      ? "bg-foreground text-background"
-                      : "bg-muted text-muted-foreground hover:bg-muted/80"
-                  }`}
-                >
-                  {CATEGORY_LABELS[cat]}
-                </button>
-              ),
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Search Input with embedded filter buttons */}
+      {/* Search Input with embedded filter buttons. It leads, the way the card
+          browser's does: the field is what every other control here narrows,
+          and it is the one thing on the toolbar that is the same on every tab. */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -832,17 +807,35 @@ export function DexFilter({
         </div>
       </div>
 
-      {/* Type Filters - show for Pokemon and Moves, collapsible */}
-      {(filter.category === "pokemon" || filter.category === "moves") && (
-        <div
-          className={`grid transition-all duration-200 ease-in-out ${
-            collapsed
-              ? "grid-rows-[0fr] opacity-0"
-              : "grid-rows-[1fr] opacity-100"
-          }`}
-        >
-          <div className="min-h-0 overflow-hidden">
-            <div className="flex flex-wrap gap-1.5">
+      {/* What is being browsed, and the types within it — one collapsible
+          block under the field, exactly as the card browser stacks its games
+          above its energy row. */}
+      <div
+        className={`grid transition-all duration-200 ease-in-out ${
+          collapsed
+            ? "grid-rows-[0fr] opacity-0"
+            : "grid-rows-[1fr] opacity-100"
+        }`}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <div className="flex flex-wrap items-center gap-1">
+            {(["pokemon", "moves", "abilities", "items"] as const).map(
+              (cat) => (
+                <Chip
+                  key={cat}
+                  selected={filter.category === cat}
+                  onClick={() => handleCategoryChange(cat)}
+                >
+                  {CATEGORY_LABELS[cat]}
+                </Chip>
+              ),
+            )}
+          </div>
+
+          {/* Types are the facet reached for first, so they sit in the toolbar
+              rather than behind the panel — the card browser's energy row. */}
+          {(filter.category === "pokemon" || filter.category === "moves") && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
               {availableTypes.map((type) => (
                 <button
                   key={type}
@@ -859,9 +852,9 @@ export function DexFilter({
                 </button>
               ))}
             </div>
-          </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Clear Filters - collapsible */}
       {hasActiveFilters && (
