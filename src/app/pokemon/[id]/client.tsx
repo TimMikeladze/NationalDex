@@ -600,7 +600,10 @@ export function PokemonPageClient({
                 <span className="hidden sm:inline text-xs">sprite</span>
               </Button>
             </PopoverTrigger>
-            <PopoverContent align="end" className="w-80 p-3">
+            <PopoverContent
+              align="end"
+              className="w-[min(20rem,calc(100vw-1.5rem))] p-3"
+            >
               <div className="space-y-3">
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-[10px] text-muted-foreground uppercase tracking-wider">

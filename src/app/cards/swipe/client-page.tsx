@@ -1,17 +1,13 @@
 "use client";
 
-import { Grid3X3, Heart } from "lucide-react";
+import { Grid3X3 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useQueryStates } from "nuqs";
 import { Suspense, useCallback, useEffect, useMemo } from "react";
 import { TcgSwipeDeck } from "@/components/tcg";
 import { Button } from "@/components/ui/button";
-import {
-  useLatestSetIds,
-  usePocketSetIds,
-  useTcgCardSearch,
-} from "@/hooks/use-tcg";
+import { usePocketSetIds, useTcgCardSearch } from "@/hooks/use-tcg";
 import type { TcgLanguage } from "@/types/tcg";
 import {
   DEFAULT_TCG_LANGUAGE,
@@ -20,13 +16,11 @@ import {
 } from "@/types/tcg";
 import {
   CARD_FILTER_PARSERS,
-  type CardScope,
   type GameFilter,
-  isCardScope,
   isGameFilter,
-  scopeApplies,
   toCardSearchFilters,
 } from "../filters";
+import { useCardScope } from "../use-card-scope";
 
 export function SwipePageClient() {
   return (
@@ -55,20 +49,14 @@ function SwipeBrowser() {
 
   const pocketSetIds = usePocketSetIds(language);
 
-  // The deck opens where the grid does — on the newest sets — because the two
-  // read the same query string.
-  const scope: CardScope = isCardScope(filters.scope)
-    ? filters.scope
-    : "latest";
-  const scopeIsLive = scope === "latest" && scopeApplies(filters);
-  const { setIds: latestSetIds, isReady: latestSetsReady } = useLatestSetIds(
-    game,
-    language,
-  );
+  // The deck opens where the grid does — on the newest sets, or on the same
+  // shuffle — because the two read the same query string.
+  const { scopeIsLive, scopedSetIds, fanOutSetIds, shuffleSeed, isReady } =
+    useCardScope(filters, game, language);
 
   const searchFilters = useMemo(
-    () => toCardSearchFilters(filters, scopeIsLive ? latestSetIds : undefined),
-    [filters, latestSetIds, scopeIsLive],
+    () => toCardSearchFilters(filters, scopedSetIds),
+    [filters, scopedSetIds],
   );
 
   const {
@@ -79,7 +67,9 @@ function SwipeBrowser() {
     fetchNextPage,
   } = useTcgCardSearch(searchFilters, {
     language,
-    enabled: !scopeIsLive || latestSetsReady,
+    shuffleSeed,
+    fanOutSetIds,
+    enabled: isReady,
   });
 
   // A card with no scan is nothing to look at, and looking is the whole point
@@ -100,16 +90,6 @@ function SwipeBrowser() {
   useEffect(() => {
     if (cards.length === 0 && dealtCards.length > 0) loadMore();
   }, [cards.length, dealtCards.length, loadMore]);
-
-  // Everything that came from the URL, so it is obvious which deck this is.
-  const context = [
-    filters.q && `“${filters.q}”`,
-    filters.set,
-    game !== "all" && (game === "tcg" ? "TCG" : "Pocket"),
-    ...filters.types,
-    ...filters.rarities,
-    scopeIsLive && "newest sets",
-  ].filter(Boolean) as string[];
 
   const gridHref = withTcgLanguage("/cards", language);
   // Going back to the grid keeps the whole search, not just the language, so
@@ -135,30 +115,16 @@ function SwipeBrowser() {
     // edge, and it must not be able to widen the page or raise a scrollbar on
     // its way out — but clipping must not turn this into a scroll container.
     <div className="mx-auto flex h-(--app-content-height) min-h-[min(26rem,var(--app-content-height))] w-full max-w-lg flex-col gap-3 overflow-x-clip px-4 py-3 md:px-6">
-      <div className="flex shrink-0 items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm font-medium">Swipe</p>
-          <p className="truncate text-xs text-muted-foreground">
-            {context.length > 0 ? context.join(" · ") : "Every card"}
-          </p>
-        </div>
-
-        <div className="flex shrink-0 items-center gap-1">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/favorites" title="Favorited cards">
-              <Heart className="size-4" />
-              <span className="sr-only sm:not-sr-only sm:ml-1.5">
-                favorites
-              </span>
-            </Link>
-          </Button>
-          <Button variant="ghost" size="sm" asChild>
-            <Link href={backToGrid} title="Back to the card grid">
-              <Grid3X3 className="size-4" />
-              <span className="sr-only sm:not-sr-only sm:ml-1.5">grid</span>
-            </Link>
-          </Button>
-        </div>
+      {/* The way back, and nothing else. The title said what the screen you
+          are looking at plainly is, and favorites is a tab away in the bottom
+          nav — both were taking room from the card, which is the whole screen. */}
+      <div className="flex shrink-0 items-center justify-end">
+        <Button variant="ghost" size="sm" asChild>
+          <Link href={backToGrid} title="Back to the card grid">
+            <Grid3X3 className="size-4" />
+            <span className="sr-only sm:not-sr-only sm:ml-1.5">grid</span>
+          </Link>
+        </Button>
       </div>
 
       <div className="flex min-h-0 flex-1">
@@ -169,7 +135,7 @@ function SwipeBrowser() {
           showGame={game === "all"}
           // Waiting on the set list is still loading, and the deck must not
           // report an empty search in the meantime.
-          isLoading={isLoading || (scopeIsLive && !latestSetsReady)}
+          isLoading={isLoading || !isReady}
           hasMore={hasNextPage}
           onNeedMore={loadMore}
           emptyMessage="No cards match these filters"

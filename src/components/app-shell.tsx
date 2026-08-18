@@ -2,6 +2,7 @@
 
 import {
   CircleHelp,
+  Gamepad2,
   GitCompareArrows,
   Grid3X3,
   Heart,
@@ -41,6 +42,8 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { useComparison } from "@/hooks/use-comparison";
+import { useGenerationPreference } from "@/hooks/use-generation-preference";
+import { getGenerationName } from "@/lib/pkmn";
 import { cn } from "@/lib/utils";
 import { useNav } from "./navigation/nav-provider";
 
@@ -68,7 +71,7 @@ export function useSecondaryToolbar() {
 
 const navItems = [
   { href: "/", icon: Grid3X3, label: "dex" },
-  { href: "/teams", icon: Users, label: "teams" },
+  { href: "/cards", icon: Layers, label: "cards" },
   { href: "#search", icon: Search, label: "search", action: true },
   { href: "/favorites", icon: Heart, label: "favs" },
   { href: "#more", icon: MoreHorizontal, label: "more", action: true },
@@ -76,7 +79,7 @@ const navItems = [
 
 // Items promoted to desktop navbar (still shown in mobile "more" sheet)
 const desktopExtraNavItems = [
-  { href: "/cards", icon: Layers, label: "cards" },
+  { href: "/teams", icon: Users, label: "teams" },
   { href: "/lists", icon: ListPlus, label: "lists" },
   { href: "/whos-that-pokemon", icon: CircleHelp, label: "quiz" },
   { href: "/comparison", icon: GitCompareArrows, label: "compare" },
@@ -95,7 +98,7 @@ const moreMenuItems = [
   ...desktopExtraNavItems.map((item) => {
     // Restore original labels for mobile sheet
     const labelMap: Record<string, string> = {
-      cards: "Cards",
+      teams: "Teams",
       lists: "Lists",
       quiz: "Who's That Pokemon?",
       compare: "Comparison",
@@ -114,6 +117,7 @@ export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const { toggleSearch, moreOpen, setMoreOpen } = useNav();
   const { comparison } = useComparison();
+  const { preferredGeneration } = useGenerationPreference();
   const isPopStateNav = useRef(false);
   const mainRef = useRef<HTMLElement>(null);
   const prevPathname = useRef(pathname);
@@ -430,15 +434,41 @@ export function AppShell({ children }: AppShellProps) {
             <SheetHeader>
               <SheetTitle>More</SheetTitle>
             </SheetHeader>
-            <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
-              <div>
-                <p className="text-sm">view as</p>
-                <p className="text-xs text-muted-foreground">
-                  Read the dex as a generation&rsquo;s games
-                </p>
-              </div>
-              <GenerationPicker align="end" />
-            </div>
+            {/* The whole row is the control — a label beside an icon gave no
+                clue that either was pressable, or what pressing did. It is
+                built like the links below it, icon first, so the sheet reads
+                as one list rather than a row and then a menu. */}
+            <GenerationPicker
+              align="end"
+              trigger={
+                <button
+                  type="button"
+                  className={cn(
+                    "flex w-full items-center gap-3 border-b px-4 py-3 text-left transition-colors hover:bg-muted hover:text-foreground",
+                    preferredGeneration !== null
+                      ? "text-foreground"
+                      : "text-muted-foreground",
+                  )}
+                >
+                  <Gamepad2 className="size-5 shrink-0" strokeWidth={1.5} />
+                  <span className="min-w-0">
+                    <span className="flex items-baseline gap-2">
+                      <span className="text-sm">view as</span>
+                      <span className="truncate text-xs lowercase text-muted-foreground">
+                        {preferredGeneration !== null
+                          ? getGenerationName(preferredGeneration)
+                          : "national dex"}
+                      </span>
+                    </span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">
+                      Pin the app to one generation&rsquo;s games — its Pokemon,
+                      moves, abilities and sprites — or leave it on National Dex
+                      for everything.
+                    </span>
+                  </span>
+                </button>
+              }
+            />
             <nav className="flex flex-col gap-1 py-2">
               {moreMenuItems.map(renderMoreMenuItem)}
             </nav>

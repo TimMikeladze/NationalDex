@@ -458,27 +458,15 @@ export function TcgSwipeDeck({
         className,
       )}
     >
-      {/* How far through the deck this is */}
-      <div className="flex w-full max-w-sm shrink-0 items-center gap-3">
-        <div className="h-0.5 flex-1 overflow-hidden bg-muted">
-          <motion.div
-            className="h-full bg-foreground"
-            animate={{ scaleX: cards.length > 0 ? index / cards.length : 0 }}
-            style={{ originX: 0 }}
-            transition={{ type: "spring", stiffness: 220, damping: 30 }}
-          />
-        </div>
-        {/* What this sitting has come to so far — a swipe that counts for
-            something reads better than one that only advances a number. */}
-        {kept > 0 && (
-          <span className="shrink-0 text-[10px] tabular-nums text-rose-500">
-            {kept} kept
-          </span>
-        )}
-        <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
-          {Math.min(index + 1, cards.length)} / {cards.length}
-          {hasMore ? "+" : ""}
-        </span>
+      {/* How far through the deck this is. The bar alone — a running tally of
+          cards seen and cards kept turned a browse into a score to finish. */}
+      <div className="h-0.5 w-full max-w-sm shrink-0 overflow-hidden bg-muted">
+        <motion.div
+          className="h-full bg-foreground"
+          animate={{ scaleX: cards.length > 0 ? index / cards.length : 0 }}
+          style={{ originX: 0 }}
+          transition={{ type: "spring", stiffness: 220, damping: 30 }}
+        />
       </div>
 
       {/* The stage takes whatever height is left, and the card takes all of it */}
@@ -611,11 +599,22 @@ export function TcgSwipeDeck({
           <ListPlus className="size-4" />
         </ControlButton>
 
+        {/* Filled in rather than merely outlined once the card is a favorite:
+            the heart is the only thing on screen that can say you already have
+            this one, and an outline reads as "not yet" at a glance. */}
         <ControlButton
-          label={topIsFavorite ? "Already a favorite — keep" : "Keep"}
+          label={
+            topIsFavorite
+              ? "Already in your favorites — keep"
+              : "Keep — adds to your favorites"
+          }
           onClick={() => commit("keep")}
           disabled={!top}
-          className="text-emerald-500 hover:border-emerald-500/60 hover:bg-emerald-500/10"
+          className={cn(
+            topIsFavorite
+              ? "border-emerald-500 bg-emerald-500 text-white hover:bg-emerald-600"
+              : "text-emerald-500 hover:border-emerald-500/60 hover:bg-emerald-500/10",
+          )}
         >
           <Heart className={cn("size-6", topIsFavorite && "fill-current")} />
         </ControlButton>

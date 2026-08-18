@@ -223,7 +223,10 @@ export function WhosThatPokemonClient() {
               <span className="hidden sm:inline">Settings</span>
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-64 space-y-4">
+          <PopoverContent
+            align="end"
+            className="w-[min(16rem,calc(100vw-1.5rem))] space-y-4"
+          >
             <div className="space-y-2">
               <span className="text-xs text-muted-foreground uppercase tracking-wider block">
                 Difficulty

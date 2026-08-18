@@ -19,6 +19,7 @@ import {
   searchTcgCards,
   type TcgCardFilters,
 } from "@/lib/tcg";
+import { seededShuffle } from "@/lib/utils";
 import type {
   TcgCard,
   TcgCardBrief,
@@ -77,7 +78,7 @@ export const LATEST_SET_COUNT = 12;
  * are mostly uncatalogued — TCGdex has no scan for them — so letting them into
  * the opening browse fills the first screen with stand-ins.
  */
-const EXPANSION_MIN_CARDS = 30;
+export const EXPANSION_MIN_CARDS = 30;
 
 /**
  * The newest sets of a game, as ids to search within. Browsing the catalogue in
@@ -166,23 +167,67 @@ export function useTcgCardSearch(
     enabled?: boolean;
     itemsPerPage?: number;
     language?: TcgLanguage;
+    /** Deals the results in a seeded random order instead of set order. */
+    shuffleSeed?: number | null;
+    /**
+     * Sets to draw a page evenly from, rather than in one query. Asking the
+     * API for several sets at once returns them one set after another, so a
+     * page would be a slab of whichever set comes first however it was then
+     * shuffled. Asking each set for its own slice is what makes a shuffled
+     * page a genuine cross-section of the sets in play.
+     */
+    fanOutSetIds?: string[];
   },
 ) {
   const language = options?.language ?? DEFAULT_TCG_LANGUAGE;
   const pocketSetIds = usePocketSetIds(language);
   const itemsPerPage = options?.itemsPerPage ?? CARDS_PER_PAGE;
+  const shuffleSeed = options?.shuffleSeed ?? null;
+
+  const fanOutSetIds =
+    options?.fanOutSetIds && options.fanOutSetIds.length > 0
+      ? options.fanOutSetIds
+      : null;
+  const perSetItems = fanOutSetIds
+    ? Math.max(1, Math.ceil(itemsPerPage / fanOutSetIds.length))
+    : itemsPerPage;
 
   const query = useInfiniteQuery({
-    queryKey: ["tcg", "cards", filters, pocketSetIds, itemsPerPage, language],
+    queryKey: [
+      "tcg",
+      "cards",
+      filters,
+      pocketSetIds,
+      itemsPerPage,
+      language,
+      fanOutSetIds,
+    ],
     initialPageParam: 1,
     queryFn: async ({ pageParam }) => {
-      const cards = await searchTcgCards({
-        ...filters,
-        page: pageParam,
-        itemsPerPage,
-        pocketSetIds,
-        language,
-      });
+      const slices = fanOutSetIds
+        ? await Promise.all(
+            fanOutSetIds.map((setId) =>
+              searchTcgCards({
+                ...filters,
+                setIds: [setId],
+                page: pageParam,
+                itemsPerPage: perSetItems,
+                pocketSetIds,
+                language,
+              }),
+            ),
+          )
+        : [
+            await searchTcgCards({
+              ...filters,
+              page: pageParam,
+              itemsPerPage,
+              pocketSetIds,
+              language,
+            }),
+          ];
+
+      const fetched = slices.flat();
 
       // A Pocket set shipping between deploys would otherwise leak into the
       // physical game's results, so the split is re-checked locally. Whether
@@ -190,23 +235,31 @@ export function useTcgCardSearch(
       // survived this check.
       return {
         cards: filters.game
-          ? cards.filter(
+          ? fetched.filter(
               (card) => gameForCardId(card.id, pocketSetIds) === filters.game,
             )
-          : cards,
-        fetched: cards.length,
+          : fetched,
+        // One set running dry does not end the browse while the others still
+        // have cards to give.
+        hasMore: slices.some((slice) => slice.length >= perSetItems),
       };
     },
     getNextPageParam: (lastPage, allPages) =>
-      lastPage.fetched < itemsPerPage ? undefined : allPages.length + 1,
+      lastPage.hasMore ? allPages.length + 1 : undefined,
     enabled: options?.enabled ?? true,
     staleTime: DAY,
   });
 
-  const cards = useMemo(
-    () => query.data?.pages.flatMap((page) => page.cards) ?? [],
-    [query.data?.pages],
-  );
+  const cards = useMemo(() => {
+    const pages = query.data?.pages ?? [];
+    if (shuffleSeed === null) return pages.flatMap((page) => page.cards);
+
+    // Each page is shuffled on its own rather than the list as a whole, so
+    // scrolling to the next page never rearranges the cards already on screen.
+    return pages.flatMap((page, index) =>
+      seededShuffle(page.cards, shuffleSeed + index),
+    );
+  }, [query.data?.pages, shuffleSeed]);
 
   return { ...query, cards };
 }

@@ -11,12 +11,11 @@ import {
   useRef,
   useState,
 } from "react";
-import { BackToTop, LatestSetsRail, TcgCardGrid } from "@/components/tcg";
+import { BackToTop, TcgCardGrid } from "@/components/tcg";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   CARDS_PER_PAGE,
-  useLatestSetIds,
   usePocketSetIds,
   useTcgCardSearch,
   useTcgEnergyTypes,
@@ -29,41 +28,71 @@ import {
 } from "@/hooks/use-tcg";
 import { resolveSpecies, toID } from "@/lib/pkmn";
 import { cn } from "@/lib/utils";
-import type { TcgLanguage } from "@/types/tcg";
+import type { TcgLanguage, TcgSetBrief } from "@/types/tcg";
 import {
   DEFAULT_TCG_LANGUAGE,
   gameForSetId,
   isTcgLanguage,
   sortRarities,
   variantLabel,
-  withTcgLanguage,
 } from "@/types/tcg";
 import { CardsFilterBar } from "./filter-bar";
 import {
   CARD_FILTER_PARSERS,
   type CardFilterUpdate,
-  type CardScope,
   type GameFilter,
-  isCardScope,
   isGameFilter,
-  scopeApplies,
+  RANDOM_SORT_VALUE,
   toCardSearchFilters,
 } from "./filters";
+import { useCardScope } from "./use-card-scope";
 
-export function CardsPageClient() {
+export interface CardBrowserProps {
+  /**
+   * Pins the browse to one set, which is what a set's own page is. The set
+   * stops being something to pick and becomes the subject, so the controls
+   * that would change it — the games, the set picker, the catalogue — step
+   * aside and everything else narrows within it.
+   */
+  lockedSet?: TcgSetBrief | null;
+  /**
+   * The catalogue the page is fixed to. A set page was reached through one
+   * catalogue's set list and its ids only mean anything there, so the browse
+   * cannot be free to switch.
+   */
+  lockedLanguage?: TcgLanguage;
+}
+
+/**
+ * The card catalogue, filtered. Used whole on `/cards`, and pinned to a single
+ * set on a set's page — one browser rather than a real one and a lesser copy,
+ * so a set page filters by rarity, printing, HP and the rest exactly as the
+ * card browser does.
+ */
+export function CardBrowser(props: CardBrowserProps) {
   return (
     <Suspense fallback={<CardsPageSkeleton />}>
-      <CardsBrowser />
+      <CardsBrowser {...props} />
     </Suspense>
   );
 }
 
 /** Filters live in the URL, so a card search can be shared or bookmarked. */
-function CardsBrowser() {
-  const [filters, setQueryFilters] = useQueryStates(CARD_FILTER_PARSERS, {
+function CardsBrowser({ lockedSet, lockedLanguage }: CardBrowserProps) {
+  const [urlFilters, setQueryFilters] = useQueryStates(CARD_FILTER_PARSERS, {
     history: "replace",
     clearOnDefault: true,
   });
+
+  // A pinned set is the page, not a filter the URL carries — it cannot be
+  // changed or cleared from in here, so it is folded in rather than written.
+  const filters = useMemo(
+    () =>
+      lockedSet
+        ? { ...urlFilters, set: lockedSet.id, game: "all" }
+        : urlFilters,
+    [urlFilters, lockedSet],
+  );
 
   const setFilters = useCallback(
     (next: CardFilterUpdate) => {
@@ -76,9 +105,9 @@ function CardsBrowser() {
   const [toolbarCollapsed, setToolbarCollapsed] = useState(false);
 
   // Each language is its own catalogue of sets, not a translation of one.
-  const language: TcgLanguage = isTcgLanguage(filters.lang)
-    ? filters.lang
-    : DEFAULT_TCG_LANGUAGE;
+  const language: TcgLanguage =
+    lockedLanguage ??
+    (isTcgLanguage(filters.lang) ? filters.lang : DEFAULT_TCG_LANGUAGE);
 
   const pocketSetIds = usePocketSetIds(language);
   const { data: sets } = useTcgSets(language);
@@ -90,22 +119,22 @@ function CardsBrowser() {
   const { data: energyTypes } = useTcgEnergyTypes(language);
 
   const game: GameFilter = isGameFilter(filters.game) ? filters.game : "all";
-  const scope: CardScope = isCardScope(filters.scope)
-    ? filters.scope
-    : "latest";
 
-  // A plain browse opens on the newest sets. Searching by name or asking for a
-  // set is asking about the whole catalogue, so the scope steps aside there.
-  const scopeMatters = scopeApplies(filters);
-  const scopeIsLive = scope === "latest" && scopeMatters;
-  const { setIds: latestSetIds, isReady: latestSetsReady } = useLatestSetIds(
-    game,
-    language,
-  );
+  // A plain browse opens on the newest sets, and a shuffle draws from sets
+  // picked at random. Searching by name or asking for a set is asking about the
+  // whole catalogue, so both step aside there.
+  const {
+    scopeIsLive,
+    randomIsLive,
+    scopedSetIds,
+    fanOutSetIds,
+    shuffleSeed,
+    isReady,
+  } = useCardScope(filters, game, language);
 
   const searchFilters = useMemo(
-    () => toCardSearchFilters(filters, scopeIsLive ? latestSetIds : undefined),
-    [filters, latestSetIds, scopeIsLive],
+    () => toCardSearchFilters(filters, scopedSetIds),
+    [filters, scopedSetIds],
   );
 
   const {
@@ -118,14 +147,16 @@ function CardsBrowser() {
     isError,
   } = useTcgCardSearch(searchFilters, {
     language,
+    shuffleSeed,
+    fanOutSetIds,
     // Firing before the set list lands would search everything and flash
     // twenty-year-old promos onto the screen.
-    enabled: !scopeIsLive || latestSetsReady,
+    enabled: isReady,
   });
 
   // Waiting on the set list reads as loading, because that is what it is: the
-  // search cannot be asked until the newest sets are known.
-  const isLoadingCards = isLoading || (scopeIsLive && !latestSetsReady);
+  // search cannot be asked until the sets it runs within are known.
+  const isLoadingCards = isLoading || !isReady;
 
   // Re-filtering keeps the old results on screen; dimming them says the list
   // being read is about to be replaced.
@@ -184,8 +215,8 @@ function CardsBrowser() {
   );
 
   const selectedSet = useMemo(
-    () => sets?.find((set) => set.id === filters.set) ?? null,
-    [sets, filters.set],
+    () => lockedSet ?? sets?.find((set) => set.id === filters.set) ?? null,
+    [lockedSet, sets, filters.set],
   );
 
   // Sets narrow to the chosen game so the picker matches the rest of the page.
@@ -205,7 +236,11 @@ function CardsBrowser() {
   const activeChips = useMemo(() => {
     const chips: { key: string; label: string; clear: CardFilterUpdate }[] = [];
 
-    if (selectedSet) {
+    // A pinned set is the page's subject, so it is not offered as something
+    // to remove — the header already says which set this is.
+    if (lockedSet) {
+      // nothing to show
+    } else if (selectedSet) {
       chips.push({
         key: "set",
         label: selectedSet.name,
@@ -327,16 +362,32 @@ function CardsBrowser() {
     filters.variants,
     filters.types,
     selectedSet,
+    lockedSet,
   ]);
 
   const panelFilterCount = activeChips.length;
 
-  const hasAnyFilter =
-    panelFilterCount > 0 || filters.q.length > 0 || filters.dexId !== null;
+  // Sorting and shuffling are the same question — what order are these cards
+  // in — so they are answered in one place. A shuffle clears the sort field,
+  // because the API has no random order to ask for and sorting the results
+  // before shuffling them only decides which page they were drawn from.
+  const setOrder = useCallback(
+    (value: string) => {
+      if (value === RANDOM_SORT_VALUE) {
+        setFilters({ seed: Date.now(), sort: null });
+        return;
+      }
+      setFilters({ sort: value === "default" ? null : value, seed: null });
+    },
+    [setFilters],
+  );
 
   const clearAll = () =>
     setFilters({
-      set: null,
+      // A pinned set is not in the URL to begin with, so a reset has nothing
+      // to clear there — and must not write a cleared `set` that would then
+      // fight the lock.
+      ...(lockedSet ? null : { set: null }),
       types: null,
       rarities: null,
       category: null,
@@ -364,8 +415,8 @@ function CardsBrowser() {
           filters={filters}
           setFilters={setFilters}
           game={game}
-          scope={scope}
-          scopeMatters={scopeMatters}
+          isRandom={filters.seed !== null}
+          onOrderChange={setOrder}
           sets={availableSets}
           selectedSet={selectedSet}
           language={language}
@@ -379,13 +430,11 @@ function CardsBrowser() {
           panelFilterCount={panelFilterCount}
           resultLabel={resultLabel}
           collapsed={toolbarCollapsed}
+          lockedSet={lockedSet ?? null}
         />
       </div>
 
       <div className="p-4 md:p-6">
-        {/* An unfiltered browse opens on 1999 promos, so the newest sets lead */}
-        {!hasAnyFilter && <LatestSetsRail game={game} language={language} />}
-
         {/* What is currently narrowing the list, and how to undo any of it */}
         {(crossReferencedPokemon || activeChips.length > 0) && (
           <div className="mb-4 flex flex-wrap items-center gap-1.5">
@@ -438,17 +487,9 @@ function CardsBrowser() {
           </div>
         )}
 
-        <div className="mb-3 flex items-center justify-between gap-3 sm:hidden">
-          <p className="text-xs tabular-nums text-muted-foreground">
-            {resultLabel}
-          </p>
-          <Link
-            href={withTcgLanguage("/cards/sets", language)}
-            className="text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
-          >
-            browse sets →
-          </Link>
-        </div>
+        <p className="mb-3 text-xs tabular-nums text-muted-foreground sm:hidden">
+          {resultLabel}
+        </p>
 
         {isError ? (
           <div className="py-16 text-center">
@@ -473,14 +514,24 @@ function CardsBrowser() {
               isLoading={isLoadingCards}
               skeletonCount={CARDS_PER_PAGE}
               emptyMessage={
-                scopeIsLive
-                  ? "No cards in the newest sets match these filters"
-                  : "No cards match these filters"
+                randomIsLive
+                  ? "No cards in this shuffle match these filters"
+                  : scopeIsLive
+                    ? "No cards in the newest sets match these filters"
+                    : "No cards match these filters"
               }
               emptyAction={
                 // Inside the newest sets, widening is the likelier fix — the
                 // filters may well have matches further back in the catalogue.
-                scopeIsLive ? (
+                randomIsLive ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setOrder("default")}
+                  >
+                    back to set order
+                  </Button>
+                ) : scopeIsLive ? (
                   <Button
                     variant="outline"
                     size="sm"
@@ -507,9 +558,22 @@ function CardsBrowser() {
               cards.length > 0 && (
                 <div className="flex flex-col items-center gap-2 py-8">
                   <p className="text-center text-xs tabular-nums text-muted-foreground">
-                    {scopeIsLive ? "end of the newest sets" : "end of results"}{" "}
+                    {randomIsLive
+                      ? "end of the shuffle"
+                      : scopeIsLive
+                        ? "end of the newest sets"
+                        : "end of results"}{" "}
                     — {cards.length} card{cards.length === 1 ? "" : "s"}
                   </p>
+                  {randomIsLive && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setFilters({ seed: Date.now() })}
+                    >
+                      shuffle again
+                    </Button>
+                  )}
                   {scopeIsLive && (
                     <Button
                       variant="outline"

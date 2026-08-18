@@ -1,16 +1,18 @@
 "use client";
 
 import {
+  ArrowUpDown,
   ChevronsUpDown,
   Layers,
   ListFilter,
   Search,
+  Shuffle,
   WalletCards,
   X,
 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Chip, FilterSection } from "@/components/tcg/tcg-chip";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +23,14 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Popover,
@@ -48,24 +58,32 @@ import {
   withTcgLanguage,
 } from "@/types/tcg";
 import {
-  CARD_SCOPE_OPTIONS,
   type CardFilterState,
   type CardFilterUpdate,
-  type CardScope,
   GAME_OPTIONS,
   type GameFilter,
   HP_PRESETS,
+  RANDOM_SORT_VALUE,
   SORT_OPTIONS,
+  sortOptionFor,
 } from "./filters";
+
+/**
+ * A chip that goes somewhere rather than narrowing something. It borrows the
+ * unselected chip's shape so the row reads as one strip, and earns a hover
+ * because unlike a filter it is a link.
+ */
+const WAY_IN_CHIP =
+  "inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground";
 
 interface CardsFilterBarProps {
   filters: CardFilterState;
   setFilters: (next: CardFilterUpdate) => void;
   game: GameFilter;
-  /** How much of the catalogue is in play. */
-  scope: CardScope;
-  /** Whether the choice decides anything here — a name search ignores it. */
-  scopeMatters: boolean;
+  /** Whether the results are currently being dealt in a random order. */
+  isRandom: boolean;
+  /** Sets the order — a `SORT_OPTIONS` value, or `RANDOM_SORT_VALUE`. */
+  onOrderChange: (value: string) => void;
   sets: TcgSetBrief[];
   selectedSet: TcgSetBrief | null;
   /** The catalogue being browsed — sets and rarities differ between them. */
@@ -82,6 +100,12 @@ interface CardsFilterBarProps {
   resultLabel: string;
   /** Collapses the secondary rows while the grid is being scrolled. */
   collapsed?: boolean;
+  /**
+   * The set this browse is pinned to, on a set's own page. Everything that
+   * would change which set is being read — the games, the set picker, the
+   * catalogue — is the page's to decide there, not the toolbar's.
+   */
+  lockedSet?: TcgSetBrief | null;
 }
 
 /**
@@ -93,8 +117,8 @@ export function CardsFilterBar({
   filters,
   setFilters,
   game,
-  scope,
-  scopeMatters,
+  isRandom,
+  onOrderChange,
   sets,
   selectedSet,
   language,
@@ -108,13 +132,25 @@ export function CardsFilterBar({
   panelFilterCount,
   resultLabel,
   collapsed = false,
+  lockedSet = null,
 }: CardsFilterBarProps) {
   const [searchInput, setSearchInput] = useState(filters.q);
   const searchParams = useSearchParams();
-  const query = searchParams.toString();
-  const swipeHref = query
-    ? `/cards/swipe?${query}`
-    : withTcgLanguage("/cards/swipe", language);
+
+  // The deck reads the same query string the grid writes, so it deals exactly
+  // these cards. A set page's URL carries neither the set nor the catalogue as
+  // a query — they are the route — so both are written in on the way out.
+  const swipeHref = useMemo(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (lockedSet) params.set("set", lockedSet.id);
+    if (language !== DEFAULT_TCG_LANGUAGE) params.set("lang", language);
+    const query = params.toString();
+    return query ? `/cards/swipe?${query}` : "/cards/swipe";
+  }, [searchParams, lockedSet, language]);
+
+  // The order is only named in the icon's tooltip now, so it has to say what
+  // the control would otherwise have shown.
+  const orderLabel = isRandom ? "Random" : sortOptionFor(filters.sort).label;
 
   // Typing shouldn't fire a request per keystroke.
   useEffect(() => {
@@ -147,7 +183,9 @@ export function CardsFilterBar({
         <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           type="search"
-          placeholder="Search cards..."
+          placeholder={
+            lockedSet ? `Search ${lockedSet.name}...` : "Search cards..."
+          }
           value={searchInput}
           onChange={(event) => setSearchInput(event.target.value)}
           className="pl-9 pr-20 [&::-webkit-search-cancel-button]:hidden"
@@ -192,77 +230,120 @@ export function CardsFilterBar({
             </PopoverTrigger>
             <PopoverContent
               align="end"
-              className="max-h-[70dvh] w-80 overflow-y-auto p-3"
+              className="max-h-[70dvh] w-[min(20rem,calc(100vw-1.5rem))] overflow-y-auto p-3"
             >
               <div className="space-y-4">
-                <FilterSection
-                  label="Set"
-                  onClear={
-                    filters.set ? () => setFilters({ set: null }) : undefined
-                  }
-                >
-                  <div className="flex items-center gap-1">
-                    <Popover>
-                      <PopoverTrigger asChild>
+                {/* Which catalogue is being read. Not a translation toggle: the
+                    Japanese catalogue holds 173 sets English never printed, so
+                    changing it changes which cards exist at all — and drops the
+                    set and rarity filters, which are catalogue-specific. It
+                    leads the panel because everything below it is scoped to
+                    whatever it says. A set page was reached through one
+                    catalogue and its set id only means anything there. */}
+                {!lockedSet && (
+                  <FilterSection label="Catalogue">
+                    <Select
+                      value={language}
+                      onValueChange={(value) =>
+                        setFilters({
+                          lang: value === DEFAULT_TCG_LANGUAGE ? null : value,
+                          set: null,
+                          rarities: null,
+                          illustrator: null,
+                        })
+                      }
+                    >
+                      <SelectTrigger size="sm" className="h-8 w-full text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent align="start">
+                        {TCG_LANGUAGES.map((option) => (
+                          <SelectItem key={option.code} value={option.code}>
+                            {option.native}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FilterSection>
+                )}
+
+                {/* On a set's own page the set is the page, so there is
+                    nothing here to pick. */}
+                {!lockedSet && (
+                  <FilterSection
+                    label="Set"
+                    onClear={
+                      filters.set ? () => setFilters({ set: null }) : undefined
+                    }
+                  >
+                    <div className="flex items-center gap-1">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 min-w-0 flex-1 justify-between font-normal"
+                          >
+                            <span className="truncate">
+                              {selectedSet ? selectedSet.name : "Any set"}
+                            </span>
+                            <ChevronsUpDown className="size-3.5 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          align="start"
+                          className="w-[min(18rem,calc(100vw-1.5rem))] p-0"
+                        >
+                          <Command>
+                            <CommandInput placeholder="Find a set..." />
+                            <CommandList>
+                              <CommandEmpty>No sets found</CommandEmpty>
+                              <CommandGroup>
+                                {sets.map((set) => (
+                                  <CommandItem
+                                    key={set.id}
+                                    value={`${set.name} ${set.id}`}
+                                    onSelect={() =>
+                                      setFilters({
+                                        set:
+                                          set.id === filters.set
+                                            ? null
+                                            : set.id,
+                                      })
+                                    }
+                                    className="flex items-center justify-between gap-2"
+                                  >
+                                    <span className="truncate">{set.name}</span>
+                                    <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
+                                      {set.cardCount.official}
+                                    </span>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                      {selectedSet && (
                         <Button
-                          variant="outline"
+                          asChild
+                          variant="ghost"
                           size="sm"
-                          className="h-8 min-w-0 flex-1 justify-between font-normal"
+                          className="h-8 shrink-0 px-2 text-xs"
                         >
-                          <span className="truncate">
-                            {selectedSet ? selectedSet.name : "Any set"}
-                          </span>
-                          <ChevronsUpDown className="size-3.5 opacity-50" />
+                          <Link
+                            href={withTcgLanguage(
+                              `/cards/sets/${selectedSet.id.toLowerCase()}`,
+                              language,
+                            )}
+                          >
+                            view
+                          </Link>
                         </Button>
-                      </PopoverTrigger>
-                      <PopoverContent align="start" className="w-72 p-0">
-                        <Command>
-                          <CommandInput placeholder="Find a set..." />
-                          <CommandList>
-                            <CommandEmpty>No sets found</CommandEmpty>
-                            <CommandGroup>
-                              {sets.map((set) => (
-                                <CommandItem
-                                  key={set.id}
-                                  value={`${set.name} ${set.id}`}
-                                  onSelect={() =>
-                                    setFilters({
-                                      set:
-                                        set.id === filters.set ? null : set.id,
-                                    })
-                                  }
-                                  className="flex items-center justify-between gap-2"
-                                >
-                                  <span className="truncate">{set.name}</span>
-                                  <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
-                                    {set.cardCount.official}
-                                  </span>
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                    {selectedSet && (
-                      <Button
-                        asChild
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 shrink-0 px-2 text-xs"
-                      >
-                        <Link
-                          href={withTcgLanguage(
-                            `/cards/sets/${selectedSet.id.toLowerCase()}`,
-                            language,
-                          )}
-                        >
-                          view
-                        </Link>
-                      </Button>
-                    )}
-                  </div>
-                </FilterSection>
+                      )}
+                    </div>
+                  </FilterSection>
+                )}
 
                 <FilterSection
                   label="Category"
@@ -547,29 +628,74 @@ export function CardsFilterBar({
             </PopoverContent>
           </Popover>
 
-          {/* The same search, dealt one card at a time — so the whole filter
-              state carries over rather than being set up twice. */}
-          <Link
-            href={swipeHref}
-            className="p-1 text-muted-foreground transition-colors hover:text-foreground"
-            title="Swipe through these cards"
-            aria-label="Swipe through these cards"
-          >
-            <WalletCards className="size-4" />
-          </Link>
+          {/* What order the cards come in. An icon rather than a named select:
+              the row below was overflowing on a phone, and the order is
+              something you set once and then read off the cards themselves. */}
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              className={cn(
+                "p-1 transition-colors",
+                isRandom || filters.sort !== "default"
+                  ? "text-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+              title={`Order: ${orderLabel}`}
+              aria-label={`Order: ${orderLabel}`}
+            >
+              <ArrowUpDown className="size-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                order
+              </DropdownMenuLabel>
+              <DropdownMenuRadioGroup
+                value={isRandom ? RANDOM_SORT_VALUE : filters.sort}
+                onValueChange={onOrderChange}
+              >
+                {SORT_OPTIONS.map((option) => (
+                  <DropdownMenuRadioItem
+                    key={option.value}
+                    value={option.value}
+                    className="cursor-pointer text-xs"
+                  >
+                    {option.label}
+                  </DropdownMenuRadioItem>
+                ))}
+                <DropdownMenuRadioItem
+                  value={RANDOM_SORT_VALUE}
+                  className="cursor-pointer text-xs"
+                >
+                  Random
+                </DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-          <Link
-            href={withTcgLanguage("/cards/sets", language)}
-            className="p-1 text-muted-foreground transition-colors hover:text-foreground"
-            title="Browse sets"
-            aria-label="Browse card sets"
+          {/* The dex's shuffle, on the card catalogue: it deals the results in
+              a random order and, on an unfiltered browse, draws them from sets
+              picked at random rather than the newest ones. It is the same
+              choice the sort control makes, reached in one press. */}
+          <button
+            type="button"
+            onClick={() =>
+              onOrderChange(isRandom ? "default" : RANDOM_SORT_VALUE)
+            }
+            aria-pressed={isRandom}
+            className={cn(
+              "p-1 transition-colors",
+              isRandom
+                ? "text-foreground"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+            title={isRandom ? "Back to set order" : "Shuffle these cards"}
+            aria-label={isRandom ? "Back to set order" : "Shuffle these cards"}
           >
-            <Layers className="size-4" />
-          </Link>
+            <Shuffle className="size-4" />
+          </button>
         </div>
       </div>
 
-      {/* Game and sort — collapsible, the way the dex toolbar behaves */}
+      {/* Game and the other ways in — collapsible, like the dex toolbar */}
       <div
         className={cn(
           "grid transition-all duration-200 ease-in-out",
@@ -579,104 +705,59 @@ export function CardsFilterBar({
         )}
       >
         <div className="min-h-0 overflow-hidden">
-          <div className="flex items-center gap-2">
-            <div className="flex gap-1">
-              {GAME_OPTIONS.filter(
-                (option) => hasPocket || option.id !== "pocket",
-              ).map((option) => (
-                <Chip
-                  key={option.id}
-                  selected={game === option.id}
-                  title={option.title}
-                  onClick={() =>
-                    setFilters({
-                      game: option.id === "all" ? null : option.id,
-                      // A set from the other game would contradict the switch.
-                      set: null,
-                    })
-                  }
-                >
-                  {option.label}
-                </Chip>
-              ))}
-            </div>
-
-            {/* How far back the browse reaches. Only shown while it decides
-                anything — a name search reads the whole catalogue regardless. */}
-            {scopeMatters && (
-              <div className="flex gap-1">
-                {CARD_SCOPE_OPTIONS.map((option) => (
+          {/* Wraps rather than clips: the collapse container hides its
+              overflow, so anything that does not fit on one line is cut in
+              half rather than pushed out of reach. */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex min-w-0 flex-wrap gap-1">
+              {/* A set belongs to one game, so on its own page the switch has
+                  nothing to switch between. */}
+              {!lockedSet &&
+                GAME_OPTIONS.filter(
+                  (option) => hasPocket || option.id !== "pocket",
+                ).map((option) => (
                   <Chip
                     key={option.id}
-                    selected={scope === option.id}
+                    selected={game === option.id}
                     title={option.title}
                     onClick={() =>
                       setFilters({
-                        scope: option.id === "latest" ? null : option.id,
+                        game: option.id === "all" ? null : option.id,
+                        // A set from the other game would contradict the switch.
+                        set: null,
                       })
                     }
                   >
                     {option.label}
                   </Chip>
                 ))}
-              </div>
-            )}
 
-            {/* Which catalogue is being read. Not a translation toggle: the
-                Japanese catalogue holds 173 sets English never printed, so
-                changing it changes which cards exist at all — and drops the
-                set and rarity filters, which are catalogue-specific. */}
-            <Select
-              value={language}
-              onValueChange={(value) =>
-                setFilters({
-                  lang: value === DEFAULT_TCG_LANGUAGE ? null : value,
-                  set: null,
-                  rarities: null,
-                  illustrator: null,
-                })
-              }
-            >
-              <SelectTrigger
-                size="sm"
-                className="h-8 w-28 shrink-0 border-0 bg-muted text-xs"
-                title="Card catalogue language"
+              {/* Two other ways to read the same catalogue — set by set, or
+                  one card at a time. Both are places to go rather than filters,
+                  so they sit together at the end of the row. The deck keeps the
+                  whole query string, so a search carries into it. */}
+              <Link
+                href={withTcgLanguage("/cards/sets", language)}
+                title="Browse every set, by series"
+                className={WAY_IN_CHIP}
               >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent align="start">
-                {TCG_LANGUAGES.map((option) => (
-                  <SelectItem key={option.code} value={option.code}>
-                    {option.native}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                <Layers className="size-3.5" />
+                Set list
+              </Link>
+
+              <Link
+                href={swipeHref}
+                title="Swipe through these cards, one at a time"
+                className={WAY_IN_CHIP}
+              >
+                <WalletCards className="size-3.5" />
+                Swipe
+              </Link>
+            </div>
 
             <span className="ml-auto hidden shrink-0 text-xs tabular-nums text-muted-foreground sm:block">
               {resultLabel}
             </span>
-
-            <Select
-              value={filters.sort}
-              onValueChange={(value) =>
-                setFilters({ sort: value === "default" ? null : value })
-              }
-            >
-              <SelectTrigger
-                size="sm"
-                className="ml-auto h-8 w-36 shrink-0 border-0 bg-muted text-xs sm:ml-0"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent align="end">
-                {SORT_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           {/* Energy is the facet a TCG player reaches for first, so it sits in

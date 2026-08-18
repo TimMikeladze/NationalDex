@@ -1,20 +1,12 @@
 "use client";
 
-import { Heart, Search, X } from "lucide-react";
+import { Heart } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import {
-  BackToTop,
-  Chip,
-  GameBadge,
-  SectionLabel,
-  TcgCardGrid,
-} from "@/components/tcg";
+import { useMemo } from "react";
+import { BackToTop, GameBadge, SectionLabel } from "@/components/tcg";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useCardFavorites } from "@/hooks/use-card-favorites";
 import { usePocketSetIds } from "@/hooks/use-tcg";
-import { cn } from "@/lib/utils";
 import type { TcgLanguage, TcgSet, TcgVariantKey } from "@/types/tcg";
 import {
   assetUrl,
@@ -25,6 +17,7 @@ import {
   tcgLanguageLabel,
   withTcgLanguage,
 } from "@/types/tcg";
+import { CardBrowser } from "../../card-browser";
 
 interface SetDetailClientProps {
   set: TcgSet;
@@ -39,11 +32,11 @@ export function SetDetailClient({
   const pocketSetIds = usePocketSetIds(language);
   const game = gameForSetId(set.id, pocketSetIds);
   const { isFavoriteCard } = useCardFavorites();
-  const [search, setSearch] = useState("");
-  const [favoritesOnly, setFavoritesOnly] = useState(false);
 
   // How much of the set is already in your favourites — the number a collector
-  // opens a set page to see.
+  // opens a set page to see. Counted against the set's own card list, which
+  // the server sends whole, so it is the real total rather than however far
+  // the grid below has been scrolled.
   const favoriteCount = useMemo(
     () => set.cards.filter((card) => isFavoriteCard(card.id)).length,
     [set.cards, isFavoriteCard],
@@ -71,18 +64,6 @@ export function SetDetailClient({
       .filter((entry): entry is [TcgVariantKey, number] => Boolean(entry[1]))
       .map(([key, count]) => ({ key, count }));
   }, [set.cardCount]);
-
-  const cards = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return set.cards.filter((card) => {
-      if (favoritesOnly && !isFavoriteCard(card.id)) return false;
-      if (!query) return true;
-      return (
-        card.name.toLowerCase().includes(query) ||
-        card.localId.toLowerCase().includes(query)
-      );
-    });
-  }, [set.cards, search, favoritesOnly, isFavoriteCard]);
 
   return (
     <div>
@@ -130,11 +111,6 @@ export function SetDetailClient({
           </div>
 
           <div className="hidden shrink-0 gap-2 sm:flex">
-            <Button asChild variant="outline" size="sm">
-              <Link href={withTcgLanguage(`/cards?set=${set.id}`, language)}>
-                filter in browser
-              </Link>
-            </Button>
             <Button asChild variant="ghost" size="sm">
               <Link href={withTcgLanguage("/cards/sets", language)}>
                 all sets
@@ -144,8 +120,9 @@ export function SetDetailClient({
         </div>
 
         {/* How many of the set's cards exist in each printing — the numbers a
-            master-set collector counts against, each one a way into the
-            browser filtered to exactly those cards. */}
+            master-set collector counts against. Each one now narrows the grid
+            below rather than sending you to another page to see it, because
+            the grid below is that page. */}
         {printingCounts.length > 0 && (
           <div className="mt-3 flex flex-wrap items-center gap-1.5">
             <SectionLabel className="w-full">printings</SectionLabel>
@@ -153,7 +130,7 @@ export function SetDetailClient({
               <Link
                 key={key}
                 href={withTcgLanguage(
-                  `/cards?set=${set.id}&variants=${key}`,
+                  `/cards/sets/${set.id.toLowerCase()}?variants=${key}`,
                   language,
                 )}
                 className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
@@ -162,6 +139,25 @@ export function SetDetailClient({
                 <span className="tabular-nums">{count}</span>
               </Link>
             ))}
+          </div>
+        )}
+
+        {/* What you already have of it. The count is the whole set's, not the
+            grid's — the browser below pages, and a collector's number must not
+            change with how far they have scrolled. */}
+        {favoriteCount > 0 && (
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            <SectionLabel className="w-full">yours</SectionLabel>
+            <Link
+              href="/favorites"
+              className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <Heart className="size-3 fill-current text-rose-500" />
+              <span className="tabular-nums">
+                {favoriteCount} of {listed}
+              </span>{" "}
+              favorited
+            </Link>
           </div>
         )}
 
@@ -179,13 +175,8 @@ export function SetDetailClient({
           </div>
         )}
 
-        <div className="mt-3 flex gap-2 sm:hidden">
-          <Button asChild variant="outline" size="sm" className="flex-1">
-            <Link href={withTcgLanguage(`/cards?set=${set.id}`, language)}>
-              filter in browser
-            </Link>
-          </Button>
-          <Button asChild variant="ghost" size="sm" className="flex-1">
+        <div className="mt-3 sm:hidden">
+          <Button asChild variant="outline" size="sm" className="w-full">
             <Link href={withTcgLanguage("/cards/sets", language)}>
               all sets
             </Link>
@@ -193,64 +184,12 @@ export function SetDetailClient({
         </div>
       </header>
 
-      <div className="pwa-sticky-toolbar sticky top-0 z-30 border-b bg-background px-4 py-3 md:px-6 lg:bg-background/95 lg:backdrop-blur lg:supports-[backdrop-filter]:bg-background/80">
-        <div className="flex items-center gap-3">
-          <div className="relative min-w-0 flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder={`Search ${set.name}...`}
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              className="pl-9 pr-9 [&::-webkit-search-cancel-button]:hidden"
-            />
-            {search && (
-              <button
-                type="button"
-                onClick={() => setSearch("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
-                title="Clear search"
-              >
-                <X className="size-4" />
-              </button>
-            )}
-          </div>
-          {favoriteCount > 0 && (
-            <Chip
-              selected={favoritesOnly}
-              onClick={() => setFavoritesOnly((current) => !current)}
-              title={`${favoriteCount} of ${set.cards.length} favorited`}
-              className="flex shrink-0 items-center gap-1"
-            >
-              <Heart
-                className={cn("size-3", favoritesOnly && "fill-current")}
-              />
-              <span className="tabular-nums">{favoriteCount}</span>
-            </Chip>
-          )}
-          <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-            {cards.length === set.cards.length
-              ? `${set.cards.length} cards`
-              : `${cards.length} of ${set.cards.length}`}
-          </span>
-        </div>
-      </div>
-
-      <div className="p-4 md:p-6">
-        <TcgCardGrid
-          cards={cards}
-          language={language}
-          pocketSetIds={pocketSetIds}
-          showGame={false}
-          emptyMessage={
-            favoritesOnly
-              ? "No favorited cards match"
-              : listed === 0
-                ? "TCGdex lists this set but has not catalogued its cards yet"
-                : "No cards match that search"
-          }
-        />
-      </div>
+      {/* The card browser, pinned to this set. A set page used to have its own
+          smaller search — a name field and nothing else — because the set's
+          payload carries only names and numbers. Asking the API instead is
+          what lets rarity, printing, HP, illustrator and the rest work here
+          exactly as they do on `/cards`. */}
+      <CardBrowser lockedSet={set} lockedLanguage={language} />
 
       <BackToTop />
     </div>

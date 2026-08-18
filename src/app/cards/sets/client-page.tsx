@@ -1,20 +1,22 @@
 "use client";
 
-import { ChevronRight, Search, X } from "lucide-react";
+import { ChevronRight, Languages, Search, X } from "lucide-react";
 import Link from "next/link";
 import { parseAsString, useQueryState } from "nuqs";
 import { Suspense, useMemo, useState } from "react";
 import { Chip } from "@/components/tcg";
-import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePocketSetIds, useTcgSeriesWithSets } from "@/hooks/use-tcg";
+import { cn } from "@/lib/utils";
 import type { TcgGame, TcgLanguage, TcgSerie } from "@/types/tcg";
 import {
   assetUrl,
@@ -61,6 +63,12 @@ function CardSetsIndex() {
   const language: TcgLanguage = isTcgLanguage(lang)
     ? lang
     : DEFAULT_TCG_LANGUAGE;
+
+  // The catalogue is only named in the icon's tooltip now, so it has to say
+  // what the select would otherwise have shown.
+  const languageLabel =
+    TCG_LANGUAGES.find((option) => option.code === language)?.native ??
+    language;
 
   const { data: series, isLoading, isError } = useTcgSeriesWithSets(language);
   const pocketSetIds = usePocketSetIds(language);
@@ -116,18 +124,64 @@ function CardSetsIndex() {
               placeholder="Search sets..."
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              className="pl-9 pr-9 [&::-webkit-search-cancel-button]:hidden"
+              className="pl-9 pr-16 [&::-webkit-search-cancel-button]:hidden"
             />
-            {search && (
-              <button
-                type="button"
-                onClick={() => setSearch("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
-                title="Clear search"
-              >
-                <X className="size-4" />
-              </button>
-            )}
+            <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="p-1 text-muted-foreground hover:text-foreground"
+                  title="Clear search"
+                  aria-label="Clear search"
+                >
+                  <X className="size-4" />
+                </button>
+              )}
+
+              {/* Which catalogue is being read. Not a translation toggle: the
+                  Japanese catalogue prints 173 sets English never did, so this
+                  changes which sets exist at all. It sits in the field rather
+                  than the row below because it is not a filter on this list —
+                  it chooses which list this is. */}
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  className={cn(
+                    "p-1 transition-colors",
+                    language === DEFAULT_TCG_LANGUAGE
+                      ? "text-muted-foreground hover:text-foreground"
+                      : "text-foreground",
+                  )}
+                  title={`Catalogue: ${languageLabel}`}
+                  aria-label={`Catalogue: ${languageLabel}`}
+                >
+                  <Languages className="size-4" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-40">
+                  <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    catalogue
+                  </DropdownMenuLabel>
+                  <DropdownMenuRadioGroup
+                    value={language}
+                    onValueChange={(value) => {
+                      void setLang(
+                        value === DEFAULT_TCG_LANGUAGE ? null : value,
+                      );
+                    }}
+                  >
+                    {TCG_LANGUAGES.map((option) => (
+                      <DropdownMenuRadioItem
+                        key={option.code}
+                        value={option.code}
+                        className="cursor-pointer text-xs"
+                      >
+                        {option.native}
+                      </DropdownMenuRadioItem>
+                    ))}
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
@@ -145,27 +199,6 @@ function CardSetsIndex() {
                 </Chip>
               ))}
             </div>
-            <Select
-              value={language}
-              onValueChange={(value) => {
-                void setLang(value === DEFAULT_TCG_LANGUAGE ? null : value);
-              }}
-            >
-              <SelectTrigger
-                size="sm"
-                className="h-8 w-28 shrink-0 border-0 bg-muted text-xs"
-                title="Card catalogue language"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent align="start">
-                {TCG_LANGUAGES.map((option) => (
-                  <SelectItem key={option.code} value={option.code}>
-                    {option.native}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
 
             {!isLoading && (
               <span className="ml-auto text-xs tabular-nums text-muted-foreground">
