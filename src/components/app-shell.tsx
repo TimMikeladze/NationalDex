@@ -434,15 +434,23 @@ export function AppShell({ children }: AppShellProps) {
             <SheetHeader>
               <SheetTitle>More</SheetTitle>
             </SheetHeader>
-            {/* The whole row is the control — a one-line label next to an icon
-                gave no clue that either was pressable, or what pressing did. */}
+            {/* The whole row is the control — a label beside an icon gave no
+                clue that either was pressable, or what pressing did. It is
+                built like the links below it, icon first, so the sheet reads
+                as one list rather than a row and then a menu. */}
             <GenerationPicker
               align="end"
               trigger={
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between gap-3 border-b px-4 py-3 text-left transition-colors hover:bg-muted"
+                  className={cn(
+                    "flex w-full items-center gap-3 border-b px-4 py-3 text-left transition-colors hover:bg-muted hover:text-foreground",
+                    preferredGeneration !== null
+                      ? "text-foreground"
+                      : "text-muted-foreground",
+                  )}
                 >
+                  <Gamepad2 className="size-5 shrink-0" strokeWidth={1.5} />
                   <span className="min-w-0">
                     <span className="flex items-baseline gap-2">
                       <span className="text-sm">view as</span>
@@ -458,10 +466,6 @@ export function AppShell({ children }: AppShellProps) {
                       for everything.
                     </span>
                   </span>
-                  <Gamepad2
-                    className="size-5 shrink-0 text-muted-foreground"
-                    strokeWidth={1.5}
-                  />
                 </button>
               }
             />
