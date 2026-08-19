@@ -47,6 +47,7 @@ No database or environment variables are required. All Pokemon data is bundled a
 | `bun start` | Start the production server |
 | `bun lint` | Run linting and format checks |
 | `bun lint:fix` | Auto-fix linting issues |
+| `bun check:deck-rules` | Check the deck formats against the rules they enforce |
 
 ## Contributing
 

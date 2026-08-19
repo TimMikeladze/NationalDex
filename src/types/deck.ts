@@ -130,7 +130,19 @@ export interface DeckFormat {
   /** Gym Leader Challenge decks hold Pokemon of a single energy type. */
   singleTypeOnly: boolean;
   openingHand: number;
+  /**
+   * Prize cards set out at the start of the game. Pocket has none: knocking a
+   * Pokemon out scores points instead, which is what `pointsToWin` counts, so
+   * "is this card prized" is a question only the physical game can ask.
+   */
   prizeCount: number;
+  usesPrizeCards: boolean;
+  pointsToWin: number | null;
+  /**
+   * Whether the opening hand always contains a Basic Pokemon. Pocket deals one
+   * every game, so a Pocket deck cannot mulligan however few Basics it plays.
+   */
+  guaranteedOpeningBasic: boolean;
   /** How many energy types a Pocket deck may register in its Energy Zone. */
   maxEnergyZoneTypes: number | null;
   guidance: DeckGuidance;
@@ -164,12 +176,15 @@ export const DECK_FORMATS: Record<DeckFormatId, DeckFormat> = {
     singleTypeOnly: false,
     openingHand: 7,
     prizeCount: 6,
+    usesPrizeCards: true,
+    pointsToWin: null,
+    guaranteedOpeningBasic: false,
     maxEnergyZoneTypes: null,
     guidance: {
       basicPokemonMin: 10,
-      pokemonRange: [10, 20],
+      pokemonRange: [8, 20],
       supporterRange: [9, 18],
-      energyRange: [6, 15],
+      energyRange: [5, 15],
     },
   },
   expanded: {
@@ -190,6 +205,9 @@ export const DECK_FORMATS: Record<DeckFormatId, DeckFormat> = {
     singleTypeOnly: false,
     openingHand: 7,
     prizeCount: 6,
+    usesPrizeCards: true,
+    pointsToWin: null,
+    guaranteedOpeningBasic: false,
     maxEnergyZoneTypes: null,
     guidance: {
       basicPokemonMin: 10,
@@ -216,6 +234,9 @@ export const DECK_FORMATS: Record<DeckFormatId, DeckFormat> = {
     singleTypeOnly: false,
     openingHand: 7,
     prizeCount: 6,
+    usesPrizeCards: true,
+    pointsToWin: null,
+    guaranteedOpeningBasic: false,
     maxEnergyZoneTypes: null,
     guidance: {
       basicPokemonMin: 10,
@@ -243,6 +264,9 @@ export const DECK_FORMATS: Record<DeckFormatId, DeckFormat> = {
     singleTypeOnly: true,
     openingHand: 7,
     prizeCount: 6,
+    usesPrizeCards: true,
+    pointsToWin: null,
+    guaranteedOpeningBasic: false,
     maxEnergyZoneTypes: null,
     guidance: {
       basicPokemonMin: 12,
@@ -257,7 +281,7 @@ export const DECK_FORMATS: Record<DeckFormatId, DeckFormat> = {
     short: "PKT",
     game: "pocket",
     blurb:
-      "Twenty cards, two copies of a name, and energy from the Energy Zone.",
+      "Twenty cards, two copies of a name, energy from the Energy Zone, and a race to three points.",
     pool: "pocket",
     deckSize: 20,
     maxCopies: 2,
@@ -269,7 +293,10 @@ export const DECK_FORMATS: Record<DeckFormatId, DeckFormat> = {
     ruleBoxAllowed: true,
     singleTypeOnly: false,
     openingHand: 5,
-    prizeCount: 3,
+    prizeCount: 0,
+    usesPrizeCards: false,
+    pointsToWin: 3,
+    guaranteedOpeningBasic: true,
     maxEnergyZoneTypes: 3,
     guidance: {
       basicPokemonMin: 6,
@@ -328,9 +355,12 @@ export function standardRegulationMarks(
   now: Date = new Date(),
 ): string[] {
   const today = now.toISOString().slice(0, 10);
+  // The table is newest first, so the first entry whose date has passed is the
+  // rotation in force. A date before every entry means a clock set wrong rather
+  // than a format, and the oldest run is the safest thing to answer with.
   const current =
     STANDARD_ROTATIONS.find((rotation) => rotation.from <= today) ??
-    STANDARD_ROTATIONS[0];
+    STANDARD_ROTATIONS[STANDARD_ROTATIONS.length - 1];
 
   const newest = current.marks[current.marks.length - 1];
   const later = knownMarks
@@ -347,8 +377,81 @@ export function standardRegulationMarks(
  */
 export const EXPANDED_FIRST_SET_ID = "bw1";
 
-/** Series that make up Expanded, for when the set list cannot be read in order. */
-export const EXPANDED_SERIE_IDS = ["bw", "xy", "sm", "swsh", "sv"];
+/**
+ * Sets that belong to Expanded but may not sort after {@link EXPANDED_FIRST_SET_ID}.
+ *
+ * The Black & White Black Star Promos started shipping a month before the set
+ * that names the era, so cutting the list at Black & White by position would
+ * leave them out — and the promos are Expanded-legal.
+ */
+export const EXPANDED_EXTRA_SET_IDS = ["bwp"];
+
+// =============================================================================
+// Banned cards
+// =============================================================================
+
+/**
+ * A card a format does not allow, whatever else is legal about it.
+ *
+ * Reprints of a Trainer are the same card doing the same thing, so those are
+ * matched by name alone. A banned Pokemon is a specific printing — Archeops
+ * from Noble Victories is banned, every later Archeops is an ordinary card —
+ * so those name the sets they mean, and a printing this list does not
+ * recognise is left alone rather than guessed at.
+ */
+export interface BannedCard {
+  name: string;
+  /** Only these printings are the banned card. Omit where the name is enough. */
+  setIds?: string[];
+  formats: DeckFormatId[];
+}
+
+/**
+ * The Expanded ban list as published by Play! Pokemon, which Gym Leader
+ * Challenge inherits on top of its own restrictions. Standard has no ban list —
+ * the rotation does that job — and Unlimited allows everything.
+ *
+ * This is a list that changes by announcement rather than on a schedule, so it
+ * is worth re-checking against the official rules pages when a season turns.
+ * Gym Leader Challenge is community-run and bans more than this; what is here
+ * is the floor both formats agree on.
+ */
+export const BANNED_CARDS: BannedCard[] = [
+  { name: "Archeops", setIds: ["bw3"], formats: ["expanded", "glc"] },
+  { name: "Chip-Chip Ice Axe", formats: ["expanded", "glc"] },
+  { name: "Delinquent", formats: ["expanded", "glc"] },
+  { name: "Forest of Giant Plants", formats: ["expanded", "glc"] },
+  { name: "Ghetsis", formats: ["expanded", "glc"] },
+  { name: "Hex Maniac", formats: ["expanded", "glc"] },
+  { name: "Lusamine", setIds: ["sm4"], formats: ["expanded", "glc"] },
+  { name: "Lysandre's Trump Card", formats: ["expanded", "glc"] },
+  { name: "Marshadow", setIds: ["sm35"], formats: ["expanded", "glc"] },
+  { name: "Puzzle of Time", formats: ["expanded", "glc"] },
+  { name: "Sableye", setIds: ["bw5"], formats: ["expanded", "glc"] },
+  { name: "Unown", setIds: ["xy7"], formats: ["expanded", "glc"] },
+  { name: "Wally", formats: ["expanded", "glc"] },
+];
+
+/** Whether this printing is on the format's ban list, and how to say so. */
+export function bannedCardReason(
+  name: string,
+  setId: string,
+  formatId: DeckFormatId,
+): string | null {
+  const wanted = name.trim().toLowerCase();
+  const set = setId.trim().toLowerCase();
+
+  const banned = BANNED_CARDS.find((entry) => {
+    if (entry.name.toLowerCase() !== wanted) return false;
+    if (!entry.formats.includes(formatId)) return false;
+    // A printing-specific ban only applies to the printings it names.
+    return entry.setIds
+      ? entry.setIds.some((id) => id.toLowerCase() === set)
+      : true;
+  });
+
+  return banned ? `Banned in ${DECK_FORMATS[formatId].name}` : null;
+}
 
 // =============================================================================
 // Grouping

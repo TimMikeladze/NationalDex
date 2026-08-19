@@ -51,7 +51,7 @@ export function DeckAnalysisPanel({
         <EnergyZone analysis={analysis} format={format} />
       )}
       {analysis.lines.length > 0 && <Lines analysis={analysis} />}
-      <Board analysis={analysis} prizes={prizes} />
+      <Board analysis={analysis} format={format} prizes={prizes} />
     </div>
   );
 }
@@ -207,24 +207,32 @@ function OpeningHand({
     <Section title="Opening hand" hint={`${format.openingHand} cards`}>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         <Stat label="Basics" value={analysis.basicPokemon} />
-        <div>
-          <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            Mulligan
-          </dt>
-          <dd
-            className={cn(
-              "text-lg font-medium tabular-nums leading-tight",
-              verdict?.tone,
-            )}
-          >
-            {analysis.mulliganOdds !== null
-              ? formatPercent(analysis.mulliganOdds, 1)
-              : "—"}
-          </dd>
-          <p className="text-[10px] text-muted-foreground/80">
-            {verdict?.label ?? `fill to ${format.deckSize} to see it`}
-          </p>
-        </div>
+        {format.guaranteedOpeningBasic ? (
+          <Stat
+            label="Mulligan"
+            value="none"
+            hint="a Basic is dealt every game"
+          />
+        ) : (
+          <div>
+            <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Mulligan
+            </dt>
+            <dd
+              className={cn(
+                "text-lg font-medium tabular-nums leading-tight",
+                verdict?.tone,
+              )}
+            >
+              {analysis.mulliganOdds !== null
+                ? formatPercent(analysis.mulliganOdds, 1)
+                : "—"}
+            </dd>
+            <p className="text-[10px] text-muted-foreground/80">
+              {verdict?.label ?? `fill to ${format.deckSize} to see it`}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* What a count is worth: the chance a card at that count shows up in the
@@ -252,16 +260,19 @@ function OpeningHand({
               </td>
             ))}
           </tr>
-          <tr>
-            <td className="text-left text-muted-foreground">prized</td>
-            {[1, 2, 3, 4].map((count) => (
-              <td key={count} className="text-right">
-                {formatPercent(
-                  chanceOfAtLeastOne(total, count, format.prizeCount),
-                )}
-              </td>
-            ))}
-          </tr>
+          {/* Pocket sets out no prize cards, so nothing can be prized there. */}
+          {format.usesPrizeCards && (
+            <tr>
+              <td className="text-left text-muted-foreground">prized</td>
+              {[1, 2, 3, 4].map((count) => (
+                <td key={count} className="text-right">
+                  {formatPercent(
+                    chanceOfAtLeastOne(total, count, format.prizeCount),
+                  )}
+                </td>
+              ))}
+            </tr>
+          )}
         </tbody>
       </table>
     </Section>
@@ -432,11 +443,17 @@ function Lines({ analysis }: { analysis: DeckAnalysis }) {
 
 function Board({
   analysis,
+  format,
   prizes,
 }: {
   analysis: DeckAnalysis;
+  format: DeckFormat;
   prizes: { prizes: number; count: number }[];
 }) {
+  // Pocket scores points rather than taking prize cards, and a Pokemon ex
+  // hands over two of them the same way.
+  const unit = format.usesPrizeCards ? "prize" : "point";
+
   return (
     <Section title="On the board">
       <dl className="grid grid-cols-3 gap-2">
@@ -453,16 +470,20 @@ function Board({
           }
           hint={`${analysis.retreat.free} free`}
         />
-        <Stat label="Rule box" value={analysis.ruleBox} hint="extra prizes" />
+        <Stat
+          label="Rule box"
+          value={analysis.ruleBox}
+          hint={`extra ${unit}s`}
+        />
       </dl>
 
       {prizes.length > 0 && (
         <p className="text-[10px] text-muted-foreground">
-          Prize trade:{" "}
+          {format.usesPrizeCards ? "Prize trade" : "Point trade"}:{" "}
           {prizes
             .map(
               (entry) =>
-                `${entry.count} give up ${entry.prizes} prize${entry.prizes === 1 ? "" : "s"}`,
+                `${entry.count} give up ${entry.prizes} ${unit}${entry.prizes === 1 ? "" : "s"}`,
             )
             .join(", ")}
           .

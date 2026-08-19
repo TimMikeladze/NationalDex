@@ -11,6 +11,7 @@
     "lint:errors": "bun biome check --diagnostic-level error --unsafe .",
     "check": "if [ \"$CI\" = \"true\" ]; then bun run lint && bun run tsc; else bun run lint:fix && bun run tsc; fi",
     "generate:regulations": "bun run scripts/generate-regulations.ts",
+    "check:deck-rules": "bun run scripts/check-deck-rules.ts",
     "prepare": "simple-git-hooks",
     "release": "release-it"
   },

@@ -8,7 +8,11 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import type { DeckFormat, DeckFormatId } from "@/types/deck";
-import { DECK_FORMAT_IDS, DECK_FORMATS } from "@/types/deck";
+import {
+  DECK_FORMAT_IDS,
+  DECK_FORMATS,
+  standardRegulationMarks,
+} from "@/types/deck";
 
 /**
  * The one line that says what a format actually asks of a deck. Written the way
@@ -26,6 +30,11 @@ export function formatRulesSummary(format: DeckFormat): string {
   if (format.maxAceSpec > 0) parts.push(`${format.maxAceSpec} ACE SPEC`);
   if (!format.ruleBoxAllowed) parts.push("no rule boxes");
   if (format.singleTypeOnly) parts.push("single type");
+  // Which rotation the builder thinks is current, said out loud: it is the one
+  // thing here that goes stale on a schedule, and a player will know.
+  if (format.pool === "standard") {
+    parts.push(`marks ${standardRegulationMarks().join("/")}`);
+  }
   return parts.join(" · ");
 }
 

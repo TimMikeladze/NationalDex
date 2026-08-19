@@ -15,7 +15,7 @@ import type {
   DeckFormat,
   DeckGrouping,
 } from "@/types/deck";
-import { standardRegulationMarks } from "@/types/deck";
+import { bannedCardReason, standardRegulationMarks } from "@/types/deck";
 import type { TcgCard, TcgCardBrief } from "@/types/tcg";
 import { setIdFromCardId, TCG_ENERGY_TYPES } from "@/types/tcg";
 
@@ -200,7 +200,9 @@ export function hasRuleBox(card: DeckCard): boolean {
   const suffix = normalize(card.suffix).replace(/[\s-]/g, "");
   if (suffix && RULE_BOX_SUFFIXES.has(suffix)) return true;
   if (isRadiant(card) || isPrismStar(card)) return true;
-  return /\s(ex|gx|v|vmax|vstar|v-union)$/i.test(card.name.trim());
+  // The mechanic is printed on the name, joined by a space or a hyphen:
+  // "Charizard ex", "Pikachu & Zekrom-GX", "Mewtwo V-UNION".
+  return /(?:\s|-)(ex|gx|v|vmax|vstar|union)$/i.test(card.name.trim());
 }
 
 /** ACE SPEC cards are one per deck, whatever else is in it. */
@@ -554,7 +556,11 @@ function lineBaseName(card: DeckCard, pool: DeckEntry[]): string {
     const previous = pool.find(
       (entry) => entry.card.name.trim().toLowerCase() === from,
     );
-    if (!previous) return from;
+    // The card it evolves from is not in the deck, so this is where the line
+    // starts as far as the deck is concerned. Naming the line after a card
+    // nobody is playing would file it under a heading that is not there — the
+    // missing step is reported as its own gap instead.
+    if (!previous) break;
     current = previous.card;
   }
 
@@ -693,7 +699,7 @@ export interface DeckAnalysis {
  * "34 Trainers and no way to retreat".
  */
 const SWITCHING_CARDS =
-  /\b(switch|switch cart|escape rope|air balloon|bird keeper|guzma|pokemon catcher|scoop up|counter catcher|jet energy|switching cups|prime catcher|luminous energy)\b/i;
+  /\b(switch|switch cart|escape rope|air balloon|bird keeper|guzma|pokemon catcher|scoop up|counter catcher|jet energy|switching cups|prime catcher|luminous energy|x speed|leaf)\b/i;
 
 const DRAW_SUPPORTERS =
   /\b(professor|research|iono|marnie|cynthia|colress|juniper|sycamore|hop|bianca|shauna|lillie|cheren|erika|arven|judge|roseanne|copycat|jacq|crispin|drayton|lance|steven|kieran|hilda|nemona)\b/i;
@@ -718,9 +724,10 @@ export function analyzeDeck(deck: Deck, format: DeckFormat): DeckAnalysis {
   const basicPokemon = countOf(entries, isBasicPokemon);
 
   // The mulligan number only means anything against a full deck: half a deck
-  // would report odds nobody will ever draw against.
+  // would report odds nobody will ever draw against. Pocket deals a Basic in
+  // every opening hand, so there is no mulligan there to report at all.
   const mulliganOdds =
-    total >= format.deckSize
+    total >= format.deckSize && !format.guaranteedOpeningBasic
       ? chanceOfNone(total, basicPokemon, format.openingHand)
       : null;
 
@@ -855,6 +862,11 @@ export function energyDemand(deck: Deck, format: DeckFormat): EnergyDemand[] {
 // Legality
 // =============================================================================
 
+/** "An Expanded deck", "A Standard deck" — the format names decide. */
+function article(name: string): string {
+  return /^[aeiou]/i.test(name) ? "An" : "A";
+}
+
 export type DeckIssueLevel = "error" | "warning" | "note";
 
 export interface DeckIssue {
@@ -902,6 +914,15 @@ export function cardPoolReason(
     return "Pocket cards cannot be played in the physical game";
   }
 
+  if (!format.usesEnergyCards && isEnergy(card)) {
+    return "Energy cards are not part of a Pocket deck — energy comes from the Energy Zone";
+  }
+
+  // Basic Energy is legal in every format whatever set it was printed in, and
+  // most printings carry no regulation mark at all. Without this exemption the
+  // one card every deck in the game plays would read as rotated out.
+  if (isBasicEnergy(card)) return null;
+
   if (format.pool === "standard") {
     const mark = (card.regulationMark ?? "").toUpperCase();
     if (!mark) {
@@ -922,19 +943,17 @@ export function cardPoolReason(
     if (!inPool) return "Printed before Black & White — outside Expanded";
   }
 
-  if (!format.ruleBoxAllowed && hasRuleBox(card)) {
-    return "Rule box cards are not allowed in this format";
-  }
-
+  // An ACE SPEC carries a rule box, so both tests catch one. Naming the ACE
+  // SPEC rule is the more useful of the two answers.
   if (format.maxAceSpec === 0 && isAceSpec(card)) {
     return "ACE SPEC cards are not allowed in this format";
   }
 
-  if (!format.usesEnergyCards && isEnergy(card)) {
-    return "Energy cards are not part of a Pocket deck — energy comes from the Energy Zone";
+  if (!format.ruleBoxAllowed && hasRuleBox(card)) {
+    return "Rule box cards are not allowed in this format";
   }
 
-  return null;
+  return bannedCardReason(card.name, card.setId, format.id);
 }
 
 /**
@@ -1000,7 +1019,7 @@ export function validateDeck(
         total < format.deckSize
           ? `${format.deckSize - total} more card${format.deckSize - total === 1 ? "" : "s"} needed`
           : `${total - format.deckSize} card${total - format.deckSize === 1 ? "" : "s"} over`,
-      detail: `A ${format.name} deck is exactly ${format.deckSize} cards. This one has ${total}.`,
+      detail: `${article(format.name)} ${format.name} deck is exactly ${format.deckSize} cards. This one has ${total}.`,
     });
   }
 
@@ -1079,20 +1098,22 @@ export function validateDeck(
     (entry) => cardPoolReason(entry.card, format, context) !== null,
   );
   if (outOfPool.length > 0) {
-    const reason = cardPoolReason(outOfPool[0].card, format, context);
+    // Each card says why it cannot be played rather than the list saying that
+    // some of them cannot: "rotated out" and "banned" are different problems
+    // with different fixes.
+    const named = outOfPool
+      .slice(0, 3)
+      .map(
+        (entry) =>
+          `${entry.card.name}: ${cardPoolReason(entry.card, format, context)}`,
+      );
+    const rest = outOfPool.length - named.length;
+
     issues.push({
       id: "pool",
       level: "error",
-      title: `${countOf(outOfPool)} card${countOf(outOfPool) === 1 ? "" : "s"} outside ${format.name}`,
-      detail:
-        outOfPool.length === 1
-          ? `${outOfPool[0].card.name} — ${reason?.toLowerCase()}.`
-          : `${outOfPool
-              .map((entry) => entry.card.name)
-              .slice(0, 4)
-              .join(
-                ", ",
-              )}${outOfPool.length > 4 ? ` and ${outOfPool.length - 4} more` : ""}.`,
+      title: `${countOf(outOfPool)} card${countOf(outOfPool) === 1 ? "" : "s"} ${format.name} will not have`,
+      detail: `${named.join("; ")}${rest > 0 ? `; and ${rest} more` : ""}.`,
       cardIds: outOfPool.map((entry) => entry.card.id),
     });
   }
@@ -1121,8 +1142,11 @@ export function validateDeck(
       id: "few-basics",
       level: "warning",
       title: `Only ${analysis.basicPokemon} Basic Pokemon`,
-      detail:
-        analysis.mulliganOdds !== null
+      detail: format.guaranteedOpeningBasic
+        ? // Pocket deals a Basic every game, so the risk is not opening on
+          // nothing — it is having nothing to put on the Bench behind it.
+          `The opening hand always holds one, but ${format.name} lists play at least ${format.guidance.basicPokemonMin} so there is something to fill the Bench with.`
+        : analysis.mulliganOdds !== null
           ? `That is a ${formatPercent(analysis.mulliganOdds, 1)} chance of opening with none and having to mulligan. Most lists play at least ${format.guidance.basicPokemonMin}.`
           : `Most ${format.name} lists play at least ${format.guidance.basicPokemonMin} so they can open on one reliably.`,
     });
@@ -1177,7 +1201,9 @@ export function validateDeck(
     /rare candy/i.test(entry.card.name),
   );
   const stageTwoLines = analysis.lines.filter((line) => line.hasStageTwo);
-  if (stageTwoLines.length > 0 && !hasRareCandy) {
+  // Pocket has no Rare Candy — evolutions are played one stage at a time
+  // there — so the note only belongs to the physical game.
+  if (format.game === "tcg" && stageTwoLines.length > 0 && !hasRareCandy) {
     issues.push({
       id: "rare-candy",
       level: "note",
@@ -1274,7 +1300,7 @@ export function isDeckLegal(issues: DeckIssue[]): boolean {
  */
 export function nameSuggestsRuleBox(name: string): boolean {
   return (
-    /\s(ex|gx|v|vmax|vstar|v-union)$/i.test(name.trim()) ||
+    /(?:\s|-)(ex|gx|v|vmax|vstar|union)$/i.test(name.trim()) ||
     /^radiant\s/i.test(name) ||
     name.includes("◇")
   );
@@ -1311,6 +1337,9 @@ export function briefPoolReason(
   if (format.game === "pocket" && !isPocketCard) return "Not a Pocket card";
   if (format.game === "tcg" && isPocketCard) return "Pocket card";
 
+  // Basic Energy is legal everywhere, out of sets far older than the pool.
+  if (format.usesEnergyCards && nameSuggestsBasicEnergy(card.name)) return null;
+
   if (format.pool === "expanded" && context.expandedSetIds.length > 0) {
     const inPool = context.expandedSetIds.some(
       (id) => id.toLowerCase() === setId.toLowerCase(),
@@ -1322,7 +1351,8 @@ export function briefPoolReason(
     return "Rule box";
   }
 
-  return null;
+  // A ban is by name and printing, both of which a result carries.
+  return bannedCardReason(card.name, setId, format.id) ? "Banned" : null;
 }
 
 // =============================================================================
@@ -1347,7 +1377,10 @@ export function prizesGivenUp(card: DeckCard): number {
     suffix === "vmax" ||
     suffix === "vunion" ||
     suffix.startsWith("tagteam") ||
-    /\svmax$/i.test(name)
+    /[\s-]vmax$/i.test(name) ||
+    /[\s-]v-?union$/i.test(name) ||
+    // A Tag Team's two names are joined by an ampersand and end in GX.
+    (name.includes("&") && /[\s-]gx$/i.test(name))
   ) {
     return 3;
   }

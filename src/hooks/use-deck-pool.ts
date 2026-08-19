@@ -9,7 +9,11 @@ import {
 import type { DeckPoolContext } from "@/lib/deck";
 import type { TcgCardFilters } from "@/lib/tcg";
 import type { DeckFormat } from "@/types/deck";
-import { EXPANDED_FIRST_SET_ID, standardRegulationMarks } from "@/types/deck";
+import {
+  EXPANDED_EXTRA_SET_IDS,
+  EXPANDED_FIRST_SET_ID,
+  standardRegulationMarks,
+} from "@/types/deck";
 import type { TcgLanguage } from "@/types/tcg";
 import { DEFAULT_TCG_LANGUAGE } from "@/types/tcg";
 
@@ -52,7 +56,14 @@ export function useDeckPool(
       ) ?? -1;
     const expandedSetIds =
       sets && expandedStart >= 0
-        ? sets.slice(expandedStart).map((set) => set.id)
+        ? [
+            ...sets.slice(expandedStart).map((set) => set.id),
+            // The era's promos shipped before the set that names it, so they
+            // sit in front of the cut and have to be added back.
+            ...EXPANDED_EXTRA_SET_IDS.filter((id) =>
+              sets.some((set) => set.id.toLowerCase() === id),
+            ),
+          ]
         : [];
 
     const context: DeckPoolContext = {
