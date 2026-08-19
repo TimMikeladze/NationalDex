@@ -1,7 +1,11 @@
 "use client";
 
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import {
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { useCallback, useMemo } from "react";
 import {
   getCardsByDexId,
   getPocketSetIds,
@@ -314,6 +318,42 @@ export function useTcgCardQuickSearch(
     staleTime: DAY,
     placeholderData: (previous) => previous,
   });
+}
+
+/**
+ * Fetches one card's full details on demand, through the same cache the card
+ * pages read. The deck builder needs them the moment a card is dropped into a
+ * deck — a search result carries a name and a scan, while a deck has to know
+ * the card's category, stage, retreat and regulation mark — and a card dragged
+ * across the screen has usually been prefetched by the time it lands.
+ */
+export function useTcgCardFetcher(
+  language: TcgLanguage = DEFAULT_TCG_LANGUAGE,
+) {
+  const queryClient = useQueryClient();
+
+  const resolve = useCallback(
+    (id: string) =>
+      queryClient.fetchQuery({
+        queryKey: ["tcg", "card", id, language],
+        queryFn: () => getTcgCard(id, language),
+        staleTime: DAY,
+      }),
+    [queryClient, language],
+  );
+
+  const prefetch = useCallback(
+    (id: string) => {
+      void queryClient.prefetchQuery({
+        queryKey: ["tcg", "card", id, language],
+        queryFn: () => getTcgCard(id, language),
+        staleTime: DAY,
+      });
+    },
+    [queryClient, language],
+  );
+
+  return { resolve, prefetch };
 }
 
 export function useTcgRarities(language: TcgLanguage = DEFAULT_TCG_LANGUAGE) {

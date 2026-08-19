@@ -2,6 +2,7 @@
 
 import { ThemeProvider } from "next-themes";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
+import { Toaster } from "@/components/ui/sonner";
 import { ComparisonProvider } from "@/hooks/use-comparison";
 import { QueryProvider } from "@/lib/query-provider";
 import { AppShell } from "./app-shell";
@@ -22,6 +23,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
             <NavProvider>
               <AppShell>{children}</AppShell>
               <SearchOverlay />
+              {/* Toasts were being raised — adding to a comparison, filling a
+                  deck — with nowhere to appear. They sit above the mobile bottom
+                  nav rather than behind it. */}
+              <Toaster position="bottom-center" offset={64} mobileOffset={64} />
             </NavProvider>
           </ComparisonProvider>
         </QueryProvider>

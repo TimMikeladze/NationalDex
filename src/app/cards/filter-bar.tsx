@@ -7,6 +7,7 @@ import {
   ListFilter,
   Search,
   Shuffle,
+  Swords,
   WalletCards,
   X,
 } from "lucide-react";
@@ -106,6 +107,14 @@ interface CardsFilterBarProps {
    * catalogue — is the page's to decide there, not the toolbar's.
    */
   lockedSet?: TcgSetBrief | null;
+  /**
+   * What the toolbar is attached to. `browse` is the card catalogue, where the
+   * game, the catalogue and the other ways of reading it are all in play. In a
+   * deck builder they are not: the deck's format decides the game and the
+   * catalogue, and a link out to the swipe deck would walk away from the deck
+   * being built.
+   */
+  variant?: "browse" | "builder";
 }
 
 /**
@@ -133,7 +142,9 @@ export function CardsFilterBar({
   resultLabel,
   collapsed = false,
   lockedSet = null,
+  variant = "browse",
 }: CardsFilterBarProps) {
+  const isBuilder = variant === "builder";
   const [searchInput, setSearchInput] = useState(filters.q);
   const searchParams = useSearchParams();
 
@@ -240,7 +251,7 @@ export function CardsFilterBar({
                     leads the panel because everything below it is scoped to
                     whatever it says. A set page was reached through one
                     catalogue and its set id only means anything there. */}
-                {!lockedSet && (
+                {!lockedSet && !isBuilder && (
                   <FilterSection label="Catalogue">
                     <Select
                       value={language}
@@ -674,24 +685,30 @@ export function CardsFilterBar({
           {/* The dex's shuffle, on the card catalogue: it deals the results in
               a random order and, on an unfiltered browse, draws them from sets
               picked at random rather than the newest ones. It is the same
-              choice the sort control makes, reached in one press. */}
-          <button
-            type="button"
-            onClick={() =>
-              onOrderChange(isRandom ? "default" : RANDOM_SORT_VALUE)
-            }
-            aria-pressed={isRandom}
-            className={cn(
-              "p-1 transition-colors",
-              isRandom
-                ? "text-foreground"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-            title={isRandom ? "Back to set order" : "Shuffle these cards"}
-            aria-label={isRandom ? "Back to set order" : "Shuffle these cards"}
-          >
-            <Shuffle className="size-4" />
-          </button>
+              choice the sort control makes, reached in one press. A deck
+              builder has no use for it — a search there is a card you are
+              looking for, not a catalogue to wander. */}
+          {!isBuilder && (
+            <button
+              type="button"
+              onClick={() =>
+                onOrderChange(isRandom ? "default" : RANDOM_SORT_VALUE)
+              }
+              aria-pressed={isRandom}
+              className={cn(
+                "p-1 transition-colors",
+                isRandom
+                  ? "text-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+              title={isRandom ? "Back to set order" : "Shuffle these cards"}
+              aria-label={
+                isRandom ? "Back to set order" : "Shuffle these cards"
+              }
+            >
+              <Shuffle className="size-4" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -713,6 +730,7 @@ export function CardsFilterBar({
               {/* A set belongs to one game, so on its own page the switch has
                   nothing to switch between. */}
               {!lockedSet &&
+                !isBuilder &&
                 GAME_OPTIONS.filter(
                   (option) => hasPocket || option.id !== "pocket",
                 ).map((option) => (
@@ -736,23 +754,36 @@ export function CardsFilterBar({
                   one card at a time. Both are places to go rather than filters,
                   so they sit together at the end of the row. The deck keeps the
                   whole query string, so a search carries into it. */}
-              <Link
-                href={withTcgLanguage("/cards/sets", language)}
-                title="Browse every set, by series"
-                className={WAY_IN_CHIP}
-              >
-                <Layers className="size-3.5" />
-                Set list
-              </Link>
+              {!isBuilder && (
+                <>
+                  <Link
+                    href={withTcgLanguage("/cards/sets", language)}
+                    title="Browse every set, by series"
+                    className={WAY_IN_CHIP}
+                  >
+                    <Layers className="size-3.5" />
+                    Set list
+                  </Link>
 
-              <Link
-                href={swipeHref}
-                title="Swipe through these cards, one at a time"
-                className={WAY_IN_CHIP}
-              >
-                <WalletCards className="size-3.5" />
-                Swipe
-              </Link>
+                  <Link
+                    href={swipeHref}
+                    title="Swipe through these cards, one at a time"
+                    className={WAY_IN_CHIP}
+                  >
+                    <WalletCards className="size-3.5" />
+                    Swipe
+                  </Link>
+
+                  <Link
+                    href="/decks"
+                    title="Build a deck out of these cards"
+                    className={WAY_IN_CHIP}
+                  >
+                    <Swords className="size-3.5" />
+                    Deck builder
+                  </Link>
+                </>
+              )}
             </div>
 
             <span className="ml-auto hidden shrink-0 text-xs tabular-nums text-muted-foreground sm:block">
