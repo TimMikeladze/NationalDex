@@ -64,6 +64,7 @@ import {
   type GameFilter,
   HP_PRESETS,
   RANDOM_SORT_VALUE,
+  SET_ORDER_SORT_VALUE,
   SORT_OPTIONS,
   sortOptionFor,
 } from "./filters";
@@ -80,8 +81,18 @@ interface CardsFilterBarProps {
   filters: CardFilterState;
   setFilters: (next: CardFilterUpdate) => void;
   game: GameFilter;
-  /** Whether the results are currently being dealt in a random order. */
-  isRandom: boolean;
+  /**
+   * The order the cards are in — a `SORT_OPTIONS` value, or
+   * `RANDOM_SORT_VALUE`. Resolved rather than read off the URL, because an
+   * unfiltered browse is shuffled without having to say so.
+   */
+  order: string;
+  /**
+   * The shuffle currently being dealt, or null when the cards are in order. A
+   * browse that drew its own shuffle has it nowhere else, so it is written into
+   * the deck's link to hand the same cards over.
+   */
+  shuffleSeed: number | null;
   /** Sets the order — a `SORT_OPTIONS` value, or `RANDOM_SORT_VALUE`. */
   onOrderChange: (value: string) => void;
   sets: TcgSetBrief[];
@@ -117,7 +128,8 @@ export function CardsFilterBar({
   filters,
   setFilters,
   game,
-  isRandom,
+  order,
+  shuffleSeed,
   onOrderChange,
   sets,
   selectedSet,
@@ -137,6 +149,8 @@ export function CardsFilterBar({
   const [searchInput, setSearchInput] = useState(filters.q);
   const searchParams = useSearchParams();
 
+  const isRandom = order === RANDOM_SORT_VALUE;
+
   // The deck reads the same query string the grid writes, so it deals exactly
   // these cards. A set page's URL carries neither the set nor the catalogue as
   // a query — they are the route — so both are written in on the way out.
@@ -144,13 +158,18 @@ export function CardsFilterBar({
     const params = new URLSearchParams(searchParams.toString());
     if (lockedSet) params.set("set", lockedSet.id);
     if (language !== DEFAULT_TCG_LANGUAGE) params.set("lang", language);
+    // The shuffle the grid is dealing may be one it drew for itself, which the
+    // query string knows nothing about — so it is written in here rather than
+    // leaving the deck to draw a different one.
+    if (shuffleSeed === null) params.delete("seed");
+    else params.set("seed", String(shuffleSeed));
     const query = params.toString();
     return query ? `/cards/swipe?${query}` : "/cards/swipe";
-  }, [searchParams, lockedSet, language]);
+  }, [searchParams, lockedSet, language, shuffleSeed]);
 
   // The order is only named in the icon's tooltip now, so it has to say what
   // the control would otherwise have shown.
-  const orderLabel = isRandom ? "Random" : sortOptionFor(filters.sort).label;
+  const orderLabel = isRandom ? "Random" : sortOptionFor(order).label;
 
   // Typing shouldn't fire a request per keystroke.
   useEffect(() => {
@@ -635,7 +654,7 @@ export function CardsFilterBar({
             <DropdownMenuTrigger
               className={cn(
                 "p-1 transition-colors",
-                isRandom || filters.sort !== "default"
+                order !== SET_ORDER_SORT_VALUE
                   ? "text-foreground"
                   : "text-muted-foreground hover:text-foreground",
               )}
@@ -649,7 +668,7 @@ export function CardsFilterBar({
                 order
               </DropdownMenuLabel>
               <DropdownMenuRadioGroup
-                value={isRandom ? RANDOM_SORT_VALUE : filters.sort}
+                value={order}
                 onValueChange={onOrderChange}
               >
                 {SORT_OPTIONS.map((option) => (
@@ -678,7 +697,7 @@ export function CardsFilterBar({
           <button
             type="button"
             onClick={() =>
-              onOrderChange(isRandom ? "default" : RANDOM_SORT_VALUE)
+              onOrderChange(isRandom ? SET_ORDER_SORT_VALUE : RANDOM_SORT_VALUE)
             }
             aria-pressed={isRandom}
             className={cn(

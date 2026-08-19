@@ -40,9 +40,12 @@ import { CardsFilterBar } from "./filter-bar";
 import {
   CARD_FILTER_PARSERS,
   type CardFilterUpdate,
+  cardOrderValue,
   type GameFilter,
   isGameFilter,
+  newShuffleSeed,
   RANDOM_SORT_VALUE,
+  SET_ORDER_SORT_VALUE,
   toCardSearchFilters,
 } from "./filters";
 import { useCardScope } from "./use-card-scope";
@@ -120,9 +123,9 @@ function CardsBrowser({ lockedSet, lockedLanguage }: CardBrowserProps) {
 
   const game: GameFilter = isGameFilter(filters.game) ? filters.game : "all";
 
-  // A plain browse opens on the newest sets, and a shuffle draws from sets
-  // picked at random. Searching by name or asking for a set is asking about the
-  // whole catalogue, so both step aside there.
+  // An open browse is a shuffle, drawn from sets picked at random; asking for
+  // an order reads the newest sets in it. Searching by name or asking for a set
+  // is asking about the whole catalogue, so both step aside there.
   const {
     scopeIsLive,
     randomIsLive,
@@ -370,14 +373,16 @@ function CardsBrowser({ lockedSet, lockedLanguage }: CardBrowserProps) {
   // Sorting and shuffling are the same question — what order are these cards
   // in — so they are answered in one place. A shuffle clears the sort field,
   // because the API has no random order to ask for and sorting the results
-  // before shuffling them only decides which page they were drawn from.
+  // before shuffling them only decides which page they were drawn from. Every
+  // other order is written down, set order included: an unwritten order is a
+  // shuffle now, so choosing to read a browse straight through has to be said.
   const setOrder = useCallback(
     (value: string) => {
       if (value === RANDOM_SORT_VALUE) {
-        setFilters({ seed: Date.now(), sort: null });
+        setFilters({ seed: newShuffleSeed(), sort: null });
         return;
       }
-      setFilters({ sort: value === "default" ? null : value, seed: null });
+      setFilters({ sort: value, seed: null });
     },
     [setFilters],
   );
@@ -415,7 +420,8 @@ function CardsBrowser({ lockedSet, lockedLanguage }: CardBrowserProps) {
           filters={filters}
           setFilters={setFilters}
           game={game}
-          isRandom={filters.seed !== null}
+          order={cardOrderValue(filters)}
+          shuffleSeed={shuffleSeed}
           onOrderChange={setOrder}
           sets={availableSets}
           selectedSet={selectedSet}
@@ -527,7 +533,7 @@ function CardsBrowser({ lockedSet, lockedLanguage }: CardBrowserProps) {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setOrder("default")}
+                    onClick={() => setOrder(SET_ORDER_SORT_VALUE)}
                   >
                     back to set order
                   </Button>
@@ -569,7 +575,7 @@ function CardsBrowser({ lockedSet, lockedLanguage }: CardBrowserProps) {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setFilters({ seed: Date.now() })}
+                      onClick={() => setFilters({ seed: newShuffleSeed() })}
                     >
                       shuffle again
                     </Button>
