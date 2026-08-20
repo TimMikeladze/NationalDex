@@ -197,14 +197,16 @@ const dexFilterUrlKeys = {
 const FILTER_STORAGE_KEY = "pokedex-dex-filter";
 
 /**
- * The parts of the filter worth remembering between visits: the filter panel
- * and the sort. Search text, the active category tab and the random seed are
- * per-visit intent, so they stay out.
+ * The parts of the filter worth remembering between visits: the filter panel,
+ * the sort, and whether the shuffle is on. The seed itself is stored so a
+ * reload comes back to the same shuffled order rather than a new one. Search
+ * text and the active category tab are per-visit intent, so they stay out.
  */
 type PersistedDexFilter = Pick<
   DexFilterState,
   | "types"
   | "generations"
+  | "randomSeed"
   | "regulations"
   | "sort"
   | "sortDirection"
@@ -216,6 +218,7 @@ function isPersistedFilterEmpty(filter: PersistedDexFilter): boolean {
   return (
     filter.types.length === 0 &&
     filter.generations.length === 0 &&
+    filter.randomSeed === null &&
     filter.regulations.length === 0 &&
     filter.sort === "dex" &&
     filter.sortDirection === "asc" &&
@@ -257,6 +260,11 @@ function parsePersistedFilter(raw: string | null): PersistedDexFilter | null {
     return {
       types: toStringArray(parsed.types) as PokemonType[],
       generations: toStringArray(parsed.generations),
+      randomSeed:
+        typeof parsed.randomSeed === "number" &&
+        Number.isInteger(parsed.randomSeed)
+          ? parsed.randomSeed
+          : null,
       regulations: toStringArray(parsed.regulations).filter((id) =>
         REGULATION_ID_SET.has(id),
       ),
@@ -329,6 +337,7 @@ export function useDexFilter() {
     const current: PersistedDexFilter = {
       types: filter.types,
       generations: filter.generations,
+      randomSeed: filter.randomSeed,
       regulations: filter.regulations,
       sort: filter.sort,
       sortDirection: filter.sortDirection,
@@ -357,6 +366,7 @@ export function useDexFilter() {
     const toPersist: PersistedDexFilter = {
       types: filter.types,
       generations: filter.generations,
+      randomSeed: filter.randomSeed,
       regulations: filter.regulations,
       sort: filter.sort,
       sortDirection: filter.sortDirection,
