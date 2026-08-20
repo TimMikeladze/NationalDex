@@ -80,9 +80,14 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
     title: "NationalDex",
   },
+  // All of these are rendered from the app bar's mark by `bun run
+  // generate:icons`, so the tab, the installed app, and the header always agree.
   icons: {
+    // `src/app/favicon.ico` is linked automatically by Next; this adds the
+    // sharper SVG on top for browsers that take it.
     icon: [{ url: "/icons/logo-app.svg", type: "image/svg+xml" }],
-    apple: "/icons/logo-app.svg",
+    // iOS ignores SVG here, so the touch icon has to stay a PNG.
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
   },
 };
 
