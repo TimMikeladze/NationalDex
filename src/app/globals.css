@@ -323,14 +323,6 @@
   gap: 1.5rem;
 }
 
-.pwa-loading-title {
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 1.5rem;
-  font-weight: 500;
-  letter-spacing: -0.025em;
-  color: #e0e0e0;
-}
-
 .pwa-loading-bar {
   width: 8rem;
   height: 2px;

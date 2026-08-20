@@ -6,6 +6,8 @@ A fast, beautiful, and feature-rich Pokedex built for trainers who want instant 
 
 NationalDex is a modern web-based Pokedex covering the full National Dex across all generations. It goes beyond a simple lookup tool — you can search for any Pokemon, move, ability, item, or trading card instantly, build and manage teams with type coverage analysis, compare Pokemon side by side, track favorites, and create custom lists. It works offline as a PWA and supports dark mode.
 
+The NationalDex logo is the compact Pokédex mark used throughout the desktop app bar, mobile launch screen, browser favicon, and installable PWA. The canonical source artwork lives at [`public/icons/logo-app.svg`](public/icons/logo-app.svg); every brand surface references that same device mark so it stays consistent across platforms.
+
 ### Key features
 
 - **Instant search** across Pokemon, moves, abilities, items, and cards
@@ -17,7 +19,7 @@ NationalDex is a modern web-based Pokedex covering the full National Dex across 
 - **Pokemon comparison** with side-by-side stat breakdowns
 - **Favorites and custom lists** persisted in local storage — Pokemon and cards alike
 - **Location finder** for Pokemon across all regions and games
-- **PWA support** — installable on any device for a native-like experience
+- **PWA support** — installable on any device for a native-like experience, with the NationalDex mark supplied as the app icon and launch-screen branding
 - **Dark mode** with automatic theme detection
 
 ## Running locally

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono } from "next/font/google";
 import Script from "next/script";
+import { Logo } from "@/components/brand/logo";
 import { Providers } from "@/components/providers";
 import { PwaLoadingScreen } from "@/components/pwa-loading-screen";
 import { SITE_URL } from "@/lib/utils";
@@ -18,7 +19,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  themeColor: "#09090b",
+  themeColor: "#e53935",
 };
 
 export const metadata: Metadata = {
@@ -80,7 +81,8 @@ export const metadata: Metadata = {
     title: "NationalDex",
   },
   icons: {
-    apple: "/icons/icon-192x192.png",
+    icon: [{ url: "/icons/logo-app.svg", type: "image/svg+xml" }],
+    apple: "/icons/logo-app.svg",
   },
 };
 
@@ -108,7 +110,10 @@ export default function RootLayout({
           aria-hidden="true"
         >
           <div className="pwa-loading-content">
-            <div className="pwa-loading-title">NationalDex</div>
+            <Logo
+              iconClassName="size-16"
+              labelClassName="text-2xl text-[#e0e0e0]"
+            />
             <div className="pwa-loading-bar">
               <div className="pwa-loading-bar-fill" />
             </div>

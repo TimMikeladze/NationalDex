@@ -29,6 +29,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { Logo } from "@/components/brand/logo";
 import { ComparisonDrawer } from "@/components/comparison/comparison-drawer";
 import { GenerationPicker } from "@/components/pokemon/generation-picker";
 import {
@@ -387,8 +388,13 @@ export function AppShell({ children }: AppShellProps) {
         {/* Desktop Header */}
         <header className="hidden lg:flex shrink-0 z-50 h-14 items-center border-b bg-background px-6">
           <div className="flex w-full items-center justify-between">
-            <Link href="/" className="text-lg font-medium">
-              NationalDex
+            <Link href="/" aria-label="NationalDex home">
+              <Logo
+                iconSrc="/icons/logo-app.svg"
+                className="gap-2"
+                iconClassName="size-8"
+                labelClassName="text-base"
+              />
             </Link>
             <nav className="flex items-center gap-1">
               {navItems.map((item) => renderNavItem(item, "desktop"))}
