@@ -1,15 +1,9 @@
 "use client";
 
-import {
-  FlaskConical,
-  Layers,
-  Loader2,
-  Sparkles,
-  Swords,
-  Zap,
-} from "lucide-react";
+import { FlaskConical, Loader2, Sparkles, Swords, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { CardsIcon } from "@/components/navigation/app-icons";
 import { useNav } from "@/components/navigation/nav-provider";
 import {
   CommandDialog,
@@ -189,7 +183,7 @@ function ResultIcon({ result }: { result: SearchResult }) {
           }}
         />
       ) : (
-        <Layers className="size-4 text-muted-foreground" />
+        <CardsIcon className="size-4 text-muted-foreground" />
       );
     case "item":
       return result.sprite ? (

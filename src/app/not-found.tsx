@@ -1,5 +1,5 @@
-import { Grid3X3 } from "lucide-react";
 import Link from "next/link";
+import { DexIcon } from "@/components/navigation/app-icons";
 import { Button } from "@/components/ui/button";
 
 // Next's built-in 404 lays itself out at `height: 100vh`, which inside the
@@ -14,7 +14,7 @@ export default function NotFound() {
       </p>
       <Button variant="outline" size="sm" asChild>
         <Link href="/">
-          <Grid3X3 className="mr-2 size-4" />
+          <DexIcon className="mr-2 size-4" />
           back to the dex
         </Link>
       </Button>

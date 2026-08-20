@@ -1,21 +1,13 @@
 "use client";
 
 import {
-  CircleHelp,
   Gamepad2,
-  GitCompareArrows,
-  Grid3X3,
   Heart,
   Info,
-  Layers,
-  ListPlus,
-  MapPin,
   MessageSquare,
   MoreHorizontal,
   Search,
   Settings,
-  Swords,
-  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -48,6 +40,16 @@ import { useComparison } from "@/hooks/use-comparison";
 import { useGenerationPreference } from "@/hooks/use-generation-preference";
 import { getGenerationName } from "@/lib/pkmn";
 import { cn } from "@/lib/utils";
+import {
+  CardsIcon,
+  CompareIcon,
+  DecksIcon,
+  DexIcon,
+  ListsIcon,
+  LocationsIcon,
+  QuizIcon,
+  TeamsIcon,
+} from "./navigation/app-icons";
 import { useNav } from "./navigation/nav-provider";
 
 type SecondaryToolbarState = {
@@ -73,8 +75,8 @@ export function useSecondaryToolbar() {
 }
 
 const navItems = [
-  { href: "/", icon: Grid3X3, label: "dex" },
-  { href: "/cards", icon: Layers, label: "cards" },
+  { href: "/", icon: DexIcon, label: "dex" },
+  { href: "/cards", icon: CardsIcon, label: "cards" },
   { href: "#search", icon: Search, label: "search", action: true },
   { href: "/favorites", icon: Heart, label: "favs" },
   { href: "#more", icon: MoreHorizontal, label: "more", action: true },
@@ -82,12 +84,12 @@ const navItems = [
 
 // Items promoted to desktop navbar (still shown in mobile "more" sheet)
 const desktopExtraNavItems = [
-  { href: "/decks", icon: Swords, label: "decks" },
-  { href: "/teams", icon: Users, label: "teams" },
-  { href: "/lists", icon: ListPlus, label: "lists" },
-  { href: "/whos-that-pokemon", icon: CircleHelp, label: "quiz" },
-  { href: "/comparison", icon: GitCompareArrows, label: "compare" },
-  { href: "/locations", icon: MapPin, label: "locations" },
+  { href: "/decks", icon: DecksIcon, label: "decks" },
+  { href: "/teams", icon: TeamsIcon, label: "teams" },
+  { href: "/lists", icon: ListsIcon, label: "lists" },
+  { href: "/whos-that-pokemon", icon: QuizIcon, label: "quiz" },
+  { href: "/comparison", icon: CompareIcon, label: "compare" },
+  { href: "/locations", icon: LocationsIcon, label: "locations" },
 ];
 
 // Items that stay in the "more" dropdown/sheet

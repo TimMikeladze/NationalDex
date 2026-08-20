@@ -5,7 +5,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Dices,
-  GitCompareArrows,
   Heart,
   ListPlus,
   Sparkles,
@@ -16,6 +15,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AddToListDialog } from "@/components/add-to-list-dialog";
 import { useSecondaryToolbar } from "@/components/app-shell";
+import { CompareIcon } from "@/components/navigation/app-icons";
 import { GenerationPicker } from "@/components/pokemon/generation-picker";
 import { GenerationScope } from "@/components/pokemon/generation-scope";
 import { PokemonImage } from "@/components/pokemon/pokemon-image";
@@ -692,7 +692,7 @@ export function PokemonPageClient({
                 : "Add to comparison"
             }
           >
-            <GitCompareArrows className="size-4" />
+            <CompareIcon className="size-4" />
             <span className="hidden sm:inline text-xs">
               {isInComparison(pokemon.name) ? "compared" : "compare"}
             </span>

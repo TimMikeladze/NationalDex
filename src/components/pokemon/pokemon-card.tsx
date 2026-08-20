@@ -1,8 +1,9 @@
 "use client";
 
-import { GitCompareArrows, Heart } from "lucide-react";
+import { Heart } from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
+import { CompareIcon } from "@/components/navigation/app-icons";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useComparison } from "@/hooks/use-comparison";
@@ -469,7 +470,7 @@ function DefaultCard({
                 isInComparison ? "Remove from comparison" : "Add to comparison"
               }
             >
-              <GitCompareArrows
+              <CompareIcon
                 className={cn("size-3.5", isInComparison && "fill-current")}
               />
             </button>
@@ -562,7 +563,7 @@ function DetailCard({
               isInComparison ? "Remove from comparison" : "Add to comparison"
             }
           >
-            <GitCompareArrows
+            <CompareIcon
               className={cn("size-4", isInComparison && "fill-current")}
             />
           </button>

@@ -1,10 +1,10 @@
 "use client";
 
-import { Grid3X3 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useQueryStates } from "nuqs";
 import { Suspense, useCallback, useEffect, useMemo } from "react";
+import { CardsIcon } from "@/components/navigation/app-icons";
 import { TcgSwipeDeck } from "@/components/tcg";
 import { Button } from "@/components/ui/button";
 import { usePocketSetIds, useTcgCardSearch } from "@/hooks/use-tcg";
@@ -122,7 +122,7 @@ function SwipeBrowser() {
       <div className="flex shrink-0 items-center justify-end">
         <Button variant="ghost" size="sm" asChild>
           <Link href={backToGrid} title="Back to the card grid">
-            <Grid3X3 className="size-4" />
+            <CardsIcon className="size-4" />
             <span className="sr-only sm:not-sr-only sm:ml-1.5">grid</span>
           </Link>
         </Button>

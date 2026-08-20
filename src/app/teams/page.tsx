@@ -1,17 +1,10 @@
 "use client";
 
-import {
-  ChevronRight,
-  Download,
-  GitCompareArrows,
-  Plus,
-  Trash2,
-  Upload,
-  Users,
-} from "lucide-react";
+import { ChevronRight, Download, Plus, Trash2, Upload } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { CompareIcon, TeamsIcon } from "@/components/navigation/app-icons";
 import { TypeCoverageCompact } from "@/components/pokemon/team-type-coverage";
 import { TeamImportExportDialog } from "@/components/team-import-export-dialog";
 import { Button } from "@/components/ui/button";
@@ -205,7 +198,7 @@ export default function TeamsPage() {
         </div>
       ) : teams.length === 0 ? (
         <div className="py-16 text-center">
-          <Users className="size-12 mx-auto text-muted-foreground mb-4" />
+          <TeamsIcon className="size-12 mx-auto text-muted-foreground mb-4" />
           <p className="text-sm text-muted-foreground">no teams yet</p>
           <p className="text-xs text-muted-foreground mt-1">
             create a team to start building your dream roster
@@ -341,7 +334,7 @@ function TeamCard({
                 className="p-2 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
                 title="Compare team members"
               >
-                <GitCompareArrows className="size-4" />
+                <CompareIcon className="size-4" />
               </button>
             )}
             <button

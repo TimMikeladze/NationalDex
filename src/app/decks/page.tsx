@@ -1,10 +1,11 @@
 "use client";
 
-import { Copy, Download, Loader2, Plus, Swords, Trash2 } from "lucide-react";
+import { Copy, Download, Loader2, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { DecksIcon } from "@/components/navigation/app-icons";
 import { DeckFormatBadge } from "@/components/tcg/deck/deck-format-picker";
 import { TcgCardImage } from "@/components/tcg/tcg-card-image";
 import { Button } from "@/components/ui/button";
@@ -422,7 +423,7 @@ function DeckCard({
 function EmptyState({ onCreate }: { onCreate: () => void }) {
   return (
     <div className="flex flex-col items-center gap-4 border border-dashed px-6 py-16 text-center">
-      <Swords className="size-6 text-muted-foreground" strokeWidth={1.5} />
+      <DecksIcon className="size-6 text-muted-foreground" strokeWidth={1.5} />
       <div className="space-y-1">
         <p className="text-sm font-medium">No decks yet</p>
         <p className="mx-auto max-w-md text-xs leading-relaxed text-muted-foreground">

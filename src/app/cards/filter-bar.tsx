@@ -3,17 +3,19 @@
 import {
   ArrowUpDown,
   ChevronsUpDown,
-  Layers,
   ListFilter,
   Search,
   Shuffle,
-  Swords,
-  WalletCards,
   X,
 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import {
+  DecksIcon,
+  SetsIcon,
+  SwipeIcon,
+} from "@/components/navigation/app-icons";
 import { Chip, FilterSection } from "@/components/tcg/tcg-chip";
 import { Button } from "@/components/ui/button";
 import {
@@ -786,7 +788,7 @@ export function CardsFilterBar({
                     title="Browse every set, by series"
                     className={WAY_IN_CHIP}
                   >
-                    <Layers className="size-3.5" />
+                    <SetsIcon className="size-3.5" />
                     Set list
                   </Link>
 
@@ -795,7 +797,7 @@ export function CardsFilterBar({
                     title="Swipe through these cards, one at a time"
                     className={WAY_IN_CHIP}
                   >
-                    <WalletCards className="size-3.5" />
+                    <SwipeIcon className="size-3.5" />
                     Swipe
                   </Link>
 
@@ -804,7 +806,7 @@ export function CardsFilterBar({
                     title="Build a deck out of these cards"
                     className={WAY_IN_CHIP}
                   >
-                    <Swords className="size-3.5" />
+                    <DecksIcon className="size-3.5" />
                     Deck builder
                   </Link>
                 </>

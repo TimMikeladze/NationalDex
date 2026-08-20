@@ -1,10 +1,11 @@
 "use client";
 
-import { ArrowLeft, GitCompareArrows, Plus, Share2, X } from "lucide-react";
+import { ArrowLeft, Plus, Share2, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { CompareIcon } from "@/components/navigation/app-icons";
 import type { PokemonPickerResult } from "@/components/pokemon/pokemon-picker";
 import { PokemonPicker } from "@/components/pokemon/pokemon-picker";
 import { TeamTypeCoverage } from "@/components/pokemon/team-type-coverage";
@@ -170,7 +171,7 @@ export default function TeamDetailPage() {
                 onClick={handleCompareTeam}
                 title="Compare team members"
               >
-                <GitCompareArrows className="size-4" />
+                <CompareIcon className="size-4" />
                 <span className="hidden sm:inline ml-1">compare</span>
               </Button>
             )}
@@ -364,7 +365,7 @@ function TeamMemberCard({
           )}
           title={inComparison ? "Remove from comparison" : "Add to comparison"}
         >
-          <GitCompareArrows className="size-3" />
+          <CompareIcon className="size-3" />
         </button>
         <button
           type="button"

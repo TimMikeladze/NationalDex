@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  ArrowUpDown,
-  ChevronDown,
-  ChevronUp,
-  GitCompareArrows,
-  Trash2,
-  X,
-} from "lucide-react";
+import { ArrowUpDown, ChevronDown, ChevronUp, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import {
   ComparisonCard,
@@ -15,6 +8,7 @@ import {
   StatsComparisonTable,
   TeamCoverageSection,
 } from "@/components/comparison/comparison-shared";
+import { CompareIcon } from "@/components/navigation/app-icons";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -96,7 +90,7 @@ export function ComparisonDrawer() {
           tabIndex={!isExpanded ? 0 : undefined}
         >
           <div className="flex items-center gap-3">
-            <GitCompareArrows className="size-4 text-muted-foreground" />
+            <CompareIcon className="size-4 text-muted-foreground" />
             <span className="text-sm font-medium">
               comparing {comparison.length} pokemon
             </span>

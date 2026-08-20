@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  ArrowLeft,
-  ArrowUpDown,
-  GitCompareArrows,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { ArrowLeft, ArrowUpDown, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import {
@@ -16,6 +10,7 @@ import {
   StatsComparisonTable,
   TeamCoverageSection,
 } from "@/components/comparison/comparison-shared";
+import { CompareIcon } from "@/components/navigation/app-icons";
 import { GenerationScope } from "@/components/pokemon/generation-scope";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -53,7 +48,7 @@ export function ComparisonPageClient() {
     return (
       <div className="p-4 md:p-6">
         <div className="py-16 text-center">
-          <GitCompareArrows className="size-12 mx-auto text-muted-foreground mb-4" />
+          <CompareIcon className="size-12 mx-auto text-muted-foreground mb-4" />
           <p className="text-sm text-muted-foreground">no pokemon to compare</p>
           <p className="text-xs text-muted-foreground mt-1">
             click the compare icon on any pokemon to add it here
