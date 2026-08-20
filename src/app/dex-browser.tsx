@@ -150,6 +150,22 @@ function HomeContent() {
     setItemsDisplayCount(ITEMS_PER_PAGE);
   }, [filterResetKey]);
 
+  // A new filter is a new set of results, and they start at the top. Narrowing
+  // the dex from a thousand Pokemon to a dozen leaves the page far shorter than
+  // it was, so a reader who was deep in the old list gets dropped wherever the
+  // browser clamps the scroll — in practice the link index below the grid, with
+  // not one result on screen. The first run is skipped so that arriving on a
+  // filtered URL, or coming back to one, keeps the position it was given.
+  const hasAppliedFilterOnce = useRef(false);
+  useEffect(() => {
+    void filterResetKey;
+    if (!hasAppliedFilterOnce.current) {
+      hasAppliedFilterOnce.current = true;
+      return;
+    }
+    document.querySelector("main")?.scrollTo({ top: 0 });
+  }, [filterResetKey]);
+
   const displayedPokemon = hasPokemonFilters ? filteredPokemon : allPokemon;
 
   return (

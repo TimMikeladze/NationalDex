@@ -36,8 +36,11 @@ function getColumnCount(containerWidth: number): number {
   return 2;
 }
 
-// Estimate row height based on card content
-// Cards have: padding + ID row + image + name + type badges
+/**
+ * Opening guess only. A card is as tall as its type badges make it, and those
+ * wrap differently at every column width, so the real height is measured off
+ * the first rendered row and this number is never used again.
+ */
 function getRowHeight(containerWidth: number): number {
   // Larger screens have larger images and padding
   if (containerWidth >= 768) return 195; // md+ breakpoint
@@ -50,12 +53,21 @@ function getGapSize(containerWidth: number): number {
   return 8; // gap-2
 }
 
+/**
+ * Rows past the viewport kept mounted on each side. The grid scrolls inside
+ * `main`, and a flick on a phone travels further between two React commits
+ * than a couple of rows' worth of slack can cover, so this buys roughly two
+ * screenfuls in each direction rather than a few hundred pixels.
+ */
+const OVERSCAN_ROWS = 10;
+
 export function VirtualizedPokemonGrid({
   pokemon,
   className,
 }: VirtualizedPokemonGridProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
+  const [scrollMargin, setScrollMargin] = useState(0);
 
   // Track container width with ResizeObserver
   useEffect(() => {
@@ -103,8 +115,64 @@ export function VirtualizedPokemonGrid({
     count: rows.length,
     getScrollElement,
     estimateSize: () => rowHeight + gap,
-    overscan: 5,
+    overscan: OVERSCAN_ROWS,
+    // Row offsets are measured from the top of `main`'s content, but the rows
+    // are positioned inside this container — which sits below a sticky toolbar
+    // that changes height as you scroll. Without this the virtualizer decides
+    // what is on screen using coordinates that are out by however far down the
+    // page the grid happens to start, and drops rows at the edges.
+    scrollMargin,
   });
+
+  /**
+   * How far the grid starts below the top of the scroll container. The toolbar
+   * above it collapses and expands while scrolling, so this is re-read on
+   * scroll rather than measured once — a stale value puts every row in the
+   * wrong place.
+   */
+  useEffect(() => {
+    const container = containerRef.current;
+    const scrollElement = getScrollElement();
+    if (!container || !scrollElement) return;
+
+    let frame = 0;
+    const measure = () => {
+      frame = 0;
+      const offset =
+        container.getBoundingClientRect().top -
+        scrollElement.getBoundingClientRect().top +
+        scrollElement.scrollTop;
+      setScrollMargin((previous) =>
+        Math.abs(previous - offset) > 1 ? offset : previous,
+      );
+    };
+    const schedule = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(measure);
+    };
+
+    measure();
+    scrollElement.addEventListener("scroll", schedule, { passive: true });
+    const resizeObserver = new ResizeObserver(schedule);
+    resizeObserver.observe(scrollElement);
+    resizeObserver.observe(container);
+
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+      scrollElement.removeEventListener("scroll", schedule);
+      resizeObserver.disconnect();
+    };
+  }, [getScrollElement]);
+
+  // Cards change height when the column count does, so the heights measured at
+  // the old width have to go rather than be reused for the new layout.
+  const measure = virtualizer.measure;
+  useEffect(() => {
+    void columnCount;
+    void rowHeight;
+    void gap;
+    measure();
+  }, [measure, columnCount, rowHeight, gap]);
 
   const virtualRows = virtualizer.getVirtualItems();
 
@@ -135,13 +203,17 @@ export function VirtualizedPokemonGrid({
           return (
             <div
               key={virtualRow.key}
+              data-index={virtualRow.index}
+              // Measured rather than assumed: a row is as tall as its tallest
+              // card, and type badges wrap onto a second line at some column
+              // widths and not others.
+              ref={virtualizer.measureElement}
               style={{
                 position: "absolute",
                 top: 0,
                 left: 0,
                 width: "100%",
-                height: `${virtualRow.size}px`,
-                transform: `translateY(${virtualRow.start}px)`,
+                transform: `translateY(${virtualRow.start - scrollMargin}px)`,
               }}
             >
               <div
@@ -149,7 +221,7 @@ export function VirtualizedPokemonGrid({
                   display: "grid",
                   gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
                   gap: `${gap}px`,
-                  height: `${rowHeight}px`,
+                  paddingBottom: `${gap}px`,
                 }}
               >
                 {row.map((pokemon) => (
