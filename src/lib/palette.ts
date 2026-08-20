@@ -392,9 +392,13 @@ export function extractPalette(
  * band so the same wash carries on white and on near-black without being
  * recomputed per theme — in OKLab that costs nothing, because moving L does
  * not drag the hue with it the way it does in HSL.
+ *
+ * The band sits low deliberately. A pale tint of a colour is a colour someone
+ * chose to be quiet; the deep end of it is the colour itself, and against
+ * white it is the only half that has any weight.
  */
-const AMBIENT_MIN_L = 0.6;
-const AMBIENT_MAX_L = 0.76;
+const AMBIENT_MIN_L = 0.42;
+const AMBIENT_MAX_L = 0.56;
 
 /** Chroma floor and ceiling. The floor is the whole point: nothing is beige. */
 const AMBIENT_MIN_C = 0.15;

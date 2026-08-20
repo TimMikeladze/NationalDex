@@ -376,46 +376,66 @@
 .ambient-backdrop {
   pointer-events: none;
   overflow: hidden;
-  opacity: 0.65;
+  opacity: 0.82;
   /* A hard bottom edge would read as a banner. Fading the wash out over its
      own lower half hands the page back its white without a seam. */
   -webkit-mask-image: linear-gradient(
     to bottom,
     #000 0%,
-    #000 32%,
+    #000 44%,
     transparent 100%
   );
-  mask-image: linear-gradient(to bottom, #000 0%, #000 32%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 44%, transparent 100%);
 }
 
 .dark .ambient-backdrop {
-  /* Colour this saturated reads louder against near-black than against white. */
-  opacity: 0.55;
+  /* Colour this deep needs the room back on near-black, where there is no
+     white underneath it to carry any of the light. */
+  opacity: 0.74;
 }
 
-/* A desktop page is mostly reading — dense tables of moves, of printings —
-   and the same wash spread over twice the width is twice as much colour. */
+/*
+ * On a phone the wash sits behind a hero and nothing else. On a desktop the
+ * same page puts a dense table of moves in the top right, directly under it —
+ * and colour this deep over small type is the one place this effect can do
+ * real harm. So on the wide layout it is lighter, and it stops holding full
+ * strength almost immediately.
+ */
 @media (min-width: 1024px) {
   .ambient-backdrop {
-    opacity: 0.55;
+    opacity: 0.45;
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      #000 0%,
+      #000 18%,
+      transparent 92%
+    );
+    mask-image: linear-gradient(to bottom, #000 0%, #000 18%, transparent 92%);
   }
 
   .dark .ambient-backdrop {
-    opacity: 0.45;
+    opacity: 0.44;
   }
 }
 
 .ambient-layer {
   position: absolute;
-  inset: 0;
+  /* Bled out past the backdrop on every side so the blur below has colour to
+     pull in from. Blurring a layer that ends where the frame ends samples the
+     nothing outside it and hems the wash in a pale border. */
+  inset: -18%;
   opacity: 0;
   transition: opacity 900ms ease-out;
+  /* The blobs are soft already; the blur is what stops them reading as four
+     shapes and starts them reading as light. Radius scales with the viewport
+     so a phone and a desktop are the same picture at different sizes. */
+  filter: blur(clamp(28px, 7vw, 80px));
   /* The dominant colour also falls straight down the page, the way a record
      sleeve bleeds into the header above the track list. */
   background-image: linear-gradient(
     to bottom in oklab,
-    color-mix(in oklab, var(--ambient-base) 45%, transparent),
-    transparent 74%
+    color-mix(in oklab, var(--ambient-base) 48%, transparent) 14%,
+    transparent 70%
   );
 }
 
@@ -429,6 +449,15 @@
 .ambient-layer > span {
   position: absolute;
   display: block;
+  /*
+   * Ink on paper. Two blobs simply laid over each other average toward grey
+   * where they meet — most of an image's colours are somewhere near opposite
+   * each other on the wheel, and averaging opposites is the definition of
+   * grey. Multiplying instead is how pigment actually behaves: overlaps get
+   * deeper and keep a hue, which is the difference between a wash with
+   * shadows in it and a wash with haze in it.
+   */
+  mix-blend-mode: multiply;
   /* `ellipse closest-side` makes the gradient reach transparent exactly at the
      blob's own edges. A `circle` here is sized to its farthest corner, so it
      is still at half strength where the backdrop clips it — which is how a
@@ -436,10 +465,17 @@
   background-image: radial-gradient(
     ellipse closest-side at center in oklab,
     var(--ambient-color) 0%,
-    color-mix(in oklab, var(--ambient-color) 60%, transparent) 46%,
+    var(--ambient-color) 24%,
+    color-mix(in oklab, var(--ambient-color) 78%, transparent) 54%,
     transparent 100%
   );
   will-change: transform;
+}
+
+/* On near-black there is no paper to soak into, so overlaps add light
+   instead of subtracting it — the same rule, read the other way up. */
+.dark .ambient-layer > span {
+  mix-blend-mode: screen;
 }
 
 .ambient-layer > span:nth-child(1) {
@@ -483,7 +519,7 @@
   content: "";
   position: absolute;
   inset: 0;
-  opacity: 0.16;
+  opacity: 0.12;
   mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
 }
