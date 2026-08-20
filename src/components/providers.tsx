@@ -25,8 +25,18 @@ export function Providers({ children }: { children: React.ReactNode }) {
               <SearchOverlay />
               {/* Toasts were being raised — adding to a comparison, filling a
                   deck — with nowhere to appear. They sit above the mobile bottom
-                  nav rather than behind it. */}
-              <Toaster position="bottom-center" offset={64} mobileOffset={64} />
+                  nav rather than behind it, clearing however tall the nav
+                  actually is on the device instead of a guess at 64px that a
+                  home indicator was enough to make wrong. */}
+              <Toaster
+                position="bottom-center"
+                offset={64}
+                mobileOffset={{
+                  bottom: "calc(var(--app-bottom-inset, 5rem) + 1rem)",
+                  left: 16,
+                  right: 16,
+                }}
+              />
             </NavProvider>
           </ComparisonProvider>
         </QueryProvider>
