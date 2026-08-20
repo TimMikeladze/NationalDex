@@ -131,7 +131,12 @@
   body {
     height: 100%;
     overflow: hidden;
-    overscroll-behavior: none;
+    /*
+     * Keep vertical rubber-banding out of the fixed shell, but leave the
+     * horizontal axis alone. Browsers use horizontal overscroll for the
+     * trackpad/touch back and forward gestures.
+     */
+    overscroll-behavior-y: none;
   }
   body {
     @apply bg-background text-foreground;
