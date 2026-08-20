@@ -122,7 +122,15 @@ export interface DexFilterState {
   tags: DexTagState;
 }
 
+export const DEX_CATEGORIES: DexCategory[] = [
+  "pokemon",
+  "moves",
+  "abilities",
+  "items",
+];
+
 const RANGE_STAT_KEY_SET = new Set<string>(RANGE_STAT_KEYS);
+const DEX_CATEGORY_SET = new Set<string>(DEX_CATEGORIES);
 const DEX_TAG_SET = new Set<string>(DEX_TAGS.map((t) => t.id));
 const SORT_KEY_SET = new Set<string>(DEX_SORT_OPTIONS.map((s) => s.id));
 const REGULATION_ID_SET = new Set<string>(REGULATIONS.map((r) => r.id));
@@ -197,25 +205,16 @@ const dexFilterUrlKeys = {
 const FILTER_STORAGE_KEY = "pokedex-dex-filter";
 
 /**
- * The parts of the filter worth remembering between visits: the filter panel,
- * the sort, and whether the shuffle is on. The seed itself is stored so a
- * reload comes back to the same shuffled order rather than a new one. Search
- * text and the active category tab are per-visit intent, so they stay out.
+ * The whole filter is remembered between visits, the way the shuffle seed is:
+ * a reload comes back to the dex exactly as it was left — same search text,
+ * same tab, same panel, same sort, same shuffled order.
  */
-type PersistedDexFilter = Pick<
-  DexFilterState,
-  | "types"
-  | "generations"
-  | "randomSeed"
-  | "regulations"
-  | "sort"
-  | "sortDirection"
-  | "stats"
-  | "tags"
->;
+type PersistedDexFilter = DexFilterState;
 
 function isPersistedFilterEmpty(filter: PersistedDexFilter): boolean {
   return (
+    filter.search === "" &&
+    filter.category === "pokemon" &&
     filter.types.length === 0 &&
     filter.generations.length === 0 &&
     filter.randomSeed === null &&
@@ -258,6 +257,12 @@ function parsePersistedFilter(raw: string | null): PersistedDexFilter | null {
     }
 
     return {
+      search: typeof parsed.search === "string" ? parsed.search : "",
+      category:
+        typeof parsed.category === "string" &&
+        DEX_CATEGORY_SET.has(parsed.category)
+          ? (parsed.category as DexCategory)
+          : "pokemon",
       types: toStringArray(parsed.types) as PokemonType[],
       generations: toStringArray(parsed.generations),
       randomSeed:
@@ -327,31 +332,21 @@ export function useDexFilter() {
     [setQueryState],
   );
 
-  // Restore the last-used panel + sort on the first visit of a session, but
-  // only when the URL carries no filter of its own — a shared link always wins.
+  // Restore the last-used filter on the first visit of a session, but only
+  // when the URL carries no filter of its own — a shared link always wins.
   const hasHydrated = useRef(false);
   useEffect(() => {
     if (hasHydrated.current) return;
     hasHydrated.current = true;
 
-    const current: PersistedDexFilter = {
-      types: filter.types,
-      generations: filter.generations,
-      randomSeed: filter.randomSeed,
-      regulations: filter.regulations,
-      sort: filter.sort,
-      sortDirection: filter.sortDirection,
-      stats: filter.stats,
-      tags: filter.tags,
-    };
-    if (!isPersistedFilterEmpty(current)) return;
+    if (!isPersistedFilterEmpty(filter)) return;
 
     const stored = parsePersistedFilter(
       localStorage.getItem(FILTER_STORAGE_KEY),
     );
     if (!stored || isPersistedFilterEmpty(stored)) return;
 
-    setFilter({ ...filter, ...stored });
+    setFilter(stored);
   }, [filter, setFilter]);
 
   // Skips the mount pass so a fresh page load can't overwrite the stored
@@ -363,22 +358,11 @@ export function useDexFilter() {
       return;
     }
 
-    const toPersist: PersistedDexFilter = {
-      types: filter.types,
-      generations: filter.generations,
-      randomSeed: filter.randomSeed,
-      regulations: filter.regulations,
-      sort: filter.sort,
-      sortDirection: filter.sortDirection,
-      stats: filter.stats,
-      tags: filter.tags,
-    };
-
-    if (isPersistedFilterEmpty(toPersist)) {
+    if (isPersistedFilterEmpty(filter)) {
       localStorage.removeItem(FILTER_STORAGE_KEY);
       return;
     }
-    localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(toPersist));
+    localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(filter));
   }, [filter]);
 
   return [filter, setFilter] as const;
@@ -829,17 +813,15 @@ export function DexFilter({
       >
         <div className="min-h-0 overflow-hidden">
           <div className="flex flex-wrap items-center gap-1">
-            {(["pokemon", "moves", "abilities", "items"] as const).map(
-              (cat) => (
-                <Chip
-                  key={cat}
-                  selected={filter.category === cat}
-                  onClick={() => handleCategoryChange(cat)}
-                >
-                  {CATEGORY_LABELS[cat]}
-                </Chip>
-              ),
-            )}
+            {DEX_CATEGORIES.map((cat) => (
+              <Chip
+                key={cat}
+                selected={filter.category === cat}
+                onClick={() => handleCategoryChange(cat)}
+              >
+                {CATEGORY_LABELS[cat]}
+              </Chip>
+            ))}
           </div>
 
           {/* Types are the facet reached for first, so they sit in the toolbar
