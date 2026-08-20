@@ -24,13 +24,18 @@ export interface CardFilterState {
   hpMin: number | null;
   hpMax: number | null;
   dexId: number | null;
+  /**
+   * The order the user asked for, or empty when they have not asked: an open
+   * browse is shuffled unless it says otherwise, so the field has to be able
+   * to say "set order" out loud.
+   */
   sort: string;
   /** How much of the catalogue is in play — the newest sets, or all of it. */
   scope: string;
   /**
-   * Seed for a shuffled browse; null when the catalogue is read in order. It
-   * lives in the URL so a shuffle can be shared, reloaded, or handed to the
-   * swipe deck and still deal the same cards.
+   * Seed for a shuffled browse, or null to let the browse draw its own. A seed
+   * that made it into the URL pins that shuffle, so it can be shared,
+   * reloaded, or handed to the swipe deck and still deal the same cards.
    */
   seed: number | null;
   /** Which language's catalogue is being browsed. */
@@ -38,9 +43,11 @@ export interface CardFilterState {
 }
 
 /**
- * Browsing opens on the newest sets rather than on 1999 promos. Widening to the
- * whole catalogue is one tap, and lives in the URL so the choice survives a
- * share or a move between the grid and the deck.
+ * How much of the catalogue a browse that is being read in order runs through:
+ * the newest sets rather than 1999 promos. Widening to the whole catalogue is
+ * one tap, and lives in the URL so the choice survives a share or a move
+ * between the grid and the deck. A shuffled browse ignores it — it draws its
+ * own sets from the whole catalogue instead.
  */
 export type CardScope = "latest" | "all";
 
@@ -85,6 +92,9 @@ export const HP_PRESETS = [
   { label: "210+", min: 210, max: null },
 ];
 
+/** Set order, as the sort control names it. */
+export const SET_ORDER_SORT_VALUE = "default";
+
 export const SORT_OPTIONS: {
   value: string;
   label: string;
@@ -119,6 +129,37 @@ export const SORT_OPTIONS: {
  */
 export const RANDOM_SORT_VALUE = "random";
 
+/**
+ * A fresh shuffle. `Math.random` rather than the clock, so shuffling twice in
+ * the same millisecond — a double tap, a grid and a deck mounting together —
+ * still deals two different draws.
+ */
+export function newShuffleSeed(): number {
+  return Math.floor(Math.random() * 2 ** 31);
+}
+
+/**
+ * What the sort control is currently set to, which is not always what the URL
+ * says. The catalogue is far too big to read front to back, and set order
+ * would deal the same first screen of 1999 promos on every visit, so an open
+ * browse opens on a shuffle. Asking for a set, a name or a Pokemon is asking
+ * about particular cards, and those are read in order.
+ *
+ * Choosing an order writes it, including set order, so the choice outlives the
+ * default. A seed on its own is a shuffle that was shared before the sort
+ * field could say so.
+ */
+export function cardOrderValue(filters: CardFilterState): string {
+  if (filters.sort) return filters.sort;
+  if (filters.seed !== null) return RANDOM_SORT_VALUE;
+  return scopeApplies(filters) ? RANDOM_SORT_VALUE : SET_ORDER_SORT_VALUE;
+}
+
+/** Whether the results are being dealt in a random order. */
+export function isRandomOrder(filters: CardFilterState): boolean {
+  return cardOrderValue(filters) === RANDOM_SORT_VALUE;
+}
+
 export function isGameFilter(value: string): value is GameFilter {
   return value === "all" || value === "tcg" || value === "pocket";
 }
@@ -145,7 +186,7 @@ export const CARD_FILTER_PARSERS = {
   hpMin: parseAsInteger,
   hpMax: parseAsInteger,
   dexId: parseAsInteger,
-  sort: parseAsString.withDefault("default"),
+  sort: parseAsString.withDefault(""),
   scope: parseAsString.withDefault("latest"),
   seed: parseAsInteger,
   lang: parseAsString.withDefault(DEFAULT_TCG_LANGUAGE),

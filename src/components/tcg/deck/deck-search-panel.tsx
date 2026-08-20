@@ -6,7 +6,7 @@ import { CardsFilterBar } from "@/app/cards/filter-bar";
 import {
   type CardFilterState,
   type CardFilterUpdate,
-  RANDOM_SORT_VALUE,
+  SET_ORDER_SORT_VALUE,
   toCardSearchFilters,
 } from "@/app/cards/filters";
 import { Chip } from "@/components/tcg/tcg-chip";
@@ -59,7 +59,10 @@ const DEFAULT_FILTERS: CardFilterState = {
   hpMin: null,
   hpMax: null,
   dexId: null,
-  sort: "default",
+  // The pool is read in set order. A browse opens on a shuffle because the
+  // catalogue is too big to read front to back; a deck builder is looking for
+  // a particular card, and cards that move between searches are harder to find.
+  sort: SET_ORDER_SORT_VALUE,
   // The format already decides how much of the catalogue is in play, so the
   // browse's "newest sets" scope would narrow it a second time.
   scope: "all",
@@ -238,14 +241,10 @@ export function DeckSearchPanel({
           filters={filters}
           setFilters={setFilters}
           game={format.game}
-          isRandom={false}
+          order={filters.sort}
+          shuffleSeed={null}
           onOrderChange={(value) =>
-            setFilters({
-              sort:
-                value === RANDOM_SORT_VALUE || value === "default"
-                  ? null
-                  : value,
-            })
+            setFilters({ sort: value === SET_ORDER_SORT_VALUE ? null : value })
           }
           sets={availableSets}
           selectedSet={selectedSet}

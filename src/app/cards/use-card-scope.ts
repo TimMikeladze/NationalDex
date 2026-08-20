@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   EXPANSION_MIN_CARDS,
   useLatestSetIds,
@@ -15,6 +15,8 @@ import {
   type CardScope,
   type GameFilter,
   isCardScope,
+  isRandomOrder,
+  newShuffleSeed,
   scopeApplies,
 } from "./filters";
 
@@ -41,7 +43,12 @@ export interface CardScopeState {
    * first, and shuffling that only reorders one set's cards.
    */
   fanOutSetIds: string[] | undefined;
-  /** Seed the results are dealt in, or null to read them in set order. */
+  /**
+   * Seed the results are dealt in, or null to read them in set order. An open
+   * browse that has not been given one draws its own, so landing on the
+   * catalogue deals a different screen every visit; it is worth carrying to
+   * the deck, which is why it is handed back rather than kept in here.
+   */
   shuffleSeed: number | null;
   /** False while the set list a scope depends on is still loading. */
   isReady: boolean;
@@ -50,8 +57,9 @@ export interface CardScopeState {
 /**
  * Which slice of the catalogue a card search runs against. The grid and the
  * swipe deck read the same query string, so they work this out the same way:
- * a plain browse opens on the newest sets, a shuffle draws from sets picked at
- * random, and asking for a set, a name or a Pokemon means the whole catalogue.
+ * an open browse is a shuffle and draws from sets picked at random, asking for
+ * an order reads the newest sets in it, and asking for a set, a name or a
+ * Pokemon means the whole catalogue.
  */
 export function useCardScope(
   filters: CardFilterState,
@@ -61,11 +69,18 @@ export function useCardScope(
   const scope: CardScope = isCardScope(filters.scope)
     ? filters.scope
     : "latest";
-  const seed = filters.seed;
+  // A browse that is shuffled but carries no seed — the open browse everyone
+  // lands on — draws one for itself. It is per mount rather than per render so
+  // the cards hold still while the page is being read, and it stays out of the
+  // URL so coming back to the catalogue deals a fresh screen rather than the
+  // one that was bookmarked.
+  const [drawnSeed] = useState(newShuffleSeed);
+  const isRandom = isRandomOrder(filters);
+  const seed = isRandom ? (filters.seed ?? drawnSeed) : null;
 
   const scopeMatters = scopeApplies(filters);
   // A shuffle picks its own sets, which replaces the newest-sets default.
-  const randomIsLive = seed !== null && scopeMatters;
+  const randomIsLive = isRandom && scopeMatters;
   const scopeIsLive = scope === "latest" && scopeMatters && !randomIsLive;
 
   const { setIds: latestSetIds, isReady: latestSetsReady } = useLatestSetIds(

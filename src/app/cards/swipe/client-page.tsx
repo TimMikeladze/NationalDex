@@ -49,8 +49,9 @@ function SwipeBrowser() {
 
   const pocketSetIds = usePocketSetIds(language);
 
-  // The deck opens where the grid does — on the newest sets, or on the same
-  // shuffle — because the two read the same query string.
+  // The deck opens where the grid does — on the same shuffle, or on the newest
+  // sets in whatever order was asked for — because the two read the same query
+  // string, and the grid writes its shuffle into the link over here.
   const { scopeIsLive, scopedSetIds, fanOutSetIds, shuffleSeed, isReady } =
     useCardScope(filters, game, language);
 
