@@ -368,39 +368,40 @@
  * Ambient backdrop.
  *
  * The wash of an item's own colours behind the top of its page — see
- * `components/ambient-backdrop.tsx`. Deliberately restrained: this app is
- * black type on white with square corners, so the colour arrives as light in
- * the room rather than as a panel with an edge.
+ * `components/ambient-backdrop.tsx`. Four oversized blobs of `oklch()`, mixed
+ * and faded in OKLab rather than sRGB: fading a colour to `transparent` in
+ * sRGB drags it through grey on the way out, which is exactly the dishwater
+ * halo that dates a gradient. In OKLab it stays itself until it is gone.
  */
 .ambient-backdrop {
   pointer-events: none;
   overflow: hidden;
-  opacity: 0.55;
+  opacity: 0.65;
   /* A hard bottom edge would read as a banner. Fading the wash out over its
      own lower half hands the page back its white without a seam. */
   -webkit-mask-image: linear-gradient(
     to bottom,
     #000 0%,
-    #000 28%,
+    #000 32%,
     transparent 100%
   );
-  mask-image: linear-gradient(to bottom, #000 0%, #000 28%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 32%, transparent 100%);
 }
 
 .dark .ambient-backdrop {
-  /* Colour reads louder against near-black than against white. */
-  opacity: 0.4;
+  /* Colour this saturated reads louder against near-black than against white. */
+  opacity: 0.55;
 }
 
 /* A desktop page is mostly reading — dense tables of moves, of printings —
    and the same wash spread over twice the width is twice as much colour. */
 @media (min-width: 1024px) {
   .ambient-backdrop {
-    opacity: 0.45;
+    opacity: 0.55;
   }
 
   .dark .ambient-backdrop {
-    opacity: 0.34;
+    opacity: 0.45;
   }
 }
 
@@ -412,9 +413,9 @@
   /* The dominant colour also falls straight down the page, the way a record
      sleeve bleeds into the header above the track list. */
   background-image: linear-gradient(
-    to bottom,
-    color-mix(in srgb, var(--ambient-base) 30%, transparent),
-    transparent 72%
+    to bottom in oklab,
+    color-mix(in oklab, var(--ambient-base) 45%, transparent),
+    transparent 74%
   );
 }
 
@@ -422,42 +423,69 @@
   opacity: 1;
 }
 
-/* Each colour is one soft, oversized blob. They overlap far past the edges so
-   no blob ever shows a boundary of its own. */
+/* Each colour is one soft, oversized blob, overlapping the others and the
+   edges far enough that none of them ever shows a boundary of its own. Where
+   two meet, OKLab mixing gives the colour between them rather than mud. */
 .ambient-layer > span {
   position: absolute;
   display: block;
+  /* `ellipse closest-side` makes the gradient reach transparent exactly at the
+     blob's own edges. A `circle` here is sized to its farthest corner, so it
+     is still at half strength where the backdrop clips it — which is how a
+     soft wash ends up with a straight vertical seam down it. */
   background-image: radial-gradient(
-    circle at center,
+    ellipse closest-side at center in oklab,
     var(--ambient-color) 0%,
-    color-mix(in srgb, var(--ambient-color) 55%, transparent) 42%,
-    transparent 72%
+    color-mix(in oklab, var(--ambient-color) 60%, transparent) 46%,
+    transparent 100%
   );
   will-change: transform;
 }
 
 .ambient-layer > span:nth-child(1) {
-  left: -14%;
-  top: -34%;
-  width: 80%;
+  left: -18%;
+  top: -40%;
+  width: 78%;
   height: 152%;
   animation: ambient-drift-a 23s ease-in-out infinite alternate;
 }
 
 .ambient-layer > span:nth-child(2) {
-  right: -16%;
-  top: -26%;
-  width: 74%;
-  height: 136%;
+  right: -20%;
+  top: -34%;
+  width: 76%;
+  height: 146%;
   animation: ambient-drift-b 29s ease-in-out infinite alternate;
 }
 
 .ambient-layer > span:nth-child(3) {
-  left: 24%;
-  top: 4%;
-  width: 62%;
-  height: 124%;
+  left: 4%;
+  top: 12%;
+  width: 70%;
+  height: 130%;
   animation: ambient-drift-c 37s ease-in-out infinite alternate;
+}
+
+.ambient-layer > span:nth-child(4) {
+  right: 0%;
+  top: 4%;
+  width: 58%;
+  height: 118%;
+  animation: ambient-drift-d 31s ease-in-out infinite alternate;
+}
+
+/*
+ * Grain. A gradient this wide and this smooth bands into visible stripes on
+ * an 8-bit display; a little noise over the top dithers the steps away. It is
+ * also the reason the wash reads as printed light rather than as a CSS effect.
+ */
+.ambient-backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.16;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 /* Slow enough that you never catch it moving, only notice it has. */
@@ -466,25 +494,34 @@
     transform: translate3d(0, 0, 0) scale(1);
   }
   to {
-    transform: translate3d(9%, 5%, 0) scale(1.14);
+    transform: translate3d(11%, 6%, 0) scale(1.16);
   }
 }
 
 @keyframes ambient-drift-b {
   from {
-    transform: translate3d(0, 0, 0) scale(1.08);
+    transform: translate3d(0, 0, 0) scale(1.1);
   }
   to {
-    transform: translate3d(-8%, 7%, 0) scale(0.94);
+    transform: translate3d(-9%, 8%, 0) scale(0.92);
   }
 }
 
 @keyframes ambient-drift-c {
   from {
-    transform: translate3d(0, 4%, 0) scale(0.96);
+    transform: translate3d(0, 5%, 0) scale(0.94);
   }
   to {
-    transform: translate3d(6%, -6%, 0) scale(1.16);
+    transform: translate3d(8%, -7%, 0) scale(1.18);
+  }
+}
+
+@keyframes ambient-drift-d {
+  from {
+    transform: translate3d(4%, -3%, 0) scale(1.12);
+  }
+  to {
+    transform: translate3d(-7%, 5%, 0) scale(0.96);
   }
 }
 

@@ -108,8 +108,9 @@ function readPalette(src: string): Promise<string[]> {
  * The colours to paint a detail page with: the ones its artwork is made of,
  * with its type colours standing in until they are read.
  *
- * `seed` is a list of raw hex colours (type or energy colours); both lists come
- * back normalised, so a caller can hand either one to the same backdrop.
+ * `seed` is a list of raw hex colours (type or energy colours). Both lists come
+ * back as `oklch()` and through the same treatment, so the stand-in is as vivid
+ * as what replaces it and the cross-fade is a change of hue, not of intensity.
  */
 export function useAmbientPalette(
   src: string | null | undefined,
