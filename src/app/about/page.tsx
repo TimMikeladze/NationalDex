@@ -1,115 +1,8 @@
 "use client";
 
-import { ArrowRight } from "lucide-react";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
-import type {
-  ContactLink,
-  DataSource,
-  FeatureConfig,
-  FooterLink,
-} from "./config";
+import type { ContactLink, DataSource, FooterLink } from "./config";
 import { aboutConfig } from "./config";
-
-const WIDE_INDICES = new Set([12]);
-
-function Hero() {
-  const { hero } = aboutConfig;
-
-  return (
-    <section className="px-6 pt-20 pb-12 md:pt-28 md:pb-16">
-      <div className="max-w-3xl mx-auto">
-        <div className="text-[10px] text-muted-foreground/70 uppercase tracking-[0.3em] mb-8 font-medium">
-          v{process.env.NEXT_PUBLIC_APP_VERSION}
-        </div>
-
-        <h1 className="text-5xl md:text-7xl font-semibold tracking-tighter mb-6">
-          {hero.title}
-        </h1>
-
-        <div className="flex items-center gap-2 mb-6">
-          <span className="text-muted-foreground/50 select-none">{">"}</span>
-          <p className="text-lg md:text-xl text-muted-foreground">
-            {hero.tagline}
-            <span className="inline-block w-[2px] h-[1.1em] bg-foreground/50 ml-1 align-text-bottom animate-pulse" />
-          </p>
-        </div>
-
-        <p className="text-sm text-muted-foreground/80 max-w-md leading-relaxed mb-10">
-          {hero.description}
-        </p>
-
-        {hero.cta && (
-          <Link
-            href={hero.cta.href}
-            className="group inline-flex items-center gap-3 bg-foreground text-background px-6 py-3 text-sm font-medium hover:opacity-90 transition-opacity"
-          >
-            {hero.cta.label}
-            <ArrowRight className="size-4 group-hover:translate-x-0.5 transition-transform" />
-          </Link>
-        )}
-      </div>
-    </section>
-  );
-}
-
-function FeatureCard({
-  feature,
-  isWide,
-}: {
-  feature: FeatureConfig;
-  isWide: boolean;
-}) {
-  const Icon = feature.icon;
-
-  return (
-    <div
-      className={cn(
-        "group relative border border-foreground/[0.06] bg-background p-5 md:p-6 transition-colors hover:border-foreground/[0.12] hover:bg-muted/20",
-        isWide && "md:col-span-2",
-      )}
-    >
-      <div
-        className="absolute left-0 top-0 w-[2px] h-full opacity-0 group-hover:opacity-100 transition-opacity"
-        style={{ backgroundColor: feature.accent }}
-      />
-      <div className="flex items-start gap-4">
-        <div className="shrink-0 mt-0.5" style={{ color: feature.accent }}>
-          <Icon className="size-4" />
-        </div>
-        <div>
-          <h3 className="text-sm font-medium mb-1.5">{feature.title}</h3>
-          <p className="text-xs text-muted-foreground/80 leading-relaxed">
-            {feature.description}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Features() {
-  const { features } = aboutConfig;
-
-  return (
-    <section className="px-6 py-12 md:py-16">
-      <div className="max-w-3xl mx-auto">
-        <div className="text-[10px] text-muted-foreground/70 uppercase tracking-[0.3em] mb-8 font-medium">
-          Features
-        </div>
-        <div className="grid md:grid-cols-3 gap-3">
-          {features.map((feature, i) => (
-            <FeatureCard
-              key={feature.title}
-              feature={feature}
-              isWide={WIDE_INDICES.has(i)}
-            />
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
 
 /** One labelled list of who a part of the app is built on. */
 function CreditGroup({
@@ -120,11 +13,11 @@ function CreditGroup({
   sources: DataSource[];
 }) {
   return (
-    <div className="space-y-2">
-      <p className="text-[10px] text-muted-foreground/70 uppercase tracking-wider">
+    <div className="space-y-4">
+      <p className="text-xs md:text-sm text-muted-foreground/70 uppercase tracking-wider">
         {label}
       </p>
-      <dl className="space-y-1.5 text-[10px] text-muted-foreground/60 leading-relaxed">
+      <dl className="space-y-3 text-sm md:text-base text-muted-foreground/70 leading-relaxed">
         {sources.map((source: DataSource) => (
           <div key={source.label} className="flex flex-wrap gap-x-2 gap-y-0.5">
             <dt className="shrink-0">
@@ -137,7 +30,7 @@ function CreditGroup({
                 {source.label}
               </a>
             </dt>
-            <dd className="text-muted-foreground/50">{source.description}</dd>
+            <dd className="text-muted-foreground/60">{source.description}</dd>
           </div>
         ))}
       </dl>
@@ -145,15 +38,15 @@ function CreditGroup({
   );
 }
 
-function Footer() {
+export default function AboutPage() {
   const { footerLinks, attribution, contact } = aboutConfig;
 
   return (
-    <footer className="px-6 py-12 mt-4 border-t border-foreground/[0.06]">
-      <div className="max-w-3xl mx-auto space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <span className="text-xs text-muted-foreground/70">
+    <div className="min-h-full px-6 py-12 md:py-20">
+      <div className="max-w-3xl mx-auto space-y-10">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
+          <div className="flex items-center gap-5">
+            <span className="text-base md:text-lg text-muted-foreground/80">
               {contact.title}{" "}
               <a
                 href={contact.handleHref}
@@ -164,7 +57,7 @@ function Footer() {
                 {contact.handle}
               </a>
             </span>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
               {contact.links.map((link: ContactLink) => {
                 const Icon = link.icon;
                 return (
@@ -173,16 +66,16 @@ function Footer() {
                     href={link.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-muted-foreground/60 hover:text-foreground transition-colors"
+                    className="text-muted-foreground/70 hover:text-foreground transition-colors"
                     aria-label={link.label}
                   >
-                    <Icon className="size-3.5" />
+                    <Icon className="size-5" />
                   </a>
                 );
               })}
             </div>
           </div>
-          <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground/70">
+          <div className="flex flex-wrap gap-x-6 gap-y-2 text-base md:text-lg text-muted-foreground/80">
             {footerLinks.map((link: FooterLink) =>
               link.external ? (
                 <a
@@ -206,7 +99,8 @@ function Footer() {
             )}
           </div>
         </div>
-        <div className="space-y-6">
+
+        <div className="space-y-10">
           <CreditGroup
             label="data and sprites"
             sources={[...attribution.dataSources, ...attribution.spriteSources]}
@@ -215,16 +109,16 @@ function Footer() {
           {/* Card scans are somebody else's artwork, so where they come from
               and what may be done with them is spelled out rather than filed
               under a one-line credit. */}
-          <div className="space-y-3">
+          <div className="space-y-5">
             <CreditGroup
               label="trading cards"
               sources={attribution.cardSources}
             />
-            <div className="space-y-2">
+            <div className="space-y-4">
               {attribution.cardNotes.map((note: string) => (
                 <p
                   key={note}
-                  className="text-[10px] text-muted-foreground/50 leading-relaxed"
+                  className="text-sm md:text-base text-muted-foreground/60 leading-relaxed"
                 >
                   {note}
                 </p>
@@ -232,21 +126,11 @@ function Footer() {
             </div>
           </div>
 
-          <p className="text-[10px] text-muted-foreground/50 leading-relaxed">
+          <p className="text-sm md:text-base text-muted-foreground/60 leading-relaxed">
             {attribution.disclaimer}
           </p>
         </div>
       </div>
-    </footer>
-  );
-}
-
-export default function AboutPage() {
-  return (
-    <div className="min-h-full">
-      <Hero />
-      <Features />
-      <Footer />
     </div>
   );
 }
