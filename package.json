@@ -58,7 +58,6 @@
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
     "embla-carousel-react": "^8.6.0",
-    "fuse.js": "^7.1.0",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.564.0",
     "motion": "^13.1.0",

@@ -1,12 +1,10 @@
 "use client";
 
 import {
-  Gamepad2,
   Heart,
   Info,
   MessageSquare,
   MoreHorizontal,
-  Search,
   Settings,
 } from "lucide-react";
 import Link from "next/link";
@@ -30,15 +28,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { useComparison } from "@/hooks/use-comparison";
-import { useGenerationPreference } from "@/hooks/use-generation-preference";
-import { getGenerationName } from "@/lib/pkmn";
 import { cn } from "@/lib/utils";
 import {
   CardsIcon,
@@ -50,6 +40,7 @@ import {
   QuizIcon,
   TeamsIcon,
 } from "./navigation/app-icons";
+import { MoreSheet } from "./navigation/more-sheet";
 import { useNav } from "./navigation/nav-provider";
 
 type SecondaryToolbarState = {
@@ -74,15 +65,26 @@ export function useSecondaryToolbar() {
   return ctx.setSecondaryToolbar;
 }
 
+// The phone's bottom bar. Six destinations is the most that fits without the
+// labels colliding, so it carries the places you go back to constantly and
+// hands everything else to "more".
 const navItems = [
   { href: "/", icon: DexIcon, label: "dex" },
   { href: "/cards", icon: CardsIcon, label: "cards" },
-  { href: "#search", icon: Search, label: "search", action: true },
+  { href: "/decks", icon: DecksIcon, label: "decks" },
+  { href: "/teams", icon: TeamsIcon, label: "teams" },
   { href: "/favorites", icon: Heart, label: "favs" },
   { href: "#more", icon: MoreHorizontal, label: "more", action: true },
 ];
 
-// Items promoted to desktop navbar (still shown in mobile "more" sheet)
+// The desktop header has room for every destination, so it lists them all
+// rather than hiding any behind a menu.
+const desktopPrimaryNavItems = [
+  { href: "/", icon: DexIcon, label: "dex" },
+  { href: "/cards", icon: CardsIcon, label: "cards" },
+  { href: "/favorites", icon: Heart, label: "favs" },
+];
+
 const desktopExtraNavItems = [
   { href: "/decks", icon: DecksIcon, label: "decks" },
   { href: "/teams", icon: TeamsIcon, label: "teams" },
@@ -99,23 +101,6 @@ const desktopMoreMenuItems = [
   { href: "/about", icon: Info, label: "About" },
 ];
 
-// All items for the mobile "more" sheet
-const moreMenuItems = [
-  ...desktopExtraNavItems.map((item) => {
-    // Restore original labels for mobile sheet
-    const labelMap: Record<string, string> = {
-      decks: "Deck Builder",
-      teams: "Teams",
-      lists: "Lists",
-      quiz: "Who's That Pokemon?",
-      compare: "Comparison",
-      locations: "Locations",
-    };
-    return { ...item, label: labelMap[item.label] ?? item.label };
-  }),
-  ...desktopMoreMenuItems,
-];
-
 interface AppShellProps {
   children: React.ReactNode;
 }
@@ -127,9 +112,8 @@ const useIsomorphicLayoutEffect =
 
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
-  const { toggleSearch, moreOpen, setMoreOpen } = useNav();
+  const { setMoreOpen } = useNav();
   const { comparison } = useComparison();
-  const { preferredGeneration } = useGenerationPreference();
   const isPopStateNav = useRef(false);
   const shellRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLElement>(null);
@@ -258,14 +242,6 @@ export function AppShell({ children }: AppShellProps) {
     prevPathname.current = pathname;
   }, [pathname]);
 
-  const handleAction = (item: (typeof navItems)[0]) => {
-    if (item.label === "search") {
-      toggleSearch();
-    } else if (item.label === "more") {
-      setMoreOpen(true);
-    }
-  };
-
   const isMoreActive = desktopMoreMenuItems.some((item) =>
     item.href === "/" ? pathname === "/" : pathname.startsWith(item.href),
   );
@@ -279,7 +255,7 @@ export function AppShell({ children }: AppShellProps) {
       (item.href === "/" ? pathname === "/" : pathname.startsWith(item.href));
 
     const mobileClasses =
-      "flex flex-col items-center justify-center gap-0.5 px-4 py-2";
+      "flex flex-col items-center justify-center gap-0.5 px-2 py-2";
     const desktopClasses =
       "flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-muted";
 
@@ -293,7 +269,7 @@ export function AppShell({ children }: AppShellProps) {
         <button
           key={item.label}
           type="button"
-          onClick={() => handleAction(item)}
+          onClick={() => setMoreOpen(true)}
           className={cn(
             variant === "mobile" ? mobileClasses : desktopClasses,
             "text-muted-foreground hover:text-foreground transition-colors",
@@ -340,42 +316,6 @@ export function AppShell({ children }: AppShellProps) {
     );
   };
 
-  const renderMoreMenuItem = (item: (typeof moreMenuItems)[0]) => {
-    const isActive =
-      item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
-    const isComparison = item.href === "/comparison";
-    const showBadge = isComparison && comparison.length > 0;
-
-    return (
-      <Link
-        key={item.href}
-        href={item.href}
-        onClick={() => setMoreOpen(false)}
-        className={cn(
-          "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors",
-          isActive
-            ? "bg-muted text-foreground"
-            : "text-muted-foreground hover:bg-muted hover:text-foreground",
-        )}
-      >
-        <div className="relative">
-          <item.icon className="size-5" strokeWidth={1.5} />
-          {showBadge && (
-            <span className="absolute -top-1 -right-1 size-3.5 rounded-full bg-primary text-primary-foreground text-[9px] font-medium flex items-center justify-center">
-              {comparison.length}
-            </span>
-          )}
-        </div>
-        <span className="text-sm">{item.label}</span>
-        {showBadge && (
-          <span className="ml-auto text-xs text-muted-foreground">
-            {comparison.length} pokemon
-          </span>
-        )}
-      </Link>
-    );
-  };
-
   return (
     <SecondaryToolbarContext.Provider value={secondaryToolbarValue}>
       <div
@@ -399,7 +339,9 @@ export function AppShell({ children }: AppShellProps) {
               />
             </Link>
             <nav className="flex items-center gap-1">
-              {navItems.map((item) => renderNavItem(item, "desktop"))}
+              {desktopPrimaryNavItems.map((item) =>
+                renderNavItem(item, "desktop"),
+              )}
               {desktopExtraNavItems.map((item) => {
                 const isActive =
                   item.href === "/"
@@ -517,52 +459,7 @@ export function AppShell({ children }: AppShellProps) {
           </div>
         </nav>
 
-        {/* Mobile More Menu Sheet */}
-        <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
-          <SheetContent side="bottom" className="pb-safe">
-            <SheetHeader>
-              <SheetTitle>More</SheetTitle>
-            </SheetHeader>
-            {/* The whole row is the control — a label beside an icon gave no
-                clue that either was pressable, or what pressing did. It is
-                built like the links below it, icon first, so the sheet reads
-                as one list rather than a row and then a menu. */}
-            <GenerationPicker
-              align="end"
-              trigger={
-                <button
-                  type="button"
-                  className={cn(
-                    "flex w-full items-center gap-3 border-b px-4 py-3 text-left transition-colors hover:bg-muted hover:text-foreground",
-                    preferredGeneration !== null
-                      ? "text-foreground"
-                      : "text-muted-foreground",
-                  )}
-                >
-                  <Gamepad2 className="size-5 shrink-0" strokeWidth={1.5} />
-                  <span className="min-w-0">
-                    <span className="flex items-baseline gap-2">
-                      <span className="text-sm">view as</span>
-                      <span className="truncate text-xs lowercase text-muted-foreground">
-                        {preferredGeneration !== null
-                          ? getGenerationName(preferredGeneration)
-                          : "national dex"}
-                      </span>
-                    </span>
-                    <span className="mt-0.5 block text-xs text-muted-foreground">
-                      Pin the app to one generation&rsquo;s games — its Pokemon,
-                      moves, abilities and sprites — or leave it on National Dex
-                      for everything.
-                    </span>
-                  </span>
-                </button>
-              }
-            />
-            <nav className="flex flex-col gap-1 py-2">
-              {moreMenuItems.map(renderMoreMenuItem)}
-            </nav>
-          </SheetContent>
-        </Sheet>
+        <MoreSheet />
 
         {/* Comparison Drawer - available on all pages */}
         <ComparisonDrawer />

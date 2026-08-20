@@ -16,7 +16,7 @@ bun run generate:icons
 
 ### Key features
 
-- **Instant search** across Pokemon, moves, abilities, items, and cards
+- **Instant search** built into the pages themselves — the dex searches Pokemon, moves, abilities and items from its own tabs, and the card browser searches the TCG catalogue
 - **Trading cards** from both the Pokemon TCG and Pokemon TCG Pocket — browsing opens on the newest sets with the whole catalogue one tap away, filter every card by set, energy type, rarity, stage and HP, hold any card up full size and walk the results with the arrow keys, open a card's own page, and cross-reference between a card and the Pokemon it depicts
 - **Swipe through cards** — the same search dealt one card at a time: right to favorite, left to pass, up to file it in a list
 - **Deck builder** — a dedicated builder for every deck: pick a rule set (Standard, Expanded, Unlimited, Gym Leader Challenge or TCG Pocket) and the card pool narrows to what that format can legally play, drag cards from the pool into the deck, and read the deck back as a binder that groups itself by card type, energy type or evolution line. Every list is checked as you build — deck size, four of a name, one ACE SPEC, evolution lines that hold up — alongside the numbers that decide a deck: mulligan odds, opening-hand and prize odds per count, Supporter and energy counts, the prize trade and the energy each attack needs. Decks export as a written list or a share code
