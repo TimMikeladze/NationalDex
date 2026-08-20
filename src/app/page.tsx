@@ -8,7 +8,7 @@ import { DexBrowser } from "./dex-browser";
 const speciesCount = getAllSpecies().length;
 
 export const metadata: Metadata = {
-  title: "NationalDex — The Complete Pokédex for Every Generation",
+  title: "NationalDex — Every Generation, Indexed",
   description: `Look up all ${speciesCount} Pokémon: base stats, learnsets, abilities, type matchups, evolutions and TCG cards. Build teams, compare Pokémon and browse every generation from Red/Blue to Scarlet/Violet.`,
   alternates: {
     canonical: "/",

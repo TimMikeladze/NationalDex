@@ -2,14 +2,14 @@ import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
 
-export const alt = "NationalDex — the modern Pokédex for every generation";
+export const alt = "NationalDex — every generation, indexed";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 function DexMark({ size = 224 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 64 64">
-      <title>NationalDex Pokédex</title>
+      <title>NationalDex</title>
       <defs>
         <linearGradient id="shell" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" stopColor="#ff5a55" />

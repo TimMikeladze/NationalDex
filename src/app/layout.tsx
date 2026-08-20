@@ -25,7 +25,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "NationalDex — The Pokedex App",
+    default: "NationalDex — Every Generation, Indexed",
     template: "%s | NationalDex",
   },
   description:
@@ -61,14 +61,14 @@ export const metadata: Metadata = {
     siteName: "NationalDex",
     type: "website",
     locale: "en_US",
-    title: "NationalDex — The Pokedex App",
+    title: "NationalDex — Every Generation, Indexed",
     description:
       "Browse Pokemon stats, moves, abilities, items, type matchups, and more. Build teams and explore all generations.",
     url: SITE_URL,
   },
   twitter: {
     card: "summary_large_image",
-    title: "NationalDex — The Pokedex App",
+    title: "NationalDex — Every Generation, Indexed",
     description:
       "Browse Pokemon stats, moves, abilities, items, type matchups, and more.",
   },
