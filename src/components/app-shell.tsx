@@ -391,9 +391,9 @@ export function AppShell({ children }: AppShellProps) {
             <Link href="/" aria-label="NationalDex home">
               <Logo
                 iconSrc="/icons/logo-app.svg"
-                className="gap-2"
-                iconClassName="size-8"
-                labelClassName="text-base"
+                className="gap-1.5"
+                iconClassName="size-7"
+                labelClassName="text-sm"
               />
             </Link>
             <nav className="flex items-center gap-1">
