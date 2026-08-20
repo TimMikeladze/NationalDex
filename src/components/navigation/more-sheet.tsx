@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Logo } from "@/components/brand/logo";
 import { GenerationPicker } from "@/components/pokemon/generation-picker";
 import {
   Sheet,
@@ -38,15 +39,15 @@ type MenuItem = {
   icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
   label: string;
   /** Says what the page is for, so the grid reads without opening every cell. */
-  hint?: string;
+  hint: string;
 };
 
 // The three the bottom bar already carries. They are repeated here so the
 // menu is a complete map of the app rather than the leftovers.
 const sectionItems: MenuItem[] = [
-  { href: "/", icon: DexIcon, label: "Dex" },
-  { href: "/cards", icon: CardsIcon, label: "Cards" },
-  { href: "/favorites", icon: Heart, label: "Favorites" },
+  { href: "/", icon: DexIcon, label: "Dex", hint: "all pokemon" },
+  { href: "/cards", icon: CardsIcon, label: "Cards", hint: "tcg sets" },
+  { href: "/favorites", icon: Heart, label: "Favorites", hint: "saved picks" },
 ];
 
 // The tools that earn a full tile: each is a place you go to work, not a
@@ -75,20 +76,26 @@ const toolItems: MenuItem[] = [
   },
 ];
 
-// About the app rather than about Pokemon, so they sit apart and smaller.
+// About the app rather than about Pokemon, so they sit in their own row.
 const appItems: MenuItem[] = [
-  { href: "/settings", icon: Settings, label: "Settings" },
-  { href: "/feedback", icon: MessageSquare, label: "Feedback" },
-  { href: "/about", icon: Info, label: "About" },
+  { href: "/settings", icon: Settings, label: "Settings", hint: "preferences" },
+  {
+    href: "/feedback",
+    icon: MessageSquare,
+    label: "Feedback",
+    hint: "send a note",
+  },
+  { href: "/about", icon: Info, label: "About", hint: "the app" },
 ];
 
 /**
  * The phone's "more" drawer.
  *
  * Nine identical rows made everything look equally important and pushed the
- * last of them under the fold. The tools are a hairline grid instead — two up,
- * each with a word on what it does — and the app pages are a small strip
- * underneath, so the whole menu lands in one screen without scrolling.
+ * last of them under the fold. Every destination is a tile instead — icon
+ * over a name over a word on what it does — so the three rows read as one
+ * grid, three up for the sections and app pages, two up for the tools that
+ * carry longer names.
  */
 export function MoreSheet() {
   const pathname = usePathname();
@@ -101,10 +108,9 @@ export function MoreSheet() {
     href === "/" ? pathname === "/" : pathname.startsWith(href);
   const close = () => setMoreOpen(false);
 
-  // The two three-up rows that bracket the grid: same cell, different weight —
-  // the sections above are destinations, the app links below are footnotes.
-  const renderStripItem = (item: MenuItem, tone: "loud" | "quiet" = "loud") => {
+  const renderTile = (item: MenuItem) => {
     const active = isActive(item.href);
+    const badge = item.href === "/comparison" ? comparison.length : 0;
 
     return (
       <Link
@@ -113,27 +119,59 @@ export function MoreSheet() {
         onClick={close}
         aria-current={active ? "page" : undefined}
         className={cn(
-          "flex flex-col items-center gap-1.5 py-3 transition-colors",
+          "relative flex min-h-[5.25rem] flex-col justify-between gap-2 p-3 transition-colors",
           active
             ? "bg-foreground text-background"
-            : cn(
-                "bg-background hover:bg-muted hover:text-foreground active:bg-muted",
-                tone === "loud" ? "text-foreground" : "text-muted-foreground",
-              ),
+            : "bg-background text-foreground hover:bg-muted active:bg-muted",
         )}
       >
-        <item.icon className="size-4" strokeWidth={1.5} />
-        <span className="text-[11px]">{item.label}</span>
+        <item.icon className="size-5" strokeWidth={1.5} />
+        <span className="space-y-0.5">
+          <span className="block text-sm leading-tight">{item.label}</span>
+          <span
+            className={cn(
+              "block text-[10px] uppercase tracking-wider",
+              active ? "text-background/60" : "text-muted-foreground",
+            )}
+          >
+            {item.hint}
+          </span>
+        </span>
+        {badge > 0 && (
+          <span
+            className={cn(
+              "absolute right-2 top-2 flex h-5 min-w-5 items-center justify-center border px-1 text-[10px] leading-none",
+              active
+                ? "border-background bg-background text-foreground"
+                : "border-foreground bg-foreground text-background",
+            )}
+          >
+            {badge}
+          </span>
+        )}
       </Link>
     );
   };
 
   return (
     <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
-      <SheetContent side="bottom" className="gap-0 p-0 pb-safe">
-        <SheetHeader className="h-12 flex-row items-center gap-0 p-0 px-4">
-          <SheetTitle className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
-            More
+      {/* The sheet is anchored to the bottom edge and sized by its content, so
+          the cap keeps a short phone from pushing the header off the top. */}
+      <SheetContent
+        side="bottom"
+        className="max-h-[90svh] gap-0 overflow-y-auto p-0 pb-safe"
+      >
+        {/* The drawer is the only chrome on the phone that can carry the mark —
+            the header above it belongs to the page. */}
+        <SheetHeader className="h-14 shrink-0 flex-row items-center gap-0 p-0 px-4">
+          <SheetTitle asChild>
+            <Link href="/" onClick={close} className="min-w-0">
+              <Logo
+                className="gap-2"
+                iconClassName="size-7"
+                labelClassName="truncate text-sm"
+              />
+            </Link>
           </SheetTitle>
         </SheetHeader>
 
@@ -170,60 +208,15 @@ export function MoreSheet() {
         {/* gap-px over a border-coloured backdrop draws the dividers, so every
             cell shares one hairline instead of stacking two. */}
         <nav className="grid grid-cols-3 gap-px border-t bg-border">
-          {sectionItems.map((item) => renderStripItem(item))}
+          {sectionItems.map(renderTile)}
         </nav>
 
         <nav className="grid grid-cols-2 gap-px border-y bg-border">
-          {toolItems.map((item) => {
-            const active = isActive(item.href);
-            const badge = item.href === "/comparison" ? comparison.length : 0;
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={close}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "relative flex min-h-[5.25rem] flex-col justify-between gap-2 p-3 transition-colors",
-                  active
-                    ? "bg-foreground text-background"
-                    : "bg-background text-foreground hover:bg-muted active:bg-muted",
-                )}
-              >
-                <item.icon className="size-5" strokeWidth={1.5} />
-                <span className="space-y-0.5">
-                  <span className="block text-sm leading-tight">
-                    {item.label}
-                  </span>
-                  <span
-                    className={cn(
-                      "block text-[10px] uppercase tracking-wider",
-                      active ? "text-background/60" : "text-muted-foreground",
-                    )}
-                  >
-                    {item.hint}
-                  </span>
-                </span>
-                {badge > 0 && (
-                  <span
-                    className={cn(
-                      "absolute right-2 top-2 flex h-5 min-w-5 items-center justify-center border px-1 text-[10px] leading-none",
-                      active
-                        ? "border-background bg-background text-foreground"
-                        : "border-foreground bg-foreground text-background",
-                    )}
-                  >
-                    {badge}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
+          {toolItems.map(renderTile)}
         </nav>
 
         <nav className="grid grid-cols-3 gap-px bg-border">
-          {appItems.map((item) => renderStripItem(item, "quiet"))}
+          {appItems.map(renderTile)}
         </nav>
       </SheetContent>
     </Sheet>
