@@ -836,16 +836,22 @@ export function PokemonPageClient({
   const currentSlug = toID(pokemon.name);
 
   return (
-    <div className="relative isolate p-4 md:p-6">
-      <AmbientBackdrop palette={ambientPalette} className="-z-10" />
-
+    <div className="p-4 md:p-6">
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8">
         {/* Summary rail (pinned on desktop) */}
         <div className={SUMMARY_RAIL_CLASSES}>
           {/* Core Header */}
           <section className="space-y-4">
             {/* Hero */}
-            <div className="flex flex-col items-center gap-3">
+            <div className="relative isolate flex flex-col items-center gap-3">
+              {/* Hung on the sprite, because the glow is the sprite's. From
+                  md up the rail is its own scroll container, so a glow
+                  reaching past its sides would hang a scrollbar under it —
+                  there it stops at the rail's edges and spreads in y only. */}
+              <AmbientBackdrop
+                palette={ambientPalette}
+                className="-z-10 -inset-x-8 -inset-y-10 md:inset-x-0 md:-inset-y-12"
+              />
               <PokemonImage
                 src={currentHeroSprite ?? pokemon.sprite}
                 alt={pokemon.name}

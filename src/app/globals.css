@@ -377,15 +377,22 @@
   pointer-events: none;
   overflow: hidden;
   opacity: 0.82;
-  /* A hard bottom edge would read as a banner. Fading the wash out over its
-     own lower half hands the page back its white without a seam. */
-  -webkit-mask-image: linear-gradient(
-    to bottom,
+  /* Masked outward from the middle rather than downward, because the glow
+     belongs to the thing in the middle of it. A linear fade would have to
+     end somewhere along the page, and wherever that was would read as the
+     bottom edge of a banner. */
+  -webkit-mask-image: radial-gradient(
+    ellipse 50% 50% at 50% 50%,
     #000 0%,
-    #000 44%,
+    #000 58%,
     transparent 100%
   );
-  mask-image: linear-gradient(to bottom, #000 0%, #000 44%, transparent 100%);
+  mask-image: radial-gradient(
+    ellipse 50% 50% at 50% 50%,
+    #000 0%,
+    #000 58%,
+    transparent 100%
+  );
 }
 
 .dark .ambient-backdrop {
@@ -394,27 +401,15 @@
   opacity: 0.74;
 }
 
-/*
- * On a phone the wash sits behind a hero and nothing else. On a desktop the
- * same page puts a dense table of moves in the top right, directly under it —
- * and colour this deep over small type is the one place this effect can do
- * real harm. So on the wide layout it is lighter, and it stops holding full
- * strength almost immediately.
- */
+/* A wide layout gives the glow more room to spread into, so the same opacity
+   reads heavier there than it does on a phone. */
 @media (min-width: 1024px) {
   .ambient-backdrop {
-    opacity: 0.45;
-    -webkit-mask-image: linear-gradient(
-      to bottom,
-      #000 0%,
-      #000 18%,
-      transparent 92%
-    );
-    mask-image: linear-gradient(to bottom, #000 0%, #000 18%, transparent 92%);
+    opacity: 0.7;
   }
 
   .dark .ambient-backdrop {
-    opacity: 0.44;
+    opacity: 0.66;
   }
 }
 
@@ -423,13 +418,13 @@
   /* Bled out past the backdrop on every side so the blur below has colour to
      pull in from. Blurring a layer that ends where the frame ends samples the
      nothing outside it and hems the wash in a pale border. */
-  inset: -18%;
+  inset: -12%;
   opacity: 0;
   transition: opacity 900ms ease-out;
   /* The blobs are soft already; the blur is what stops them reading as four
      shapes and starts them reading as light. Radius scales with the viewport
      so a phone and a desktop are the same picture at different sizes. */
-  filter: blur(clamp(28px, 7vw, 80px));
+  filter: blur(clamp(18px, 5vw, 48px));
   /* The dominant colour also falls straight down the page, the way a record
      sleeve bleeds into the header above the track list. */
   background-image: linear-gradient(
@@ -443,9 +438,12 @@
   opacity: 1;
 }
 
-/* Each colour is one soft, oversized blob, overlapping the others and the
-   edges far enough that none of them ever shows a boundary of its own. Where
-   two meet, OKLab mixing gives the colour between them rather than mud. */
+/*
+ * One colour to a corner. Piled on top of each other they would multiply down
+ * to near-black in the middle — but the middle is behind the card or the
+ * sprite, which is the one part of this nobody sees. What shows is the rim,
+ * and out there each corner is mostly its own colour.
+ */
 .ambient-layer > span {
   position: absolute;
   display: block;
@@ -479,34 +477,34 @@
 }
 
 .ambient-layer > span:nth-child(1) {
-  left: -18%;
-  top: -40%;
-  width: 78%;
-  height: 152%;
+  left: -12%;
+  top: -12%;
+  width: 76%;
+  height: 72%;
   animation: ambient-drift-a 23s ease-in-out infinite alternate;
 }
 
 .ambient-layer > span:nth-child(2) {
-  right: -20%;
-  top: -34%;
-  width: 76%;
-  height: 146%;
+  right: -12%;
+  top: -12%;
+  width: 74%;
+  height: 70%;
   animation: ambient-drift-b 29s ease-in-out infinite alternate;
 }
 
 .ambient-layer > span:nth-child(3) {
-  left: 4%;
-  top: 12%;
-  width: 70%;
-  height: 130%;
+  left: -12%;
+  bottom: -12%;
+  width: 72%;
+  height: 74%;
   animation: ambient-drift-c 37s ease-in-out infinite alternate;
 }
 
 .ambient-layer > span:nth-child(4) {
-  right: 0%;
-  top: 4%;
-  width: 58%;
-  height: 118%;
+  right: -12%;
+  bottom: -12%;
+  width: 76%;
+  height: 72%;
   animation: ambient-drift-d 31s ease-in-out infinite alternate;
 }
 
@@ -530,34 +528,34 @@
     transform: translate3d(0, 0, 0) scale(1);
   }
   to {
-    transform: translate3d(11%, 6%, 0) scale(1.16);
+    transform: translate3d(7%, 5%, 0) scale(1.14);
   }
 }
 
 @keyframes ambient-drift-b {
   from {
-    transform: translate3d(0, 0, 0) scale(1.1);
+    transform: translate3d(0, 0, 0) scale(1.12);
   }
   to {
-    transform: translate3d(-9%, 8%, 0) scale(0.92);
+    transform: translate3d(-6%, 6%, 0) scale(0.94);
   }
 }
 
 @keyframes ambient-drift-c {
   from {
-    transform: translate3d(0, 5%, 0) scale(0.94);
+    transform: translate3d(0, 4%, 0) scale(0.95);
   }
   to {
-    transform: translate3d(8%, -7%, 0) scale(1.18);
+    transform: translate3d(6%, -5%, 0) scale(1.15);
   }
 }
 
 @keyframes ambient-drift-d {
   from {
-    transform: translate3d(4%, -3%, 0) scale(1.12);
+    transform: translate3d(3%, -3%, 0) scale(1.13);
   }
   to {
-    transform: translate3d(-7%, 5%, 0) scale(0.96);
+    transform: translate3d(-5%, 4%, 0) scale(0.96);
   }
 }
 

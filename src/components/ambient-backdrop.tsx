@@ -6,14 +6,19 @@ import { cn } from "@/lib/utils";
 interface AmbientBackdropProps {
   palette: AmbientPalette;
   /**
-   * Where the wash sits and how far it reaches. It is positioned by the page
-   * that owns it, because only that page knows how far its own padding goes.
+   * How far past its subject the glow reaches. Positioned by the page that
+   * owns it, because only that page knows what it is lighting.
    */
   className?: string;
 }
 
 /**
- * The colour an item brings with it, spread out behind the top of its page.
+ * The colour an item brings with it, thrown on the wall behind it.
+ *
+ * It belongs to the artwork, not to the page — it sits around the card or the
+ * sprite the way light off a screen falls on the wall behind it, and stops
+ * there. A wash spread over the whole width would land on the moves table and
+ * the printings list too, which are things to read, not things to light.
  *
  * Two layers, never one: the type colours light the page immediately, the
  * colours read off the artwork cross-fade in over them a moment later. The
@@ -28,7 +33,7 @@ export function AmbientBackdrop({ palette, className }: AmbientBackdropProps) {
     <div
       aria-hidden="true"
       className={cn(
-        "ambient-backdrop absolute -inset-x-4 -top-4 h-80 md:-inset-x-6 md:-top-6 md:h-96",
+        "ambient-backdrop absolute -inset-16 md:-inset-24",
         className,
       )}
     >

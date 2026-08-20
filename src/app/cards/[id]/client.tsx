@@ -256,15 +256,7 @@ export function CardDetailClient({
     card.retreat !== undefined;
 
   return (
-    <div className="relative isolate p-4 md:p-6">
-      {/* Taller than the default: a card's scan is the tallest thing on any
-          page in the app, and the wash stopping halfway up it reads as a
-          mistake rather than as light. */}
-      <AmbientBackdrop
-        palette={ambientPalette}
-        className="-z-10 h-[26rem] md:h-[34rem]"
-      />
-
+    <div className="p-4 md:p-6">
       {/* Same twelve-column, full-bleed grid a Pokemon page uses, so the two
           detail pages line up when you move between them. */}
       {/* `auto` on the artwork row keeps the print details directly beneath the
@@ -273,12 +265,17 @@ export function CardDetailClient({
       <div className="grid grid-cols-1 gap-6 md:grid-cols-12 md:grid-rows-[auto_1fr] md:gap-8">
         {/* Artwork first everywhere; on desktop it stays put while text scrolls */}
         <div className="order-1 md:col-start-1 md:row-start-1 md:col-span-5 lg:col-span-5 xl:col-span-5 2xl:col-span-4">
-          <TcgCardZoom
-            card={card}
-            language={language}
-            setName={card.set.name}
-            className="mx-auto max-w-[17rem] sm:max-w-xs md:mx-0 md:max-w-sm lg:max-w-[24rem] xl:max-w-[26rem] 2xl:max-w-[30rem]"
-          />
+          {/* The sizing moved up here so the glow is measured against the card
+              itself rather than the column it sits in — light thrown by the
+              scan, ending not far past its edges. */}
+          <div className="relative isolate mx-auto max-w-[17rem] sm:max-w-xs md:mx-0 md:max-w-sm lg:max-w-[24rem] xl:max-w-[26rem] 2xl:max-w-[30rem]">
+            <AmbientBackdrop palette={ambientPalette} className="-z-10" />
+            <TcgCardZoom
+              card={card}
+              language={language}
+              setName={card.set.name}
+            />
+          </div>
         </div>
 
         {/* Print details. On a phone they follow the card's own text, which is
