@@ -24,6 +24,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -116,13 +117,20 @@ interface AppShellProps {
   children: React.ReactNode;
 }
 
+// The shell only ever renders in the browser after hydration, but the render
+// itself still happens on the server, where `useLayoutEffect` warns.
+const useIsomorphicLayoutEffect =
+  typeof window === "undefined" ? useEffect : useLayoutEffect;
+
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const { toggleSearch, moreOpen, setMoreOpen } = useNav();
   const { comparison } = useComparison();
   const { preferredGeneration } = useGenerationPreference();
   const isPopStateNav = useRef(false);
+  const shellRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLElement>(null);
+  const navRef = useRef<HTMLElement>(null);
   const prevPathname = useRef(pathname);
   const [secondaryToolbar, setSecondaryToolbar] =
     useState<SecondaryToolbarState | null>(null);
@@ -138,6 +146,70 @@ export function AppShell({ children }: AppShellProps) {
     () => ({ setSecondaryToolbar: setSecondaryToolbarStable }),
     [setSecondaryToolbarStable],
   );
+
+  // Publish the geometry the shell actually ended up with.
+  //
+  // The CSS starting values are estimates — a nav is "3rem plus the home
+  // indicator", a header is "3.5rem" — and an estimate is exactly what broke
+  // this before: on a device whose insets did not match the guess, pages sized
+  // against `--app-content-height` were a strip taller or shorter than the room
+  // they had. These are the measured heights of the real boxes, so a page can
+  // ask how much room it has and get an answer that is true on that device.
+  useIsomorphicLayoutEffect(() => {
+    const shell = shellRef.current;
+    const main = mainRef.current;
+    if (!shell || !main) return;
+
+    let frame = 0;
+
+    const publish = () => {
+      frame = 0;
+      const shellTop = shell.getBoundingClientRect().top;
+      const mainBox = main.getBoundingClientRect();
+      const navHeight = navRef.current?.getBoundingClientRect().height ?? 0;
+
+      // On the root as well as the shell: anything portalled out of the shell
+      // — toasts, sheets — has to clear the same nav, and cannot inherit a
+      // variable scoped to a subtree it is no longer in.
+      const set = (name: string, value: number) => {
+        const px = `${Math.round(value * 100) / 100}px`;
+        shell.style.setProperty(name, px);
+        document.documentElement.style.setProperty(name, px);
+      };
+
+      // Measured from the top of the viewport, so the top safe area the shell
+      // pads out is already part of it.
+      set("--app-top-inset", mainBox.top - shellTop);
+      set("--app-bottom-inset", navHeight);
+      set("--app-content-height", mainBox.height);
+    };
+
+    // Resize observers fire during layout; defer so a page reading these back
+    // in its own effect never sees a value from the previous frame.
+    const schedule = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(publish);
+    };
+
+    publish();
+
+    const observer = new ResizeObserver(schedule);
+    observer.observe(shell);
+    observer.observe(main);
+    if (navRef.current) observer.observe(navRef.current);
+
+    // `resize` covers the cases a ResizeObserver cannot see on iOS: rotation
+    // and the safe area changing under it.
+    window.addEventListener("resize", schedule);
+    window.addEventListener("orientationchange", schedule);
+
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+      observer.disconnect();
+      window.removeEventListener("resize", schedule);
+      window.removeEventListener("orientationchange", schedule);
+    };
+  }, []);
 
   // Track back/forward navigation via popstate
   useEffect(() => {
@@ -304,14 +376,16 @@ export function AppShell({ children }: AppShellProps) {
   return (
     <SecondaryToolbarContext.Provider value={secondaryToolbarValue}>
       <div
-        // The shell is exactly one viewport tall and never scrolls itself, so
-        // `main` is the only thing that can scroll and the page can never grow
-        // a second scrollbar behind the fixed chrome.
-        className="app-shell h-[100dvh] overflow-hidden flex flex-col"
+        ref={shellRef}
+        // Geometry lives in `app-shell` (globals.css): the shell is pinned to
+        // the four edges of the viewport and the chrome sits in normal flow
+        // inside it, so `main` gets the leftover and the nav is flush with the
+        // bottom of the device without anything having to be worked out.
+        className="app-shell"
         data-secondary={secondaryToolbar?.content ? "true" : "false"}
       >
         {/* Desktop Header */}
-        <header className="hidden lg:flex fixed top-0 left-0 right-0 z-50 h-14 items-center border-b bg-background px-6 fixed-bottom-stable">
+        <header className="hidden lg:flex shrink-0 z-50 h-14 items-center border-b bg-background px-6">
           <div className="flex w-full items-center justify-between">
             <Link href="/" className="text-lg font-medium">
               NationalDex
@@ -396,8 +470,8 @@ export function AppShell({ children }: AppShellProps) {
         {secondaryToolbar?.content && (
           <header
             className={cn(
-              "fixed left-0 right-0 z-40 border-b fixed-bottom-stable bg-background lg:bg-background/80 lg:backdrop-blur lg:supports-backdrop-filter:bg-background/60",
-              "top-0 lg:top-14 pwa-glass-header",
+              "shrink-0 z-40 border-b bg-background lg:bg-background/80 lg:backdrop-blur lg:supports-backdrop-filter:bg-background/60",
+              "pwa-glass-header",
               secondaryToolbar.className,
             )}
           >
@@ -414,18 +488,22 @@ export function AppShell({ children }: AppShellProps) {
 
         <main
           ref={mainRef}
-          // `app-main` (globals.css) owns the geometry: it slots the scroll
-          // container into the space the fixed chrome leaves, on every
-          // breakpoint and in standalone mode alike. Sizing it here as well is
-          // how the two got out of step and left a strip of background above
-          // the bottom nav.
+          // `app-main` (globals.css) owns the geometry: it takes whatever the
+          // chrome above and below it leaves over. Giving it a height here as
+          // well is how the two got out of step and left a strip of background
+          // above the bottom nav.
           className="app-main overflow-y-auto overflow-x-hidden"
         >
           <div className="w-full min-h-full">{children}</div>
         </main>
 
-        {/* Mobile/Tablet Bottom Nav - hidden on desktop */}
-        <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background pb-safe lg:hidden fixed-bottom-stable pwa-glass-nav">
+        {/* Mobile/Tablet Bottom Nav - hidden on desktop. Last child of the
+            shell, so its padding is the last thing before the bottom edge of
+            the device and the home indicator sits on it. */}
+        <nav
+          ref={navRef}
+          className="shrink-0 z-50 border-t bg-background pb-safe lg:hidden pwa-glass-nav"
+        >
           <div className="flex h-12 items-center justify-around max-w-lg mx-auto">
             {navItems.map((item) => renderNavItem(item, "mobile"))}
           </div>

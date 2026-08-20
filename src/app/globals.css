@@ -121,6 +121,18 @@
   * {
     @apply border-border outline-ring/50;
   }
+  /*
+   * The app is a fixed shell with one scroll container inside it, so the
+   * document itself must never scroll. On iOS standalone a document that can
+   * scroll — even by a pixel — rubber-bands the whole app away from the
+   * device edges and drags the fixed chrome with it.
+   */
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
   body {
     @apply bg-background text-foreground;
     font-feature-settings:
@@ -178,22 +190,35 @@
   padding-top: env(safe-area-inset-top, 0px);
 }
 
-/* Clears the bottom nav. Derived, so it cannot drift from the real one. */
-.pb-nav {
-  padding-bottom: var(
-    --app-bottom-inset,
-    calc(3rem + env(safe-area-inset-bottom, 0px))
-  );
-}
-
-/* App chrome height (desktop header + optional secondary toolbar) */
+/*
+ * The shell.
+ *
+ * `fixed; inset: 0` rather than a height in `dvh`: it is the one way to say
+ * "exactly the viewport, all four edges" that does not go through a unit the
+ * browser has to compute. Under `viewport-fit=cover` that box is the whole
+ * device, so the bottom nav — the shell's last child in normal flow — is flush
+ * with the bottom of the screen by construction. There is no arithmetic left
+ * to drift out of step with the chrome, which is how a strip of background
+ * used to end up under the nav in standalone mode.
+ *
+ * The top safe area is padding on the shell, so the status bar is never drawn
+ * over. A glass toolbar that wants to sit behind it bleeds back up into it
+ * (see `.pwa-glass-header` below).
+ */
 .app-shell {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-top: env(safe-area-inset-top, 0px);
+
+  /* First-paint estimates of what the chrome eats. AppShell overwrites all
+     three with measured pixels as soon as it mounts, so pages that size
+     themselves against them are exact rather than approximately right. */
   --app-secondary-height: 3.5rem; /* 56px */
   --app-top-offset: 0px; /* mobile default (no desktop header) */
   --app-bottom-offset: 3rem; /* mobile bottom nav (h-12) */
-  /* Everything the chrome eats, safe areas included. The two are kept apart
-     because the scroll container needs to know where it starts as well as how
-     tall it is. */
   --app-top-inset: calc(var(--app-top-offset) + env(safe-area-inset-top, 0px));
   --app-bottom-inset: calc(
     var(--app-bottom-offset) +
@@ -223,28 +248,23 @@
 }
 
 /*
- * The app's single scroll container.
- *
- * The header, the optional secondary toolbar and the bottom nav are all
- * `fixed`, so they take up no space in flow: the gap they leave has to be
- * spelled out here, and it has to be spelled out exactly once. `margin-top`
- * rather than `padding-top` so that the box the browser scrolls is the box the
- * user can actually see — that keeps `h-full` children honest, keeps
- * `sticky top-0` toolbars pinned below the chrome instead of behind it, and
- * makes the leftover-space arithmetic impossible to get wrong: top inset +
- * height + bottom inset is always exactly one viewport.
+ * The app's single scroll container: whatever the chrome above and below it
+ * leaves over, asked for as "the rest" instead of computed. `min-height: 0` so
+ * a tall page makes it scroll rather than making it grow and push the nav off
+ * the bottom of the screen.
  */
 .app-shell .app-main {
-  margin-top: var(--app-top-inset);
-  height: var(--app-content-height);
-  max-height: var(--app-content-height);
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 /* PWA standalone mode - only applies on mobile/tablet (below lg breakpoint) */
 @media (display-mode: standalone) and (max-width: 1023px) {
-  /* Glass header that stretches to top with internal safe area padding */
+  /* Glass header that stretches back up under the status bar. The shell pads
+     the top safe area out of the way for everything else; the toolbar is the
+     one thing that wants to sit behind it, so it takes that padding back. */
   .app-shell .pwa-glass-header {
-    top: 0;
+    margin-top: calc(-1 * env(safe-area-inset-top, 0px));
     padding-top: env(safe-area-inset-top, 0px);
     background: color-mix(in srgb, var(--background) 85%, transparent);
     backdrop-filter: blur(20px) saturate(180%);
@@ -276,43 +296,6 @@
     background: inherit;
     backdrop-filter: inherit;
     -webkit-backdrop-filter: inherit;
-  }
-}
-
-/* iOS Safari standalone fallback using supports */
-@supports (-webkit-touch-callout: none) {
-  @media (display-mode: standalone) and (max-width: 1023px) {
-    .app-shell .pwa-glass-header {
-      top: 0;
-      padding-top: env(safe-area-inset-top, 0px);
-      background: color-mix(in srgb, var(--background) 85%, transparent);
-      backdrop-filter: blur(20px) saturate(180%);
-      -webkit-backdrop-filter: blur(20px) saturate(180%);
-    }
-
-    .app-shell .pwa-glass-nav {
-      background: color-mix(in srgb, var(--background) 85%, transparent);
-      backdrop-filter: blur(20px) saturate(180%);
-      -webkit-backdrop-filter: blur(20px) saturate(180%);
-    }
-
-    .app-shell .pwa-sticky-toolbar {
-      background: color-mix(in srgb, var(--background) 85%, transparent);
-      backdrop-filter: blur(20px) saturate(180%);
-      -webkit-backdrop-filter: blur(20px) saturate(180%);
-    }
-
-    .app-shell .pwa-sticky-toolbar::before {
-      content: "";
-      position: absolute;
-      top: calc(-1 * env(safe-area-inset-top, 0px));
-      left: 0;
-      right: 0;
-      height: env(safe-area-inset-top, 0px);
-      background: inherit;
-      backdrop-filter: inherit;
-      -webkit-backdrop-filter: inherit;
-    }
   }
 }
 
@@ -382,12 +365,4 @@
   to {
     opacity: 0;
   }
-}
-
-/* Fix mobile fixed positioning issues during scroll */
-.fixed-bottom-stable {
-  transform: translate3d(0, 0, 0);
-  -webkit-transform: translate3d(0, 0, 0);
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
 }
