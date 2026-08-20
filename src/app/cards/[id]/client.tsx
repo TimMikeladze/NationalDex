@@ -11,6 +11,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo } from "react";
 import { AddToListDialog } from "@/components/add-to-list-dialog";
+import { AmbientBackdrop } from "@/components/ambient-backdrop";
 import { useSecondaryToolbar } from "@/components/app-shell";
 import { PokemonImage } from "@/components/pokemon/pokemon-image";
 import {
@@ -23,6 +24,7 @@ import {
   TcgCardZoom,
 } from "@/components/tcg";
 import { Button } from "@/components/ui/button";
+import { useAmbientPalette } from "@/hooks/use-ambient-palette";
 import { useCardFavorites } from "@/hooks/use-card-favorites";
 import { useCardsByDexId, usePocketSetIds, useTcgSet } from "@/hooks/use-tcg";
 import { resolveSpecies, toID } from "@/lib/pkmn";
@@ -39,6 +41,7 @@ import {
   gameForCardId,
   mergedVariants,
   setIdFromCardId,
+  TCG_ENERGY_COLORS,
   TCG_VARIANT_KEYS,
   variantFullLabel,
   variantKey,
@@ -138,6 +141,16 @@ export function CardDetailClient({
   const setSymbol = assetUrl(card.set.symbol);
 
   const variants = useMemo(() => mergedVariants(card), [card]);
+
+  // The scan paints its own page. Energy colours hold the room until the
+  // artwork has been read; a Trainer card has none, so it simply waits.
+  const energyColors = (card.types ?? [])
+    .map((type) => TCG_ENERGY_COLORS[type])
+    .filter((color): color is string => Boolean(color));
+  const ambientPalette = useAmbientPalette(
+    cardImageUrl(card.image, "low"),
+    energyColors,
+  );
 
   const secondaryToolbarContent = useMemo(
     () => (
@@ -252,12 +265,17 @@ export function CardDetailClient({
       <div className="grid grid-cols-1 gap-6 md:grid-cols-12 md:grid-rows-[auto_1fr] md:gap-8">
         {/* Artwork first everywhere; on desktop it stays put while text scrolls */}
         <div className="order-1 md:col-start-1 md:row-start-1 md:col-span-5 lg:col-span-5 xl:col-span-5 2xl:col-span-4">
-          <TcgCardZoom
-            card={card}
-            language={language}
-            setName={card.set.name}
-            className="mx-auto max-w-[17rem] sm:max-w-xs md:mx-0 md:max-w-sm lg:max-w-[24rem] xl:max-w-[26rem] 2xl:max-w-[30rem]"
-          />
+          {/* The sizing moved up here so the glow is measured against the card
+              itself rather than the column it sits in — light thrown by the
+              scan, ending not far past its edges. */}
+          <div className="relative isolate mx-auto max-w-[17rem] sm:max-w-xs md:mx-0 md:max-w-sm lg:max-w-[24rem] xl:max-w-[26rem] 2xl:max-w-[30rem]">
+            <AmbientBackdrop palette={ambientPalette} className="-z-10" />
+            <TcgCardZoom
+              card={card}
+              language={language}
+              setName={card.set.name}
+            />
+          </div>
         </div>
 
         {/* Print details. On a phone they follow the card's own text, which is

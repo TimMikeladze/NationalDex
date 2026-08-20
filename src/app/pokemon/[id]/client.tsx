@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AddToListDialog } from "@/components/add-to-list-dialog";
+import { AmbientBackdrop } from "@/components/ambient-backdrop";
 import { useSecondaryToolbar } from "@/components/app-shell";
 import { CompareIcon } from "@/components/navigation/app-icons";
 import { GenerationPicker } from "@/components/pokemon/generation-picker";
@@ -43,6 +44,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useAmbientPalette } from "@/hooks/use-ambient-palette";
 import { useComparison } from "@/hooks/use-comparison";
 import { useFavorites } from "@/hooks/use-favorites";
 import { useGenerationPreference } from "@/hooks/use-generation-preference";
@@ -78,6 +80,7 @@ import type {
   PokemonMove,
   PokemonSpecies,
 } from "@/types/pokemon";
+import { TYPE_COLORS } from "@/types/pokemon";
 
 const _isAnimatedSprite = (src: string) => src.toLowerCase().endsWith(".gif");
 
@@ -789,6 +792,23 @@ export function PokemonPageClient({
     return () => setSecondaryToolbar(null);
   }, [secondaryToolbarContent, setSecondaryToolbar]);
 
+  // Resolved before the early returns below, because the backdrop that reads
+  // its colours is a hook and a hook cannot be called after one. Which sprite
+  // is on screen is the whole question: flip to shiny and the page follows.
+  const currentHeroSprite = pokemon
+    ? pokemonSprite(pokemon.name, {
+        set: effectiveSpriteSetId,
+        shiny: spriteShiny,
+        female: spriteFemale,
+        side: spriteBack ? "back" : "front",
+      }) || pokemon.sprite
+    : null;
+
+  const ambientPalette = useAmbientPalette(
+    currentHeroSprite,
+    (pokemon?.types ?? []).map((type) => TYPE_COLORS[type]),
+  );
+
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] p-6 text-center">
@@ -812,14 +832,6 @@ export function PokemonPageClient({
     return <PokemonPageSkeleton />;
   }
 
-  const currentHeroSprite =
-    pokemonSprite(pokemon.name, {
-      set: effectiveSpriteSetId,
-      shiny: spriteShiny,
-      female: spriteFemale,
-      side: spriteBack ? "back" : "front",
-    }) || pokemon.sprite;
-
   const statTotal = pokemon.stats.reduce((sum, s) => sum + s.value, 0);
   const currentSlug = toID(pokemon.name);
 
@@ -831,9 +843,17 @@ export function PokemonPageClient({
           {/* Core Header */}
           <section className="space-y-4">
             {/* Hero */}
-            <div className="flex flex-col items-center gap-3">
+            <div className="relative isolate flex flex-col items-center gap-3">
+              {/* Hung on the sprite, because the glow is the sprite's. From
+                  md up the rail is its own scroll container, so a glow
+                  reaching past its sides would hang a scrollbar under it —
+                  there it stops at the rail's edges and spreads in y only. */}
+              <AmbientBackdrop
+                palette={ambientPalette}
+                className="-z-10 -inset-x-8 -inset-y-10 md:inset-x-0 md:-inset-y-12"
+              />
               <PokemonImage
-                src={currentHeroSprite}
+                src={currentHeroSprite ?? pokemon.sprite}
                 alt={pokemon.name}
                 pokemonId={pokemon.id}
                 width={192}
