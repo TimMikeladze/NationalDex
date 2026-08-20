@@ -14,6 +14,7 @@ import {
   MoreHorizontal,
   Search,
   Settings,
+  Swords,
   Users,
 } from "lucide-react";
 import Link from "next/link";
@@ -79,6 +80,7 @@ const navItems = [
 
 // Items promoted to desktop navbar (still shown in mobile "more" sheet)
 const desktopExtraNavItems = [
+  { href: "/decks", icon: Swords, label: "decks" },
   { href: "/teams", icon: Users, label: "teams" },
   { href: "/lists", icon: ListPlus, label: "lists" },
   { href: "/whos-that-pokemon", icon: CircleHelp, label: "quiz" },
@@ -98,6 +100,7 @@ const moreMenuItems = [
   ...desktopExtraNavItems.map((item) => {
     // Restore original labels for mobile sheet
     const labelMap: Record<string, string> = {
+      decks: "Deck Builder",
       teams: "Teams",
       lists: "Lists",
       quiz: "Who's That Pokemon?",
