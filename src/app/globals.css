@@ -363,3 +363,133 @@
     opacity: 0;
   }
 }
+
+/*
+ * Ambient backdrop.
+ *
+ * The wash of an item's own colours behind the top of its page — see
+ * `components/ambient-backdrop.tsx`. Deliberately restrained: this app is
+ * black type on white with square corners, so the colour arrives as light in
+ * the room rather than as a panel with an edge.
+ */
+.ambient-backdrop {
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0.55;
+  /* A hard bottom edge would read as a banner. Fading the wash out over its
+     own lower half hands the page back its white without a seam. */
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 28%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(to bottom, #000 0%, #000 28%, transparent 100%);
+}
+
+.dark .ambient-backdrop {
+  /* Colour reads louder against near-black than against white. */
+  opacity: 0.4;
+}
+
+/* A desktop page is mostly reading — dense tables of moves, of printings —
+   and the same wash spread over twice the width is twice as much colour. */
+@media (min-width: 1024px) {
+  .ambient-backdrop {
+    opacity: 0.45;
+  }
+
+  .dark .ambient-backdrop {
+    opacity: 0.34;
+  }
+}
+
+.ambient-layer {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 900ms ease-out;
+  /* The dominant colour also falls straight down the page, the way a record
+     sleeve bleeds into the header above the track list. */
+  background-image: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--ambient-base) 30%, transparent),
+    transparent 72%
+  );
+}
+
+.ambient-layer[data-visible="true"] {
+  opacity: 1;
+}
+
+/* Each colour is one soft, oversized blob. They overlap far past the edges so
+   no blob ever shows a boundary of its own. */
+.ambient-layer > span {
+  position: absolute;
+  display: block;
+  background-image: radial-gradient(
+    circle at center,
+    var(--ambient-color) 0%,
+    color-mix(in srgb, var(--ambient-color) 55%, transparent) 42%,
+    transparent 72%
+  );
+  will-change: transform;
+}
+
+.ambient-layer > span:nth-child(1) {
+  left: -14%;
+  top: -34%;
+  width: 80%;
+  height: 152%;
+  animation: ambient-drift-a 23s ease-in-out infinite alternate;
+}
+
+.ambient-layer > span:nth-child(2) {
+  right: -16%;
+  top: -26%;
+  width: 74%;
+  height: 136%;
+  animation: ambient-drift-b 29s ease-in-out infinite alternate;
+}
+
+.ambient-layer > span:nth-child(3) {
+  left: 24%;
+  top: 4%;
+  width: 62%;
+  height: 124%;
+  animation: ambient-drift-c 37s ease-in-out infinite alternate;
+}
+
+/* Slow enough that you never catch it moving, only notice it has. */
+@keyframes ambient-drift-a {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(9%, 5%, 0) scale(1.14);
+  }
+}
+
+@keyframes ambient-drift-b {
+  from {
+    transform: translate3d(0, 0, 0) scale(1.08);
+  }
+  to {
+    transform: translate3d(-8%, 7%, 0) scale(0.94);
+  }
+}
+
+@keyframes ambient-drift-c {
+  from {
+    transform: translate3d(0, 4%, 0) scale(0.96);
+  }
+  to {
+    transform: translate3d(6%, -6%, 0) scale(1.16);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient-layer > span {
+    animation: none;
+  }
+}

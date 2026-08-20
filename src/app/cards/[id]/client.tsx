@@ -11,6 +11,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo } from "react";
 import { AddToListDialog } from "@/components/add-to-list-dialog";
+import { AmbientBackdrop } from "@/components/ambient-backdrop";
 import { useSecondaryToolbar } from "@/components/app-shell";
 import { PokemonImage } from "@/components/pokemon/pokemon-image";
 import {
@@ -23,6 +24,7 @@ import {
   TcgCardZoom,
 } from "@/components/tcg";
 import { Button } from "@/components/ui/button";
+import { useAmbientPalette } from "@/hooks/use-ambient-palette";
 import { useCardFavorites } from "@/hooks/use-card-favorites";
 import { useCardsByDexId, usePocketSetIds, useTcgSet } from "@/hooks/use-tcg";
 import { resolveSpecies, toID } from "@/lib/pkmn";
@@ -39,6 +41,7 @@ import {
   gameForCardId,
   mergedVariants,
   setIdFromCardId,
+  TCG_ENERGY_COLORS,
   TCG_VARIANT_KEYS,
   variantFullLabel,
   variantKey,
@@ -138,6 +141,16 @@ export function CardDetailClient({
   const setSymbol = assetUrl(card.set.symbol);
 
   const variants = useMemo(() => mergedVariants(card), [card]);
+
+  // The scan paints its own page. Energy colours hold the room until the
+  // artwork has been read; a Trainer card has none, so it simply waits.
+  const energyColors = (card.types ?? [])
+    .map((type) => TCG_ENERGY_COLORS[type])
+    .filter((color): color is string => Boolean(color));
+  const ambientPalette = useAmbientPalette(
+    cardImageUrl(card.image, "low"),
+    energyColors,
+  );
 
   const secondaryToolbarContent = useMemo(
     () => (
@@ -243,7 +256,15 @@ export function CardDetailClient({
     card.retreat !== undefined;
 
   return (
-    <div className="p-4 md:p-6">
+    <div className="relative isolate p-4 md:p-6">
+      {/* Taller than the default: a card's scan is the tallest thing on any
+          page in the app, and the wash stopping halfway up it reads as a
+          mistake rather than as light. */}
+      <AmbientBackdrop
+        palette={ambientPalette}
+        className="-z-10 h-[26rem] md:h-[34rem]"
+      />
+
       {/* Same twelve-column, full-bleed grid a Pokemon page uses, so the two
           detail pages line up when you move between them. */}
       {/* `auto` on the artwork row keeps the print details directly beneath the
