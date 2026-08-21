@@ -844,13 +844,16 @@ export function PokemonPageClient({
           <section className="space-y-4">
             {/* Hero */}
             <div className="relative isolate flex flex-col items-center gap-3">
-              {/* Hung on the sprite, because the glow is the sprite's. From
-                  md up the rail is its own scroll container, so a glow
-                  reaching past its sides would hang a scrollbar under it —
-                  there it stops at the rail's edges and spreads in y only. */}
+              {/* Hung on the sprite, because the glow is the sprite's, and
+                  drawn in from the rail's edges rather than out past them so
+                  its left and right sides are on screen — a rectangle you only
+                  see two sides of reads as a band across the page. From md up
+                  the rail is its own scroll container, so a glow reaching past
+                  its sides would hang a scrollbar under it; there it stops at
+                  the rail's edges and spreads in y only. */}
               <AmbientBackdrop
                 palette={ambientPalette}
-                className="-z-10 -inset-x-8 -inset-y-10 md:inset-x-0 md:-inset-y-12"
+                className="-z-10 inset-x-4 -inset-y-7 md:inset-x-0 md:-inset-y-10"
               />
               <PokemonImage
                 src={currentHeroSprite ?? pokemon.sprite}

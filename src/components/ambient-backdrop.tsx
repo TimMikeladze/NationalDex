@@ -6,14 +6,25 @@ import { cn } from "@/lib/utils";
 interface AmbientBackdropProps {
   palette: AmbientPalette;
   /**
-   * How far past its subject the glow reaches. Positioned by the page that
-   * owns it, because only that page knows what it is lighting.
+   * The rectangle the glow occupies, given as insets from its subject.
+   * Positioned by the page that owns it, because only that page knows what it
+   * is lighting and how much room there is around it. Worth keeping inside the
+   * viewport on a phone: the shape is the point, and a rectangle running off
+   * both sides of the screen is only ever seen as a band.
    */
   className?: string;
 }
 
 /**
  * The colour an item brings with it, thrown on the wall behind it.
+ *
+ * A rectangle, always. The artwork is rectangular, the sprite sits in a square
+ * box, every surface in the app has square corners — an oval of colour behind
+ * any of them was the one shape in here disagreeing with all of that. Squared
+ * off, it stops reading as a halo stuck to the artwork and starts reading as a
+ * lit panel the artwork is mounted on. The geometry lives in `globals.css`:
+ * four rectangular fields of colour, one to a quadrant, under a mask that
+ * feathers four straight edges rather than dissolving them into an ellipse.
  *
  * It belongs to the artwork, not to the page — it sits around the card or the
  * sprite the way light off a screen falls on the wall behind it, and stops
@@ -33,7 +44,7 @@ export function AmbientBackdrop({ palette, className }: AmbientBackdropProps) {
     <div
       aria-hidden="true"
       className={cn(
-        "ambient-backdrop absolute -inset-16 md:-inset-24",
+        "ambient-backdrop absolute -inset-x-6 -inset-y-8",
         className,
       )}
     >
