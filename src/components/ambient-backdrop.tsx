@@ -32,18 +32,21 @@ interface AmbientBackdropProps {
  * split across four corners was the other half of what read as a graphic
  * rather than as light.
  *
- * Two layers, never one: the type colours light the page immediately, the
- * colours read off the artwork cross-fade in over them a moment later. The
- * alternative — waiting for the scan, then snapping the page from grey to
- * red — is the version you notice.
+ * It stays invisible until `palette.isReady`, then fades in once. The colours
+ * belong to the artwork, so there is nothing honest to show before the artwork
+ * has loaded, and guessing first means correcting yourself in front of the
+ * reader. `useAmbientPalette` also returns an empty palette when the wash is
+ * switched off in settings, which lands here as nothing rendered at all.
  */
 export function AmbientBackdrop({
   palette,
   size = "default",
   className,
 }: AmbientBackdropProps) {
-  const { base, extracted } = palette;
-  if (base.length === 0 && !extracted?.length) return null;
+  const { colors, isReady } = palette;
+  if (colors.length === 0) return null;
+
+  const [dominant, accent] = colors;
 
   return (
     <div
@@ -51,38 +54,18 @@ export function AmbientBackdrop({
       data-size={size}
       className={cn("ambient-backdrop", className)}
     >
-      <AmbientLayer colors={base} visible={!extracted?.length} />
-      <AmbientLayer
-        colors={extracted ?? []}
-        visible={Boolean(extracted?.length)}
+      <div
+        className="ambient-layer"
+        data-visible={isReady}
+        style={
+          {
+            "--ambient-dominant": dominant,
+            // A sprite with a single colour in it gets its own colour twice,
+            // which is a plain wash — correct for something that is one colour.
+            "--ambient-accent": accent ?? dominant,
+          } as React.CSSProperties
+        }
       />
     </div>
-  );
-}
-
-function AmbientLayer({
-  colors,
-  visible,
-}: {
-  colors: string[];
-  visible: boolean;
-}) {
-  if (colors.length === 0) return null;
-
-  const [dominant, accent] = colors;
-
-  return (
-    <div
-      className="ambient-layer"
-      data-visible={visible}
-      style={
-        {
-          "--ambient-dominant": dominant,
-          // A sprite with a single colour in it gets its own colour twice,
-          // which is a plain wash — correct for something that is one colour.
-          "--ambient-accent": accent ?? dominant,
-        } as React.CSSProperties
-      }
-    />
   );
 }

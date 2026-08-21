@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAmbientPreference } from "@/hooks/use-ambient-preference";
 import {
   extractPalette,
   PALETTE_SAMPLE_WIDTH,
@@ -10,13 +11,20 @@ import {
 
 export interface AmbientPalette {
   /**
-   * What we can colour the page with before a single byte of artwork has
-   * arrived — the Pokemon's types, the card's energy. Wrong in the details,
-   * right in the mood, and there instantly.
+   * What to paint the page with: the colours the artwork is made of, or the
+   * type colours when the artwork could not be read at all.
    */
-  base: string[];
-  /** The colours the artwork is actually made of, once they are known. */
-  extracted: string[] | null;
+  colors: string[];
+  /**
+   * False until the artwork has been read — or has failed to be read. Nothing
+   * paints before this.
+   *
+   * The page used to light up in its type colours the instant it rendered and
+   * then swap to the artwork's a moment later, which is a flash of the wrong
+   * colour on every single page load. Waiting costs the fraction of a second
+   * the sprite takes to arrive and buys a page that is only ever one colour.
+   */
+  isReady: boolean;
 }
 
 /**
@@ -105,47 +113,69 @@ function readPalette(src: string): Promise<string[]> {
 }
 
 /**
- * The colours to paint a detail page with: the ones its artwork is made of,
- * with its type colours standing in until they are read.
+ * The colours to paint a detail page with, once the artwork they come from has
+ * loaded — see `AmbientPalette.isReady`.
  *
- * `seed` is a list of raw hex colours (type or energy colours). Both lists come
- * back as `oklch()` and through the same treatment, so the stand-in is as vivid
- * as what replaces it and the cross-fade is a change of hue, not of intensity.
+ * `seed` is a list of raw hex colours (type or energy colours), used only when
+ * the artwork cannot be read: an export build, a host outside `remotePatterns`,
+ * a canvas the browser refuses to hand back. It goes through the same treatment
+ * as an extracted palette, so the fallback is as vivid as the thing it stands
+ * in for.
  */
 export function useAmbientPalette(
   src: string | null | undefined,
   seed: string[] = [],
 ): AmbientPalette {
+  const { ambientEnabled } = useAmbientPreference();
+
   const [extracted, setExtracted] = useState<string[] | null>(() =>
     src ? (cache.get(src) ?? null) : null,
   );
+  // A palette already in the cache — the same card walked back to, a sprite
+  // toggled and toggled back — is ready on the first frame, with no fade.
+  const [isSettled, setIsSettled] = useState(() =>
+    src ? cache.has(src) : true,
+  );
 
   useEffect(() => {
+    // Nothing is sampled while the wash is switched off. The work is an image
+    // decode and a canvas read per sprite, and there is nothing to spend it on.
+    if (!ambientEnabled) return;
+
     if (!src) {
       setExtracted(null);
+      setIsSettled(true);
       return;
     }
 
     const cached = cache.get(src);
     if (cached) {
       setExtracted(cached.length > 0 ? cached : null);
+      setIsSettled(true);
       return;
     }
 
     // Sprites change under the reader — shiny, back, female, a different
-    // generation's graphics — so the previous palette stays on screen until
-    // the new one is ready rather than dropping back to the type colours.
+    // generation's graphics. `isSettled` is deliberately not cleared here: the
+    // palette on screen stays until its replacement is read, rather than the
+    // page dropping to nothing and lighting up again.
     let active = true;
     readPalette(src).then((colors) => {
-      if (active) setExtracted(colors.length > 0 ? colors : null);
+      if (!active) return;
+      setExtracted(colors.length > 0 ? colors : null);
+      setIsSettled(true);
     });
     return () => {
       active = false;
     };
-  }, [src]);
+  }, [src, ambientEnabled]);
+
+  // Switched off is not "no colours yet" — it is no colours, ever, which lands
+  // in `AmbientBackdrop` as nothing rendered.
+  if (!ambientEnabled) return { colors: [], isReady: false };
 
   return {
-    base: toAmbientColors(seed),
-    extracted,
+    colors: extracted ?? toAmbientColors(seed),
+    isReady: isSettled,
   };
 }

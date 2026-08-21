@@ -421,11 +421,17 @@
   }
 }
 
+/*
+ * Held back until the artwork has been read, then brought up once. Short,
+ * because by the time it runs the sprite is already on screen and the colour
+ * is meant to have arrived with it — a slow fade here reads as the page
+ * catching up with itself.
+ */
 .ambient-layer {
   position: absolute;
   inset: 0;
   opacity: 0;
-  transition: opacity 900ms ease-out;
+  transition: opacity 500ms ease-out;
 
   /*
    * Two gradients, in this order: the second colour blooming in over one top

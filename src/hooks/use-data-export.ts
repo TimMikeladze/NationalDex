@@ -11,6 +11,7 @@ const STORAGE_KEYS = {
   spritePreferences: "pokedex-sprite-preferences",
   pokedexPreference: "pokedex-entry-preference",
   generationPreference: "pokedex-generation-preference",
+  ambientBackdrop: "pokedex-ambient-backdrop",
   whosThatPokemonBestStreak: "whos-that-pokemon-best-streak",
   dexFilter: "pokedex-dex-filter",
   theme: "theme",
@@ -28,6 +29,8 @@ export interface ExportedData {
   spritePreferences: unknown;
   pokedexPreference: string | null;
   generationPreference: string | null;
+  /** Whether detail pages wear their artwork's colours; absent in older backups. */
+  ambientBackdrop?: string | null;
   whosThatPokemonBestStreak: number;
   /** Remembered dex filter panel + sort; absent in backups made before it existed. */
   dexFilter?: unknown;
@@ -57,6 +60,7 @@ export function useDataExport() {
       generationPreference: localStorage.getItem(
         STORAGE_KEYS.generationPreference,
       ),
+      ambientBackdrop: localStorage.getItem(STORAGE_KEYS.ambientBackdrop),
       whosThatPokemonBestStreak:
         Number.parseInt(
           localStorage.getItem(STORAGE_KEYS.whosThatPokemonBestStreak) || "0",
@@ -128,6 +132,14 @@ export function useDataExport() {
           localStorage.setItem(
             STORAGE_KEYS.generationPreference,
             data.generationPreference,
+          );
+        }
+
+        // Import the artwork-colour preference
+        if (data.ambientBackdrop) {
+          localStorage.setItem(
+            STORAGE_KEYS.ambientBackdrop,
+            data.ambientBackdrop,
           );
         }
 
