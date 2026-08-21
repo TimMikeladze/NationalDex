@@ -367,249 +367,120 @@
 /*
  * Ambient backdrop.
  *
- * The wash of an item's own colours behind the top of its page — see
- * `components/ambient-backdrop.tsx`. Four oversized panels of `oklch()`, mixed
- * and faded in OKLab rather than sRGB: fading a colour to `transparent` in
- * sRGB drags it through grey on the way out, which is exactly the dishwater
- * halo that dates a gradient. In OKLab it stays itself until it is gone.
+ * The wash of an item's own colour down the top of its page — see
+ * `components/ambient-backdrop.tsx`. Gradients of `oklch()`, mixed and faded
+ * in OKLab rather than sRGB: fading a colour to `transparent` in sRGB drags it
+ * through grey on the way out, which is exactly the dishwater halo that dates
+ * a gradient. In OKLab it stays itself until it is gone.
  *
- * Every shape in here is a rectangle, on purpose. `--radius` is 0 everywhere
- * else in the app, and a soft oval of colour behind a square sprite or a
- * rectangular scan was the one thing still arguing with that. Light thrown by
- * a lit panel takes the shape of the panel; this takes the shape of the
- * artwork it belongs to.
+ * It is full-bleed and top-anchored on purpose, the way an album page is. The
+ * previous version drew a feathered rectangle around the artwork; a rectangle
+ * has four edges, and four edges are four chances to see the effect instead of
+ * the colour. Running the colour off both sides of the screen and out of the
+ * bottom of itself leaves nothing to catch on.
  */
 .ambient-backdrop {
   pointer-events: none;
+  position: absolute;
+  top: 0;
+  inset-inline: 0;
+  /* Far enough to hold the artwork and its title, gone before the first
+     paragraph anyone has to read. Viewport-relative so a phone and a desktop
+     are the same picture at different sizes. */
+  height: var(--ambient-height, clamp(17rem, 42vh, 30rem));
   overflow: hidden;
-  /* Lower than the old oval wanted, because these panels are flat colour to
-     the edge where the blobs peaked in the middle and fell away. The same
-     opacity over a fuller shape is simply more ink. */
-  opacity: 0.6;
+  /* Full strength at the top and the whole page to fall through. On white
+     there is paper underneath carrying half the light, so it takes more of
+     itself here than it does on black to land as the same colour. */
+  opacity: 0.72;
+}
 
-  /*
-   * Feathered along four straight edges instead of dissolved into an ellipse.
-   * Two crossed fades, intersected: either one on its own fades in a single
-   * axis and leaves the other two sides cut clean off, and stacking them the
-   * normal way (their union) puts the hard corner straight back in. The
-   * intersection is a rectangle whose four sides all fall away, and whose
-   * corners — the product of both fades — land soft without ever rounding.
-   */
-  --ambient-edge-x: linear-gradient(
-    to right,
-    transparent 0%,
-    rgb(0 0 0 / 0.62) 2%,
-    rgb(0 0 0 / 0.9) 5%,
-    #000 9%,
-    #000 91%,
-    rgb(0 0 0 / 0.9) 95%,
-    rgb(0 0 0 / 0.62) 98%,
-    transparent 100%
-  );
-  --ambient-edge-y: linear-gradient(
-    to bottom,
-    transparent 0%,
-    rgb(0 0 0 / 0.62) 2%,
-    rgb(0 0 0 / 0.9) 5%,
-    #000 9%,
-    #000 91%,
-    rgb(0 0 0 / 0.9) 95%,
-    rgb(0 0 0 / 0.62) 98%,
-    transparent 100%
-  );
-  -webkit-mask-image: var(--ambient-edge-x), var(--ambient-edge-y);
-  -webkit-mask-composite: source-in;
-  mask-image: var(--ambient-edge-x), var(--ambient-edge-y);
-  mask-composite: intersect;
+/* A card scan is several times the height of a sprite, so the colour has to
+   reach past the bottom of it or the artwork ends up sitting in a band. */
+.ambient-backdrop[data-size="tall"] {
+  --ambient-height: clamp(24rem, 62vh, 44rem);
 }
 
 .dark .ambient-backdrop {
-  /* Colour this deep needs the room back on near-black, where there is no
-     white underneath it to carry any of the light. */
-  opacity: 0.66;
+  /* On near-black there is no white underneath to carry any of the light, so
+     the same wash reads thinner and gets the room back. */
+  opacity: 0.62;
 }
 
-/*
- * Without `mask-composite` the two fades stack as a union instead of an
- * intersection, which floods everything but the corners. One vertical fade on
- * its own is the honest degradation: still a rectangle, still square-cornered,
- * just running out to the sides rather than stopping short of them.
- */
-@supports not (mask-composite: intersect) {
-  .ambient-backdrop {
-    -webkit-mask-image: var(--ambient-edge-y);
-    mask-image: var(--ambient-edge-y);
-  }
-
-  .ambient-layer > span {
-    -webkit-mask-image: var(--ambient-panel-x);
-    mask-image: var(--ambient-panel-x);
-  }
-}
-
-/* A wide layout gives the glow more room to spread into, so the same opacity
-   reads heavier there than it does on a phone. */
+/* A phone puts the artwork under this and nothing else. A desktop puts the
+   moves table beside it, and the same colour that lights a hero sits on top of
+   a list you are reading — so it comes down where there is more page for it to
+   land on. */
 @media (min-width: 1024px) {
   .ambient-backdrop {
-    opacity: 0.52;
+    opacity: 0.6;
   }
 
   .dark .ambient-backdrop {
-    opacity: 0.58;
+    opacity: 0.56;
   }
 }
 
+/*
+ * Held back until the artwork has been read, then brought up once. Short,
+ * because by the time it runs the sprite is already on screen and the colour
+ * is meant to have arrived with it — a slow fade here reads as the page
+ * catching up with itself.
+ */
 .ambient-layer {
   position: absolute;
-  /* Bled out past the backdrop on every side so the blur below has colour to
-     pull in from. Blurring a layer that ends where the frame ends samples the
-     nothing outside it and hems the wash in a pale border. */
-  inset: -12%;
+  inset: 0;
   opacity: 0;
-  transition: opacity 900ms ease-out;
-  /* The panels meet along straight seams; the blur is what stops those seams
-     reading as four tiles and starts the whole thing reading as light. Radius
-     scales with the viewport so a phone and a desktop are the same picture at
-     different sizes. */
-  filter: blur(clamp(22px, 6vw, 56px));
-  /* The dominant colour also falls straight down the page, the way a record
-     sleeve bleeds into the header above the track list. */
-  background-image: linear-gradient(
-    to bottom in oklab,
-    color-mix(in oklab, var(--ambient-base) 48%, transparent) 14%,
-    transparent 70%
-  );
+  transition: opacity 500ms ease-out;
+
+  /*
+   * Two gradients, in this order: the second colour blooming in over one top
+   * corner, and under it the dominant colour running the width of the page and
+   * dying downward.
+   *
+   * The falloff is stepped rather than left to a straight two-stop fade. A
+   * linear ramp holds too much colour through the middle and then stops all at
+   * once — you can point at where it ends. These stops are an ease-out: most
+   * of the colour spends itself in the top third, and the last of it is thin
+   * enough over the bottom third that there is no line to find.
+   */
+  background-image:
+    radial-gradient(
+      120% 62% at 80% -14%,
+      color-mix(in oklab, var(--ambient-accent) 46%, transparent) 0%,
+      color-mix(in oklab, var(--ambient-accent) 18%, transparent) 46%,
+      transparent 74%
+    ),
+    linear-gradient(
+      to bottom in oklab,
+      var(--ambient-dominant) 0%,
+      var(--ambient-dominant) 8%,
+      color-mix(in oklab, var(--ambient-dominant) 86%, transparent) 20%,
+      color-mix(in oklab, var(--ambient-dominant) 58%, transparent) 38%,
+      color-mix(in oklab, var(--ambient-dominant) 30%, transparent) 58%,
+      color-mix(in oklab, var(--ambient-dominant) 10%, transparent) 78%,
+      transparent 100%
+    );
+
+  /*
+   * Ink on paper. Two colours simply laid over each other average toward grey
+   * where they meet — most of an image's colours sit somewhere near opposite
+   * each other on the wheel, and averaging opposites is the definition of
+   * grey. Multiplying instead is how pigment actually behaves: the overlap
+   * gets deeper and keeps a hue. Only the accent blends; the dominant colour
+   * has nothing under it but the page.
+   */
+  background-blend-mode: multiply, normal;
+}
+
+/* On near-black there is no paper to soak into, so the overlap adds light
+   instead of subtracting it — the same rule, read the other way up. */
+.dark .ambient-layer {
+  background-blend-mode: screen, normal;
 }
 
 .ambient-layer[data-visible="true"] {
   opacity: 1;
-}
-
-/*
- * One colour to a quadrant. Piled on top of each other they would multiply
- * down to near-black in the middle — but the middle is behind the card or the
- * sprite, which is the one part of this nobody sees. What shows is the rim,
- * and out there each quadrant is mostly its own colour.
- */
-.ambient-layer > span {
-  position: absolute;
-  display: block;
-  /*
-   * Ink on paper. Two panels simply laid over each other average toward grey
-   * where they meet — most of an image's colours are somewhere near opposite
-   * each other on the wheel, and averaging opposites is the definition of
-   * grey. Multiplying instead is how pigment actually behaves: overlaps get
-   * deeper and keep a hue, which is the difference between a wash with
-   * shadows in it and a wash with haze in it.
-   */
-  mix-blend-mode: multiply;
-  /*
-   * A flat field of colour rather than a blob. It runs solid out to its own
-   * outer corner — which sits well outside the frame — and falls away only
-   * inward, where the next quadrant takes over. A radial falloff here would
-   * pull the silhouette back toward an oval no matter how the frame around it
-   * was masked.
-   */
-  background-color: var(--ambient-color);
-  -webkit-mask-image: var(--ambient-panel-x), var(--ambient-panel-y);
-  -webkit-mask-composite: source-in;
-  mask-image: var(--ambient-panel-x), var(--ambient-panel-y);
-  mask-composite: intersect;
-  will-change: transform;
-}
-
-/* On near-black there is no paper to soak into, so overlaps add light
-   instead of subtracting it — the same rule, read the other way up. */
-.dark .ambient-layer > span {
-  mix-blend-mode: screen;
-}
-
-.ambient-layer > span:nth-child(1) {
-  left: -12%;
-  top: -12%;
-  width: 76%;
-  height: 72%;
-  --ambient-panel-x: linear-gradient(
-    to right,
-    #000 0%,
-    #000 48%,
-    rgb(0 0 0 / 0.6) 76%,
-    transparent 100%
-  );
-  --ambient-panel-y: linear-gradient(
-    to bottom,
-    #000 0%,
-    #000 48%,
-    rgb(0 0 0 / 0.6) 76%,
-    transparent 100%
-  );
-  animation: ambient-drift-a 23s ease-in-out infinite alternate;
-}
-
-.ambient-layer > span:nth-child(2) {
-  right: -12%;
-  top: -12%;
-  width: 74%;
-  height: 70%;
-  --ambient-panel-x: linear-gradient(
-    to left,
-    #000 0%,
-    #000 48%,
-    rgb(0 0 0 / 0.6) 76%,
-    transparent 100%
-  );
-  --ambient-panel-y: linear-gradient(
-    to bottom,
-    #000 0%,
-    #000 48%,
-    rgb(0 0 0 / 0.6) 76%,
-    transparent 100%
-  );
-  animation: ambient-drift-b 29s ease-in-out infinite alternate;
-}
-
-.ambient-layer > span:nth-child(3) {
-  left: -12%;
-  bottom: -12%;
-  width: 72%;
-  height: 74%;
-  --ambient-panel-x: linear-gradient(
-    to right,
-    #000 0%,
-    #000 48%,
-    rgb(0 0 0 / 0.6) 76%,
-    transparent 100%
-  );
-  --ambient-panel-y: linear-gradient(
-    to top,
-    #000 0%,
-    #000 48%,
-    rgb(0 0 0 / 0.6) 76%,
-    transparent 100%
-  );
-  animation: ambient-drift-c 37s ease-in-out infinite alternate;
-}
-
-.ambient-layer > span:nth-child(4) {
-  right: -12%;
-  bottom: -12%;
-  width: 76%;
-  height: 72%;
-  --ambient-panel-x: linear-gradient(
-    to left,
-    #000 0%,
-    #000 48%,
-    rgb(0 0 0 / 0.6) 76%,
-    transparent 100%
-  );
-  --ambient-panel-y: linear-gradient(
-    to top,
-    #000 0%,
-    #000 48%,
-    rgb(0 0 0 / 0.6) 76%,
-    transparent 100%
-  );
-  animation: ambient-drift-d 31s ease-in-out infinite alternate;
 }
 
 /*
@@ -621,52 +492,15 @@
   content: "";
   position: absolute;
   inset: 0;
-  opacity: 0.12;
+  opacity: 0.1;
   mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-/* Slow enough that you never catch it moving, only notice it has. Panels
-   stay well oversized through the whole cycle, so a straight outer edge can
-   never drift in from the side. */
-@keyframes ambient-drift-a {
-  from {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  to {
-    transform: translate3d(7%, 5%, 0) scale(1.14);
-  }
-}
-
-@keyframes ambient-drift-b {
-  from {
-    transform: translate3d(0, 0, 0) scale(1.12);
-  }
-  to {
-    transform: translate3d(-6%, 6%, 0) scale(0.98);
-  }
-}
-
-@keyframes ambient-drift-c {
-  from {
-    transform: translate3d(0, 4%, 0) scale(0.99);
-  }
-  to {
-    transform: translate3d(6%, -5%, 0) scale(1.15);
-  }
-}
-
-@keyframes ambient-drift-d {
-  from {
-    transform: translate3d(3%, -3%, 0) scale(1.13);
-  }
-  to {
-    transform: translate3d(-5%, 4%, 0) scale(1);
-  }
-}
-
+/* The cross-fade is a change of hue rather than movement, but a reader who has
+   asked for less of this should get the answer straight away. */
 @media (prefers-reduced-motion: reduce) {
-  .ambient-layer > span {
-    animation: none;
+  .ambient-layer {
+    transition-duration: 1ms;
   }
 }

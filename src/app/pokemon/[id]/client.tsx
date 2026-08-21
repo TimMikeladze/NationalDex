@@ -836,25 +836,20 @@ export function PokemonPageClient({
   const currentSlug = toID(pokemon.name);
 
   return (
-    <div className="p-4 md:p-6">
+    <div className="relative isolate p-4 md:p-6">
+      {/* Hung on the page rather than on the sprite. The colour is the
+          sprite's, but it belongs to the top of the page the way an album's
+          colour does — full width, from the very top, spent before the moves
+          table. Pinned to the padding box, so it starts above the sprite
+          rather than level with it. */}
+      <AmbientBackdrop palette={ambientPalette} className="-z-10" />
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8">
         {/* Summary rail (pinned on desktop) */}
         <div className={SUMMARY_RAIL_CLASSES}>
           {/* Core Header */}
           <section className="space-y-4">
             {/* Hero */}
-            <div className="relative isolate flex flex-col items-center gap-3">
-              {/* Hung on the sprite, because the glow is the sprite's, and
-                  drawn in from the rail's edges rather than out past them so
-                  its left and right sides are on screen — a rectangle you only
-                  see two sides of reads as a band across the page. From md up
-                  the rail is its own scroll container, so a glow reaching past
-                  its sides would hang a scrollbar under it; there it stops at
-                  the rail's edges and spreads in y only. */}
-              <AmbientBackdrop
-                palette={ambientPalette}
-                className="-z-10 inset-x-4 -inset-y-7 md:inset-x-0 md:-inset-y-10"
-              />
+            <div className="flex flex-col items-center gap-3">
               <PokemonImage
                 src={currentHeroSprite ?? pokemon.sprite}
                 alt={pokemon.name}

@@ -24,6 +24,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { useAmbientPreference } from "@/hooks/use-ambient-preference";
 import { useCardFavorites } from "@/hooks/use-card-favorites";
 import { type ExportedData, useDataExport } from "@/hooks/use-data-export";
 import { useFavorites } from "@/hooks/use-favorites";
@@ -41,6 +43,7 @@ const MATCH_GENERATION = "match-generation";
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
+  const { ambientEnabled, setAmbientEnabled } = useAmbientPreference();
   const { favorites, clearFavorites } = useFavorites();
   const { favoriteCards, clearFavoriteCards } = useCardFavorites();
   const { lists } = useLists();
@@ -99,7 +102,7 @@ export default function SettingsPage() {
       <div className="space-y-8">
         <section className="space-y-3">
           <p className="text-[10px] text-muted-foreground uppercase tracking-wider block">
-            theme
+            appearance
           </p>
           <div className="flex gap-2">
             {(["light", "dark", "system"] as const).map((t) => (
@@ -117,6 +120,22 @@ export default function SettingsPage() {
                 {t}
               </button>
             ))}
+          </div>
+
+          <div className="flex items-center justify-between gap-4 py-2 border-b">
+            <div>
+              <p className="text-sm">artwork colors</p>
+              <p className="text-xs text-muted-foreground">
+                Pours the colors of a pokemon&rsquo;s sprite or a card&rsquo;s
+                scan down the top of its page. Off leaves those pages plain and
+                skips reading the artwork altogether.
+              </p>
+            </div>
+            <Switch
+              checked={ambientEnabled}
+              onCheckedChange={setAmbientEnabled}
+              aria-label="Paint detail pages with their artwork's colors"
+            />
           </div>
         </section>
 
