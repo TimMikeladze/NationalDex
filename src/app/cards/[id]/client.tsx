@@ -266,10 +266,17 @@ export function CardDetailClient({
         {/* Artwork first everywhere; on desktop it stays put while text scrolls */}
         <div className="order-1 md:col-start-1 md:row-start-1 md:col-span-5 lg:col-span-5 xl:col-span-5 2xl:col-span-4">
           {/* The sizing moved up here so the glow is measured against the card
-              itself rather than the column it sits in — light thrown by the
-              scan, ending not far past its edges. */}
+              itself rather than the column it sits in. The wash is a rectangle
+              a fixed distance out from the scan on every side, so what you see
+              is the card's own colours mounted behind it like a mat — not a
+              cloud it happens to be sitting in. It stays inside the phone's
+              gutters on purpose: a rectangle whose sides run off the screen is
+              just a band. */}
           <div className="relative isolate mx-auto max-w-[17rem] sm:max-w-xs md:mx-0 md:max-w-sm lg:max-w-[24rem] xl:max-w-[26rem] 2xl:max-w-[30rem]">
-            <AmbientBackdrop palette={ambientPalette} className="-z-10" />
+            <AmbientBackdrop
+              palette={ambientPalette}
+              className="-z-10 -inset-x-6 -inset-y-8 md:-inset-x-10 md:-inset-y-14"
+            />
             <TcgCardZoom
               card={card}
               language={language}
