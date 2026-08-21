@@ -12,21 +12,21 @@ type AmbientPreference = {
 };
 
 /**
- * On unless someone has turned it off. The wash is part of how a detail page
- * looks rather than an extra, so an empty store means yes, not no.
+ * Off unless someone has turned it on. The wash is a flourish on top of a page
+ * that reads fine without it, so an empty store means no, not yes.
  */
 const DEFAULT_PREFERENCE: AmbientPreference = {
-  ambientEnabled: true,
+  ambientEnabled: false,
   isLoaded: false,
 };
 
 function parsePreference(value: string | null): boolean {
-  if (value === null) return true;
+  if (value === null) return false;
   try {
     const parsed = JSON.parse(value) as Partial<AmbientPreference>;
-    return parsed.ambientEnabled !== false;
+    return parsed.ambientEnabled === true;
   } catch {
-    return true;
+    return false;
   }
 }
 
