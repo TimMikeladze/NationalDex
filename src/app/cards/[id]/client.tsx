@@ -256,7 +256,11 @@ export function CardDetailClient({
     card.retreat !== undefined;
 
   return (
-    <div className="p-4 md:p-6">
+    <div className="relative isolate p-4 md:p-6">
+      {/* The card's own colours down the top of the page, full width — the
+          same wash a Pokemon page gets, only reaching further because a scan
+          stands taller than a sprite. `tall` is the whole difference. */}
+      <AmbientBackdrop palette={ambientPalette} size="tall" className="-z-10" />
       {/* Same twelve-column, full-bleed grid a Pokemon page uses, so the two
           detail pages line up when you move between them. */}
       {/* `auto` on the artwork row keeps the print details directly beneath the
@@ -265,18 +269,7 @@ export function CardDetailClient({
       <div className="grid grid-cols-1 gap-6 md:grid-cols-12 md:grid-rows-[auto_1fr] md:gap-8">
         {/* Artwork first everywhere; on desktop it stays put while text scrolls */}
         <div className="order-1 md:col-start-1 md:row-start-1 md:col-span-5 lg:col-span-5 xl:col-span-5 2xl:col-span-4">
-          {/* The sizing moved up here so the glow is measured against the card
-              itself rather than the column it sits in. The wash is a rectangle
-              a fixed distance out from the scan on every side, so what you see
-              is the card's own colours mounted behind it like a mat — not a
-              cloud it happens to be sitting in. It stays inside the phone's
-              gutters on purpose: a rectangle whose sides run off the screen is
-              just a band. */}
-          <div className="relative isolate mx-auto max-w-[17rem] sm:max-w-xs md:mx-0 md:max-w-sm lg:max-w-[24rem] xl:max-w-[26rem] 2xl:max-w-[30rem]">
-            <AmbientBackdrop
-              palette={ambientPalette}
-              className="-z-10 -inset-x-6 -inset-y-8 md:-inset-x-10 md:-inset-y-14"
-            />
+          <div className="mx-auto max-w-[17rem] sm:max-w-xs md:mx-0 md:max-w-sm lg:max-w-[24rem] xl:max-w-[26rem] 2xl:max-w-[30rem]">
             <TcgCardZoom
               card={card}
               language={language}
