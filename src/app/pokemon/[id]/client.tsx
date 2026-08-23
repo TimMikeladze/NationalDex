@@ -1,0 +1,2456 @@
+"use client";
+
+import {
+  BookOpen,
+  ChevronLeft,
+  ChevronRight,
+  Dices,
+  Heart,
+  ListPlus,
+  Sparkles,
+} from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import { AddToListDialog } from "@/components/add-to-list-dialog";
+import { AmbientBackdrop } from "@/components/ambient-backdrop";
+import { useSecondaryToolbar } from "@/components/app-shell";
+import { CompareIcon } from "@/components/navigation/app-icons";
+import { GenerationPicker } from "@/components/pokemon/generation-picker";
+import { GenerationScope } from "@/components/pokemon/generation-scope";
+import { PokemonImage } from "@/components/pokemon/pokemon-image";
+import { SpriteSetSelect } from "@/components/pokemon/sprite-set-select";
+import { StatBar } from "@/components/pokemon/stat-bar";
+import { TypeBadge } from "@/components/pokemon/type-badge";
+import { PokemonCardsSection } from "@/components/tcg";
+import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { useAmbientPalette } from "@/hooks/use-ambient-palette";
+import { useComparison } from "@/hooks/use-comparison";
+import { useFavorites } from "@/hooks/use-favorites";
+import { useGenerationPreference } from "@/hooks/use-generation-preference";
+import { usePokedexPreference } from "@/hooks/use-pokedex-preference";
+import {
+  calculateTypeEffectiveness,
+  useEvolutionChain,
+  usePokemonEncounters,
+  usePokemonMoves,
+  usePokemonWithSpecies,
+} from "@/hooks/use-pokemon";
+import { useSpritePreferences } from "@/hooks/use-sprite-preferences";
+import {
+  getDexPokemonList,
+  getDexPokemonVariationsByDexNumber,
+} from "@/lib/dex-pokemon";
+import {
+  FIRST_ABILITY_GEN,
+  FIRST_BREEDING_GEN,
+  getGenerationGames,
+  getGenerationName,
+  getOffensiveTypeMatchups,
+  getSpeciesGenerations,
+  LATEST_GEN,
+  toID,
+} from "@/lib/pkmn";
+import type { FormattedPokemonEncounter, PokedexEntry } from "@/lib/pokeapi";
+import { getSpriteSet, pokemonSprite, type SpriteSetId } from "@/lib/sprites";
+import { cn } from "@/lib/utils";
+import type {
+  EvolutionChainLink,
+  Pokemon,
+  PokemonMove,
+  PokemonSpecies,
+} from "@/types/pokemon";
+import { TYPE_COLORS } from "@/types/pokemon";
+
+const _isAnimatedSprite = (src: string) => src.toLowerCase().endsWith(".gif");
+
+// Left summary rail. Once the layout splits into two columns it stays pinned
+// below the app chrome so sprite/types/stats remain visible while the long
+// moves and locations lists scroll. `main` is the scroll container, so the
+// rail's height is the viewport minus the fixed header/nav offsets (plus the
+// page's own 1.5rem top/bottom padding); anything taller scrolls inside the
+// rail itself.
+const SUMMARY_RAIL_CLASSES =
+  "space-y-6 md:col-span-5 lg:col-span-5 xl:col-span-5 2xl:col-span-4 md:self-start md:sticky md:top-6 md:max-h-[calc(var(--app-content-height)-3rem)] md:overflow-y-auto md:overscroll-contain md:-mr-2 md:pr-2";
+
+// =============================================================================
+// Variant & Region Helpers
+// =============================================================================
+
+const VARIANT_SUFFIXES = [
+  "Gmax",
+  "Mega",
+  "Mega-X",
+  "Mega-Y",
+  "Mega-Z",
+  "Alola",
+  "Galar",
+  "Hisui",
+  "Paldea",
+];
+
+function getVariantFromName(name: string): string | null {
+  for (const suffix of VARIANT_SUFFIXES) {
+    if (name.endsWith(`-${suffix}`)) {
+      return suffix;
+    }
+  }
+  return null;
+}
+
+function getBaseName(name: string): string {
+  const variant = getVariantFromName(name);
+  if (variant) {
+    return name.slice(0, -(variant.length + 1));
+  }
+  return name;
+}
+
+const VARIANT_DISPLAY_NAMES: Record<string, string> = {
+  Gmax: "Gigantamax",
+  Mega: "Mega",
+  "Mega-X": "Mega X",
+  "Mega-Y": "Mega Y",
+  "Mega-Z": "Mega Z",
+  Alola: "Alolan",
+  Galar: "Galarian",
+  Hisui: "Hisuian",
+  Paldea: "Paldean",
+};
+
+type Region =
+  | "Kanto"
+  | "Johto"
+  | "Hoenn"
+  | "Sinnoh"
+  | "Unova"
+  | "Kalos"
+  | "Alola"
+  | "Galar"
+  | "Paldea";
+
+function getRegionFromDexNumber(dexNumber: number): Region | null {
+  if (dexNumber >= 1 && dexNumber <= 151) return "Kanto";
+  if (dexNumber >= 152 && dexNumber <= 251) return "Johto";
+  if (dexNumber >= 252 && dexNumber <= 386) return "Hoenn";
+  if (dexNumber >= 387 && dexNumber <= 493) return "Sinnoh";
+  if (dexNumber >= 494 && dexNumber <= 649) return "Unova";
+  if (dexNumber >= 650 && dexNumber <= 721) return "Kalos";
+  if (dexNumber >= 722 && dexNumber <= 809) return "Alola";
+  if (dexNumber >= 810 && dexNumber <= 905) return "Galar";
+  if (dexNumber >= 906 && dexNumber <= 1025) return "Paldea";
+  return null;
+}
+
+function VariantOrRegionBadge({
+  name,
+  dexNumber,
+}: {
+  name: string;
+  dexNumber: number;
+}) {
+  const variant = getVariantFromName(name);
+  if (variant) {
+    return (
+      <span className="inline-flex items-center font-medium rounded border border-border bg-muted text-muted-foreground px-2 py-0.5 text-xs">
+        {VARIANT_DISPLAY_NAMES[variant] ?? variant}
+      </span>
+    );
+  }
+  const region = getRegionFromDexNumber(dexNumber);
+  if (region) {
+    return (
+      <span className="inline-flex items-center font-medium rounded border border-border bg-muted text-muted-foreground px-2 py-0.5 text-xs">
+        {region}
+      </span>
+    );
+  }
+  return null;
+}
+
+// Display names for game versions
+const VERSION_DISPLAY_NAMES: Record<string, string> = {
+  red: "Red",
+  blue: "Blue",
+  yellow: "Yellow",
+  gold: "Gold",
+  silver: "Silver",
+  crystal: "Crystal",
+  ruby: "Ruby",
+  sapphire: "Sapphire",
+  emerald: "Emerald",
+  firered: "FireRed",
+  leafgreen: "LeafGreen",
+  diamond: "Diamond",
+  pearl: "Pearl",
+  platinum: "Platinum",
+  heartgold: "HeartGold",
+  soulsilver: "SoulSilver",
+  black: "Black",
+  white: "White",
+  "black-2": "Black 2",
+  "white-2": "White 2",
+  x: "X",
+  y: "Y",
+  "omega-ruby": "Omega Ruby",
+  "alpha-sapphire": "Alpha Sapphire",
+  sun: "Sun",
+  moon: "Moon",
+  "ultra-sun": "Ultra Sun",
+  "ultra-moon": "Ultra Moon",
+  "lets-go-pikachu": "Let's Go Pikachu",
+  "lets-go-eevee": "Let's Go Eevee",
+  sword: "Sword",
+  shield: "Shield",
+  "brilliant-diamond": "Brilliant Diamond",
+  "shining-pearl": "Shining Pearl",
+  "legends-arceus": "Legends: Arceus",
+  scarlet: "Scarlet",
+  violet: "Violet",
+};
+
+const getVersionDisplayName = (version: string) =>
+  VERSION_DISPLAY_NAMES[version] ||
+  version.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+// Colors for game version chips
+const VERSION_COLORS: Record<
+  string,
+  { bg: string; text: string; border: string }
+> = {
+  red: { bg: "bg-red-500/20", text: "text-red-400", border: "border-red-500" },
+  blue: {
+    bg: "bg-blue-500/20",
+    text: "text-blue-400",
+    border: "border-blue-500",
+  },
+  yellow: {
+    bg: "bg-yellow-500/20",
+    text: "text-yellow-400",
+    border: "border-yellow-500",
+  },
+  gold: {
+    bg: "bg-amber-500/20",
+    text: "text-amber-400",
+    border: "border-amber-500",
+  },
+  silver: {
+    bg: "bg-slate-400/20",
+    text: "text-slate-300",
+    border: "border-slate-400",
+  },
+  crystal: {
+    bg: "bg-cyan-500/20",
+    text: "text-cyan-400",
+    border: "border-cyan-500",
+  },
+  ruby: {
+    bg: "bg-rose-600/20",
+    text: "text-rose-400",
+    border: "border-rose-600",
+  },
+  sapphire: {
+    bg: "bg-blue-600/20",
+    text: "text-blue-400",
+    border: "border-blue-600",
+  },
+  emerald: {
+    bg: "bg-emerald-500/20",
+    text: "text-emerald-400",
+    border: "border-emerald-500",
+  },
+  firered: {
+    bg: "bg-orange-500/20",
+    text: "text-orange-400",
+    border: "border-orange-500",
+  },
+  leafgreen: {
+    bg: "bg-green-500/20",
+    text: "text-green-400",
+    border: "border-green-500",
+  },
+  diamond: {
+    bg: "bg-sky-400/20",
+    text: "text-sky-300",
+    border: "border-sky-400",
+  },
+  pearl: {
+    bg: "bg-pink-300/20",
+    text: "text-pink-300",
+    border: "border-pink-300",
+  },
+  platinum: {
+    bg: "bg-zinc-400/20",
+    text: "text-zinc-300",
+    border: "border-zinc-400",
+  },
+  heartgold: {
+    bg: "bg-amber-400/20",
+    text: "text-amber-300",
+    border: "border-amber-400",
+  },
+  soulsilver: {
+    bg: "bg-slate-300/20",
+    text: "text-slate-200",
+    border: "border-slate-300",
+  },
+  black: {
+    bg: "bg-neutral-700/30",
+    text: "text-neutral-200",
+    border: "border-neutral-500",
+  },
+  white: {
+    bg: "bg-neutral-200/20",
+    text: "text-neutral-200",
+    border: "border-neutral-300",
+  },
+  "black-2": {
+    bg: "bg-neutral-700/30",
+    text: "text-neutral-200",
+    border: "border-neutral-500",
+  },
+  "white-2": {
+    bg: "bg-neutral-200/20",
+    text: "text-neutral-200",
+    border: "border-neutral-300",
+  },
+  x: { bg: "bg-blue-500/20", text: "text-blue-400", border: "border-blue-500" },
+  y: { bg: "bg-red-500/20", text: "text-red-400", border: "border-red-500" },
+  "omega-ruby": {
+    bg: "bg-rose-600/20",
+    text: "text-rose-400",
+    border: "border-rose-600",
+  },
+  "alpha-sapphire": {
+    bg: "bg-blue-600/20",
+    text: "text-blue-400",
+    border: "border-blue-600",
+  },
+  sun: {
+    bg: "bg-orange-400/20",
+    text: "text-orange-300",
+    border: "border-orange-400",
+  },
+  moon: {
+    bg: "bg-purple-500/20",
+    text: "text-purple-400",
+    border: "border-purple-500",
+  },
+  "ultra-sun": {
+    bg: "bg-orange-500/20",
+    text: "text-orange-400",
+    border: "border-orange-500",
+  },
+  "ultra-moon": {
+    bg: "bg-purple-600/20",
+    text: "text-purple-400",
+    border: "border-purple-600",
+  },
+  "lets-go-pikachu": {
+    bg: "bg-yellow-400/20",
+    text: "text-yellow-300",
+    border: "border-yellow-400",
+  },
+  "lets-go-eevee": {
+    bg: "bg-amber-600/20",
+    text: "text-amber-400",
+    border: "border-amber-600",
+  },
+  sword: {
+    bg: "bg-cyan-500/20",
+    text: "text-cyan-400",
+    border: "border-cyan-500",
+  },
+  shield: {
+    bg: "bg-rose-500/20",
+    text: "text-rose-400",
+    border: "border-rose-500",
+  },
+  "brilliant-diamond": {
+    bg: "bg-sky-400/20",
+    text: "text-sky-300",
+    border: "border-sky-400",
+  },
+  "shining-pearl": {
+    bg: "bg-pink-400/20",
+    text: "text-pink-300",
+    border: "border-pink-400",
+  },
+  "legends-arceus": {
+    bg: "bg-indigo-500/20",
+    text: "text-indigo-400",
+    border: "border-indigo-500",
+  },
+  scarlet: {
+    bg: "bg-red-600/20",
+    text: "text-red-400",
+    border: "border-red-600",
+  },
+  violet: {
+    bg: "bg-violet-600/20",
+    text: "text-violet-400",
+    border: "border-violet-600",
+  },
+};
+
+const getVersionColors = (version: string) =>
+  VERSION_COLORS[version] || {
+    bg: "bg-muted",
+    text: "text-muted-foreground",
+    border: "border-muted",
+  };
+
+// Group entries with identical flavor text
+type GroupedEntry = {
+  versions: string[];
+  flavorText: string;
+};
+
+function groupEntriesByText(
+  entries: { version: string; flavorText: string }[],
+): GroupedEntry[] {
+  const groups: GroupedEntry[] = [];
+  for (const entry of entries) {
+    const existing = groups.find((g) => g.flavorText === entry.flavorText);
+    if (existing) {
+      existing.versions.push(entry.version);
+    } else {
+      groups.push({ versions: [entry.version], flavorText: entry.flavorText });
+    }
+  }
+  return groups;
+}
+
+const MOVES_SKELETON_GROUP_KEYS = Array.from(
+  { length: 3 },
+  (_, i) => `moves-skel-group-${i}`,
+);
+const MOVES_SKELETON_ROW_KEYS = Array.from(
+  { length: 4 },
+  (_, i) => `moves-skel-row-${i}`,
+);
+const EVOLUTION_SKELETON_KEYS = Array.from(
+  { length: 3 },
+  (_, i) => `evo-skel-${i}`,
+);
+const WEAKNESS_SKELETON_KEYS = Array.from(
+  { length: 4 },
+  (_, i) => `weak-skel-${i}`,
+);
+const RESISTANCE_SKELETON_KEYS = Array.from(
+  { length: 3 },
+  (_, i) => `resist-skel-${i}`,
+);
+const STAT_SKELETON_KEYS = Array.from(
+  { length: 6 },
+  (_, i) => `stat-skel-${i}`,
+);
+
+interface PokemonPageClientProps {
+  id: string;
+  pokedexEntry: PokedexEntry | null;
+}
+
+export function PokemonPageClient({
+  id,
+  pokedexEntry,
+}: PokemonPageClientProps) {
+  const router = useRouter();
+  const { preferredGeneration } = useGenerationPreference();
+
+  // Generations whose games this Pokemon actually appears in. A preference for
+  // a generation it missed (Kakuna in Gen IX, say) falls back to latest data.
+  const availableGenerations = useMemo(() => getSpeciesGenerations(id), [id]);
+  const activeGeneration =
+    preferredGeneration !== null &&
+    availableGenerations.includes(preferredGeneration)
+      ? preferredGeneration
+      : null;
+  const missingFromPreferredGeneration =
+    preferredGeneration !== null && activeGeneration === null;
+
+  const { pokemon, species, isLoading, error } = usePokemonWithSpecies(
+    id,
+    activeGeneration,
+  );
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const { isInComparison, toggleComparison, expandPanel } = useComparison();
+  const setSecondaryToolbar = useSecondaryToolbar();
+  const { defaultPokemonSpriteGen, speciesCutoffGeneration } =
+    useSpritePreferences();
+  const { data: moves, isLoading: movesLoading } = usePokemonMoves(
+    id,
+    activeGeneration,
+  );
+  const { data: evolutionChain, isLoading: evolutionLoading } =
+    useEvolutionChain(species?.evolutionChainUrl ?? null, activeGeneration);
+  const { data: encounters, isLoading: encountersLoading } =
+    usePokemonEncounters(pokemon?.id ?? null);
+
+  const [spriteGenOverride, setSpriteGenOverride] = useState<
+    "default" | SpriteSetId
+  >("default");
+  const [spriteShiny, setSpriteShiny] = useState(false);
+  const [spriteBack, setSpriteBack] = useState(false);
+  const [spriteFemale, setSpriteFemale] = useState(false);
+
+  const effectiveSpriteSetId =
+    spriteGenOverride === "default"
+      ? defaultPokemonSpriteGen
+      : spriteGenOverride;
+  // Not every sprite sheet has shiny/back/female variants (Gen 1 has no shiny
+  // at all), so the toggles follow what the selected set actually offers.
+  const activeSpriteSet = getSpriteSet(effectiveSpriteSetId);
+
+  // Base species only, ordered by National Dex number, each with a unique
+  // routable slug. Forms/formes share their base species' dex number, so
+  // prev/next/random navigate between base species rather than individual
+  // forms. Scoped to the generation being viewed, so prev/next walk that
+  // generation's dex.
+  const dexOrder = useMemo(
+    () =>
+      getDexPokemonList(activeGeneration, {
+        forms: "none",
+        speciesCutoffGeneration,
+      }),
+    [activeGeneration, speciesCutoffGeneration],
+  );
+  const dexIndex = useMemo(() => {
+    if (!pokemon) return -1;
+    return dexOrder.findIndex((p) => p.id === pokemon.id);
+  }, [dexOrder, pokemon]);
+  const prevDexPokemon = dexIndex > 0 ? dexOrder[dexIndex - 1] : null;
+  const nextDexPokemon =
+    dexIndex >= 0 && dexIndex < dexOrder.length - 1
+      ? dexOrder[dexIndex + 1]
+      : null;
+
+  const handleRandomPokemon = useCallback(() => {
+    if (dexOrder.length === 0) return;
+    const randomPokemon = dexOrder[Math.floor(Math.random() * dexOrder.length)];
+    router.push(`/pokemon/${randomPokemon.slug}`);
+  }, [router, dexOrder]);
+
+  const typeEffectiveness = useMemo(() => {
+    if (!pokemon) return null;
+    return calculateTypeEffectiveness(
+      pokemon.types,
+      activeGeneration ?? LATEST_GEN,
+    );
+  }, [pokemon, activeGeneration]);
+
+  const secondaryToolbarContent = useMemo(() => {
+    if (!pokemon) return null;
+
+    return (
+      <>
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          {prevDexPokemon ? (
+            <Button
+              asChild
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 gap-1.5 text-muted-foreground hover:text-foreground"
+              title="Previous Pokemon"
+            >
+              <Link href={`/pokemon/${prevDexPokemon.slug}`}>
+                <ChevronLeft className="size-4" />
+                <span className="hidden sm:inline text-xs">prev</span>
+              </Link>
+            </Button>
+          ) : (
+            <div className="size-7" />
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <GenerationPicker
+            availableGenerations={availableGenerations}
+            size="compact"
+          />
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2 gap-1.5 text-muted-foreground hover:text-foreground"
+                title="Sprite settings"
+              >
+                <Sparkles className="size-4" />
+                <span className="hidden sm:inline text-xs">sprite</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              align="end"
+              className="w-[min(20rem,calc(100vw-1.5rem))] p-3"
+            >
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                    sprite
+                  </span>
+                  <SpriteSetSelect
+                    value={spriteGenOverride}
+                    onValueChange={(v) =>
+                      setSpriteGenOverride(v as "default" | SpriteSetId)
+                    }
+                    extraOption={{ value: "default", label: "Default" }}
+                    className="h-8 w-44"
+                  />
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="flex items-center justify-between gap-2 rounded border px-2 py-1.5">
+                    <span className="text-xs">Shiny</span>
+                    <Switch
+                      aria-label="Toggle shiny sprite"
+                      disabled={!activeSpriteSet.shiny}
+                      checked={spriteShiny && activeSpriteSet.shiny}
+                      onCheckedChange={setSpriteShiny}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-2 rounded border px-2 py-1.5">
+                    <span className="text-xs">Back</span>
+                    <Switch
+                      aria-label="Toggle back sprite"
+                      disabled={!activeSpriteSet.back}
+                      checked={spriteBack && activeSpriteSet.back}
+                      onCheckedChange={setSpriteBack}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-2 rounded border px-2 py-1.5">
+                    <span className="text-xs">Female</span>
+                    <Switch
+                      aria-label="Toggle female sprite"
+                      disabled={!activeSpriteSet.female}
+                      checked={spriteFemale && activeSpriteSet.female}
+                      onCheckedChange={setSpriteFemale}
+                    />
+                  </div>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          <Button
+            type="button"
+            onClick={handleRandomPokemon}
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2 gap-1.5 text-muted-foreground hover:text-foreground"
+            title="Random Pokemon"
+          >
+            <Dices className="size-4" />
+            <span className="hidden sm:inline text-xs">random</span>
+          </Button>
+
+          <Button
+            type="button"
+            onClick={() => {
+              const wasInComparison = isInComparison(pokemon.name);
+              toggleComparison(pokemon.name);
+              if (!wasInComparison) {
+                toast.success(`${pokemon.name} added to comparison`, {
+                  action: {
+                    label: "View",
+                    onClick: () => expandPanel(),
+                  },
+                });
+              }
+            }}
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "h-8 px-2 gap-1.5 transition-colors",
+              isInComparison(pokemon.name)
+                ? "text-blue-500 hover:text-blue-500"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+            title={
+              isInComparison(pokemon.name)
+                ? "Remove from comparison"
+                : "Add to comparison"
+            }
+          >
+            <CompareIcon className="size-4" />
+            <span className="hidden sm:inline text-xs">
+              {isInComparison(pokemon.name) ? "compared" : "compare"}
+            </span>
+          </Button>
+
+          <Button
+            type="button"
+            onClick={() => toggleFavorite(pokemon.id)}
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "h-8 px-2 gap-1.5 transition-colors",
+              isFavorite(pokemon.id)
+                ? "text-rose-500 hover:text-rose-500"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+            title={
+              isFavorite(pokemon.id)
+                ? "Remove from favorites"
+                : "Add to favorites"
+            }
+          >
+            <Heart
+              className={cn("size-4", isFavorite(pokemon.id) && "fill-current")}
+            />
+            <span className="hidden sm:inline text-xs">
+              {isFavorite(pokemon.id) ? "favorited" : "favorite"}
+            </span>
+          </Button>
+
+          <AddToListDialog
+            itemType="pokemon"
+            itemId={pokemon.id.toString()}
+            itemName={pokemon.name}
+            itemSprite={pokemon.sprite}
+            trigger={
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2 gap-1.5 text-muted-foreground hover:text-foreground"
+                title="Add to list"
+              >
+                <ListPlus className="size-4" />
+                <span className="hidden sm:inline text-xs">list</span>
+              </Button>
+            }
+          />
+          {nextDexPokemon ? (
+            <Button
+              asChild
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 gap-1.5 text-muted-foreground hover:text-foreground"
+              title="Next Pokemon"
+            >
+              <Link href={`/pokemon/${nextDexPokemon.slug}`}>
+                <span className="hidden sm:inline text-xs">next</span>
+                <ChevronRight className="size-4" />
+              </Link>
+            </Button>
+          ) : (
+            <div className="size-7" />
+          )}
+        </div>
+      </>
+    );
+  }, [
+    pokemon,
+    prevDexPokemon,
+    nextDexPokemon,
+    availableGenerations,
+    expandPanel,
+    handleRandomPokemon,
+    isFavorite,
+    isInComparison,
+    activeSpriteSet,
+    spriteBack,
+    spriteFemale,
+    spriteGenOverride,
+    spriteShiny,
+    toggleComparison,
+    toggleFavorite,
+  ]);
+
+  useEffect(() => {
+    if (secondaryToolbarContent) {
+      setSecondaryToolbar({ content: secondaryToolbarContent });
+    } else {
+      setSecondaryToolbar(null);
+    }
+
+    return () => setSecondaryToolbar(null);
+  }, [secondaryToolbarContent, setSecondaryToolbar]);
+
+  // Resolved before the early returns below, because the backdrop that reads
+  // its colours is a hook and a hook cannot be called after one. Which sprite
+  // is on screen is the whole question: flip to shiny and the page follows.
+  const currentHeroSprite = pokemon
+    ? pokemonSprite(pokemon.name, {
+        set: effectiveSpriteSetId,
+        shiny: spriteShiny,
+        female: spriteFemale,
+        side: spriteBack ? "back" : "front",
+      }) || pokemon.sprite
+    : null;
+
+  const ambientPalette = useAmbientPalette(
+    currentHeroSprite,
+    (pokemon?.types ?? []).map((type) => TYPE_COLORS[type]),
+  );
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] p-6 text-center">
+        <h2 className="text-lg font-medium mb-2">pokemon not found</h2>
+        <p className="text-sm text-muted-foreground mb-6">
+          Could not load data for &ldquo;{id}&rdquo;.
+        </p>
+        <div className="flex gap-3">
+          <Button variant="outline" size="sm" onClick={handleRandomPokemon}>
+            try a random pokemon
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/">back to pokedex</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading || !pokemon) {
+    return <PokemonPageSkeleton />;
+  }
+
+  const statTotal = pokemon.stats.reduce((sum, s) => sum + s.value, 0);
+  const currentSlug = toID(pokemon.name);
+
+  return (
+    <div className="relative isolate p-4 md:p-6">
+      {/* Hung on the page rather than on the sprite. The colour is the
+          sprite's, but it belongs to the top of the page the way an album's
+          colour does — full width, from the very top, spent before the moves
+          table. Pinned to the padding box, so it starts above the sprite
+          rather than level with it. */}
+      <AmbientBackdrop palette={ambientPalette} className="-z-10" />
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8">
+        {/* Summary rail (pinned on desktop) */}
+        <div className={SUMMARY_RAIL_CLASSES}>
+          {/* Core Header */}
+          <section className="space-y-4">
+            {/* Hero */}
+            <div className="flex flex-col items-center gap-3">
+              <PokemonImage
+                src={currentHeroSprite ?? pokemon.sprite}
+                alt={pokemon.name}
+                pokemonId={pokemon.id}
+                width={192}
+                height={192}
+                className="size-32 md:size-40 xl:size-44 2xl:size-48 mx-auto"
+                priority
+              />
+
+              <div className="text-center space-y-2">
+                <h1 className="text-xl font-medium">
+                  {getBaseName(pokemon.name)}
+                </h1>
+                <div className="flex justify-center gap-2 flex-wrap">
+                  {pokemon.types.map((type) => (
+                    <TypeBadge key={type} type={type} size="default" linkable />
+                  ))}
+                  <VariantOrRegionBadge
+                    name={pokemon.name}
+                    dexNumber={pokemon.id}
+                  />
+                </div>
+              </div>
+
+              <GenerationScope
+                activeGeneration={activeGeneration}
+                unavailableGeneration={
+                  missingFromPreferredGeneration ? preferredGeneration : null
+                }
+                subject={getBaseName(pokemon.name)}
+              />
+            </div>
+
+            {/* Pokedex Entries */}
+            {pokedexEntry?.entries && pokedexEntry.entries.length > 0 && (
+              <PokedexEntriesSection
+                entries={pokedexEntry.entries}
+                activeGeneration={activeGeneration}
+              />
+            )}
+          </section>
+
+          {/* Type Effectiveness */}
+          {typeEffectiveness && (
+            <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>weaknesses</Label>
+                <div className="flex flex-wrap gap-1">
+                  {typeEffectiveness.weaknesses.map(({ type, multiplier }) => (
+                    <TypeBadge
+                      key={type}
+                      type={type}
+                      multiplier={multiplier}
+                      size="sm"
+                      linkable
+                    />
+                  ))}
+                  {typeEffectiveness.weaknesses.length === 0 && (
+                    <span className="text-xs text-muted-foreground">None</span>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>resistances</Label>
+                <div className="flex flex-wrap gap-1">
+                  {typeEffectiveness.resistances.map(({ type, multiplier }) => (
+                    <TypeBadge
+                      key={type}
+                      type={type}
+                      multiplier={multiplier}
+                      size="sm"
+                      linkable
+                    />
+                  ))}
+                  {typeEffectiveness.immunities.map((type) => (
+                    <TypeBadge
+                      key={type}
+                      type={type}
+                      multiplier={0}
+                      size="sm"
+                      linkable
+                    />
+                  ))}
+                  {typeEffectiveness.resistances.length === 0 &&
+                    typeEffectiveness.immunities.length === 0 && (
+                      <span className="text-xs text-muted-foreground">
+                        None
+                      </span>
+                    )}
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Abilities */}
+          <AbilitiesSection
+            pokemon={pokemon}
+            activeGeneration={activeGeneration}
+          />
+
+          {/* Stats */}
+          <section className="space-y-3">
+            <Label>base stats</Label>
+            <div className="space-y-2">
+              {pokemon.stats.map((stat) => (
+                <StatBar key={stat.name} stat={stat} />
+              ))}
+            </div>
+            <div className="flex justify-between text-xs pt-1 border-t">
+              <span className="text-muted-foreground">Total</span>
+              <span className="tabular-nums font-medium">{statTotal}</span>
+            </div>
+          </section>
+
+          {/* Evolution */}
+          <EvolutionSection
+            chain={evolutionChain}
+            isLoading={evolutionLoading}
+            currentSlug={currentSlug}
+            generation={activeGeneration}
+          />
+
+          <DetailsSection
+            pokemon={pokemon}
+            species={species}
+            activeGeneration={activeGeneration}
+          />
+        </div>
+
+        {/* Main content column */}
+        <div className="space-y-6 md:col-span-7 lg:col-span-7 xl:col-span-7 2xl:col-span-8">
+          {/* Moves */}
+          <MovesSection
+            moves={moves}
+            isLoading={movesLoading}
+            activeGeneration={activeGeneration}
+          />
+
+          {/* Locations */}
+          <LocationsSection
+            encounters={encounters}
+            isLoading={encountersLoading}
+            activeGeneration={activeGeneration}
+          />
+
+          {/* Trading cards */}
+          <PokemonCardsSection
+            dexId={pokemon.id}
+            pokemonName={getBaseName(pokemon.name)}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Components
+// ============================================================================
+
+function Label({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="text-[10px] text-muted-foreground uppercase tracking-wider block">
+      {children}
+    </span>
+  );
+}
+
+function PokedexEntriesSection({
+  entries,
+  activeGeneration,
+}: {
+  entries: { version: string; flavorText: string }[];
+  activeGeneration: number | null;
+}) {
+  const { preferredGameVersion, setPreferredGameVersion, isLoaded } =
+    usePokedexPreference();
+  const [showAllVersions, setShowAllVersions] = useState(false);
+
+  // Group entries with identical flavor text, keeping only the games of the
+  // generation being viewed when one is selected.
+  const groupedEntries = useMemo(() => {
+    const scoped =
+      activeGeneration === null
+        ? entries
+        : entries.filter(
+            (e) => getVersionGeneration(e.version) === activeGeneration,
+          );
+    return groupEntriesByText(scoped.length > 0 ? scoped : entries);
+  }, [entries, activeGeneration]);
+
+  // Find the group to display - prefer user's selection, fall back to most recent
+  const selectedGroup = useMemo(() => {
+    if (preferredGameVersion) {
+      const preferred = groupedEntries.find((g) =>
+        g.versions.includes(preferredGameVersion),
+      );
+      if (preferred) return preferred;
+    }
+    // Fall back to most recent (last group)
+    return groupedEntries[groupedEntries.length - 1];
+  }, [groupedEntries, preferredGameVersion]);
+
+  const currentIndex = groupedEntries.findIndex(
+    (g) => g.flavorText === selectedGroup.flavorText,
+  );
+
+  const cycleVersion = (direction: "prev" | "next") => {
+    const newIndex =
+      direction === "next"
+        ? (currentIndex + 1) % groupedEntries.length
+        : (currentIndex - 1 + groupedEntries.length) % groupedEntries.length;
+    // Select the first version in the new group
+    setPreferredGameVersion(groupedEntries[newIndex].versions[0]);
+  };
+
+  // Don't render until preferences are loaded to avoid hydration mismatch
+  if (!isLoaded) {
+    return (
+      <div className="space-y-2">
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-6 w-48 mx-auto" />
+      </div>
+    );
+  }
+
+  // Format display name for a group (multiple versions)
+  const formatGroupName = (versions: string[]) => {
+    if (versions.length === 1) {
+      return getVersionDisplayName(versions[0]);
+    }
+    if (versions.length === 2) {
+      return `${getVersionDisplayName(versions[0])} / ${getVersionDisplayName(versions[1])}`;
+    }
+    return `${getVersionDisplayName(versions[0])} +${versions.length - 1}`;
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* Current entry with cycle controls */}
+      <div className="flex items-start gap-2">
+        {groupedEntries.length > 1 && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-6 w-6 p-0 shrink-0 text-muted-foreground hover:text-foreground"
+            onClick={() => cycleVersion("prev")}
+            title="Previous entry"
+          >
+            <ChevronLeft className="size-3" />
+          </Button>
+        )}
+        <p className="flex-1 text-xs md:text-sm text-muted-foreground italic text-center leading-snug md:leading-relaxed">
+          "{selectedGroup.flavorText}"
+        </p>
+        {groupedEntries.length > 1 && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-6 w-6 p-0 shrink-0 text-muted-foreground hover:text-foreground"
+            onClick={() => cycleVersion("next")}
+            title="Next entry"
+          >
+            <ChevronRight className="size-3" />
+          </Button>
+        )}
+      </div>
+
+      {/* Version selector chips */}
+      {groupedEntries.length > 1 && (
+        <div className="space-y-2">
+          {/* Current selection badge */}
+          <button
+            type="button"
+            onClick={() => setShowAllVersions(!showAllVersions)}
+            className="flex items-center justify-center gap-1.5 mx-auto text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <BookOpen className="size-3" />
+            <span className="font-medium">
+              {formatGroupName(selectedGroup.versions)}
+            </span>
+            <span className="text-[10px]">
+              ({currentIndex + 1}/{groupedEntries.length})
+            </span>
+            <ChevronRight
+              className={cn(
+                "size-3 transition-transform",
+                showAllVersions && "rotate-90",
+              )}
+            />
+          </button>
+
+          {/* All version chips - show individual games with colors */}
+          {showAllVersions && (
+            <div className="flex flex-wrap justify-center gap-1.5 pt-1">
+              {entries.map((entry) => {
+                const isSelected = selectedGroup.versions.includes(
+                  entry.version,
+                );
+                const colors = getVersionColors(entry.version);
+                return (
+                  <button
+                    key={entry.version}
+                    type="button"
+                    onClick={() => setPreferredGameVersion(entry.version)}
+                    className={cn(
+                      "px-2 py-0.5 text-[10px] rounded-full border transition-colors",
+                      colors.text,
+                      colors.border,
+                      isSelected
+                        ? colors.bg
+                        : "bg-transparent opacity-60 hover:opacity-100",
+                    )}
+                  >
+                    {getVersionDisplayName(entry.version)}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AbilitiesSection({
+  pokemon,
+  activeGeneration,
+}: {
+  pokemon: Pokemon;
+  activeGeneration: number | null;
+}) {
+  if (
+    activeGeneration !== null &&
+    activeGeneration < FIRST_ABILITY_GEN &&
+    pokemon.abilities.length === 0
+  ) {
+    return (
+      <section className="space-y-2">
+        <Label>abilities</Label>
+        <p className="text-xs text-muted-foreground">
+          Abilities were introduced in {getGenerationName(FIRST_ABILITY_GEN)}.
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="space-y-2">
+      <Label>abilities</Label>
+      <div className="flex flex-wrap gap-2">
+        {pokemon.abilities.map((ability) => {
+          const slug = toID(ability.name);
+          return (
+            <Link
+              key={ability.name}
+              href={`/abilities/${slug}`}
+              className={cn(
+                "text-xs px-2 py-1 border rounded hover:bg-muted/50 transition-colors cursor-pointer",
+                ability.isHidden && "text-muted-foreground border-dashed",
+              )}
+            >
+              {ability.name}
+              {ability.isHidden && " (hidden)"}
+            </Link>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+// ============================================================================
+// Moves Section
+// ============================================================================
+
+function MovesSection({
+  moves,
+  isLoading,
+  activeGeneration,
+}: {
+  moves?: PokemonMove[];
+  isLoading: boolean;
+  activeGeneration: number | null;
+}) {
+  const heading =
+    activeGeneration === null
+      ? "moves"
+      : `moves — ${getGenerationName(activeGeneration)} (${getGenerationGames(activeGeneration)})`;
+
+  if (isLoading) {
+    return (
+      <section className="space-y-4">
+        <Label>{heading}</Label>
+        {MOVES_SKELETON_GROUP_KEYS.map((groupKey) => (
+          <div key={groupKey} className="space-y-2">
+            <Skeleton className="h-4 w-20" />
+            {MOVES_SKELETON_ROW_KEYS.map((rowKey) => (
+              <Skeleton key={`${groupKey}-${rowKey}`} className="h-6 w-full" />
+            ))}
+          </div>
+        ))}
+      </section>
+    );
+  }
+
+  if (!moves || moves.length === 0) {
+    return (
+      <section className="space-y-3">
+        <Label>{heading}</Label>
+        <p className="text-sm text-muted-foreground">No moves found.</p>
+      </section>
+    );
+  }
+
+  const byName = (a: PokemonMove, b: PokemonMove) =>
+    a.name.localeCompare(b.name);
+  const withMethod = (method: PokemonMove["learnMethod"]) =>
+    moves.filter((m) => m.learnMethod === method);
+
+  const levelUpMoves = withMethod("level-up").sort(
+    (a, b) => a.levelLearnedAt - b.levelLearnedAt || byName(a, b),
+  );
+  const tmMoves = withMethod("machine").sort(byName);
+  const eggMoves = withMethod("egg").sort(byName);
+  const tutorMoves = withMethod("tutor").sort(byName);
+  const otherMoves = [...withMethod("event"), ...withMethod("other")].sort(
+    byName,
+  );
+
+  return (
+    <section className="space-y-4">
+      <Label>{heading}</Label>
+      <div className="space-y-6">
+        {levelUpMoves.length > 0 && (
+          <MoveGroup
+            title="Level Up"
+            moves={levelUpMoves}
+            showLevel
+            generation={activeGeneration}
+          />
+        )}
+        {tmMoves.length > 0 && (
+          <MoveGroup
+            title="TM / HM"
+            moves={tmMoves}
+            generation={activeGeneration}
+          />
+        )}
+        {eggMoves.length > 0 && (
+          <MoveGroup
+            title="Egg Moves"
+            moves={eggMoves}
+            generation={activeGeneration}
+          />
+        )}
+        {tutorMoves.length > 0 && (
+          <MoveGroup
+            title="Move Tutor"
+            moves={tutorMoves}
+            generation={activeGeneration}
+          />
+        )}
+        {otherMoves.length > 0 && (
+          <MoveGroup
+            title="Event & Other"
+            moves={otherMoves}
+            generation={activeGeneration}
+          />
+        )}
+      </div>
+    </section>
+  );
+}
+
+function MoveGroup({
+  title,
+  moves,
+  showLevel = false,
+  generation,
+}: {
+  title: string;
+  moves: PokemonMove[];
+  showLevel?: boolean;
+  generation: number | null;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label>{title}</Label>
+      <div className="space-y-1">
+        {moves.map((move, idx) => {
+          const slug = toID(move.name);
+          return (
+            <Tooltip key={`${move.name}-${idx}`}>
+              <TooltipTrigger asChild>
+                <Link
+                  href={`/moves/${slug}`}
+                  className="flex items-center gap-2 text-xs py-1 border-b border-muted last:border-0 w-full text-left hover:bg-muted/50 transition-colors cursor-pointer"
+                >
+                  {showLevel && (
+                    <span className="w-10 shrink-0 text-muted-foreground tabular-nums whitespace-nowrap">
+                      {move.levelLearnedAt > 0
+                        ? `Lv.${move.levelLearnedAt}`
+                        : "—"}
+                    </span>
+                  )}
+                  <span className="flex-1 font-medium">{move.name}</span>
+                  <TypeBadge type={move.type} size="sm" />
+                  <span className="w-16 shrink-0 text-right tabular-nums text-muted-foreground whitespace-nowrap">
+                    {move.power ? `${move.power} pwr` : move.damageClass}
+                  </span>
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="w-fit max-w-none p-0">
+                <MoveTooltipContent move={move} generation={generation} />
+              </TooltipContent>
+            </Tooltip>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function MoveTooltipContent({
+  move,
+  generation,
+}: {
+  move: PokemonMove;
+  generation: number | null;
+}) {
+  const typeMatchups = useMemo(
+    () => getOffensiveTypeMatchups(move.type, generation ?? LATEST_GEN),
+    [move.type, generation],
+  );
+
+  const formatTarget = (target: string) => {
+    const targetMap: Record<string, string> = {
+      normal: "One target",
+      self: "User",
+      allAdjacent: "All adjacent",
+      allAdjacentFoes: "All adjacent foes",
+      allySide: "Ally side",
+      foeSide: "Foe side",
+      all: "All Pokémon",
+      any: "Any target",
+      allies: "User & allies",
+      allyTeam: "User's team",
+      scripted: "Varies",
+      randomNormal: "Random foe",
+    };
+    return targetMap[target] || target;
+  };
+
+  return (
+    <div className="space-y-2 p-3">
+      {/* Header */}
+      <div className="flex items-center gap-2">
+        <span className="font-medium">{move.name}</span>
+        <TypeBadge type={move.type} size="sm" />
+      </div>
+
+      {/* Description */}
+      {move.description && (
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          {move.description}
+        </p>
+      )}
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-3 gap-2 text-xs">
+        <div className="space-y-0.5">
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wider block">
+            Power
+          </span>
+          <span className="font-medium tabular-nums">{move.power ?? "—"}</span>
+        </div>
+        <div className="space-y-0.5">
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wider block">
+            Accuracy
+          </span>
+          <span className="font-medium tabular-nums">
+            {move.accuracy ? `${move.accuracy}%` : "—"}
+          </span>
+        </div>
+        <div className="space-y-0.5">
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wider block">
+            PP
+          </span>
+          <span className="font-medium tabular-nums">{move.pp}</span>
+        </div>
+        <div className="space-y-0.5">
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wider block">
+            Category
+          </span>
+          <span className="font-medium">{move.damageClass}</span>
+        </div>
+        <div className="space-y-0.5">
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wider block">
+            Priority
+          </span>
+          <span className="font-medium tabular-nums">
+            {move.priority > 0 ? `+${move.priority}` : move.priority}
+          </span>
+        </div>
+        <div className="space-y-0.5">
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wider block">
+            Target
+          </span>
+          <span className="font-medium">{formatTarget(move.target)}</span>
+        </div>
+      </div>
+
+      {/* Type Effectiveness - only for damaging moves */}
+      {move.damageClass !== "Status" && (
+        <div className="space-y-1 pt-1 border-t border-muted">
+          {typeMatchups.superEffective.length > 0 && (
+            <div className="flex flex-wrap sm:flex-nowrap gap-1">
+              {typeMatchups.superEffective.map((t) => (
+                <TypeBadge
+                  key={t}
+                  type={t as PokemonMove["type"]}
+                  size="sm"
+                  multiplier={2}
+                />
+              ))}
+            </div>
+          )}
+          {typeMatchups.notVeryEffective.length > 0 && (
+            <div className="flex flex-wrap sm:flex-nowrap gap-1">
+              {typeMatchups.notVeryEffective.map((t) => (
+                <TypeBadge
+                  key={t}
+                  type={t as PokemonMove["type"]}
+                  size="sm"
+                  multiplier={0.5}
+                />
+              ))}
+            </div>
+          )}
+          {typeMatchups.noEffect.length > 0 && (
+            <div className="flex flex-wrap sm:flex-nowrap gap-1">
+              {typeMatchups.noEffect.map((t) => (
+                <TypeBadge
+                  key={t}
+                  type={t as PokemonMove["type"]}
+                  size="sm"
+                  multiplier={0}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// Locations Section
+// ============================================================================
+
+const LOCATIONS_SKELETON_KEYS = Array.from(
+  { length: 4 },
+  (_, i) => `loc-skel-${i}`,
+);
+
+// Order for sorting versions (chronologically)
+const VERSION_ORDER = [
+  "red",
+  "blue",
+  "yellow",
+  "gold",
+  "silver",
+  "crystal",
+  "ruby",
+  "sapphire",
+  "emerald",
+  "firered",
+  "leafgreen",
+  "diamond",
+  "pearl",
+  "platinum",
+  "heartgold",
+  "soulsilver",
+  "black",
+  "white",
+  "black-2",
+  "white-2",
+  "x",
+  "y",
+  "omega-ruby",
+  "alpha-sapphire",
+  "sun",
+  "moon",
+  "ultra-sun",
+  "ultra-moon",
+  "lets-go-pikachu",
+  "lets-go-eevee",
+  "sword",
+  "shield",
+  "brilliant-diamond",
+  "shining-pearl",
+  "legends-arceus",
+  "scarlet",
+  "violet",
+];
+
+// Display names for game versions
+const VERSION_DISPLAY: Record<string, string> = {
+  red: "Red",
+  blue: "Blue",
+  yellow: "Yellow",
+  gold: "Gold",
+  silver: "Silver",
+  crystal: "Crystal",
+  ruby: "Ruby",
+  sapphire: "Sapphire",
+  emerald: "Emerald",
+  firered: "FireRed",
+  leafgreen: "LeafGreen",
+  diamond: "Diamond",
+  pearl: "Pearl",
+  platinum: "Platinum",
+  heartgold: "HeartGold",
+  soulsilver: "SoulSilver",
+  black: "Black",
+  white: "White",
+  "black-2": "Black 2",
+  "white-2": "White 2",
+  x: "X",
+  y: "Y",
+  "omega-ruby": "Omega Ruby",
+  "alpha-sapphire": "Alpha Sapphire",
+  sun: "Sun",
+  moon: "Moon",
+  "ultra-sun": "Ultra Sun",
+  "ultra-moon": "Ultra Moon",
+  "lets-go-pikachu": "Let's Go Pikachu",
+  "lets-go-eevee": "Let's Go Eevee",
+  sword: "Sword",
+  shield: "Shield",
+  "brilliant-diamond": "Brilliant Diamond",
+  "shining-pearl": "Shining Pearl",
+  "legends-arceus": "Legends: Arceus",
+  scarlet: "Scarlet",
+  violet: "Violet",
+};
+
+// Group versions by generation for better organization
+const VERSION_GENERATIONS: Record<string, number> = {
+  red: 1,
+  blue: 1,
+  yellow: 1,
+  gold: 2,
+  silver: 2,
+  crystal: 2,
+  ruby: 3,
+  sapphire: 3,
+  emerald: 3,
+  firered: 3,
+  leafgreen: 3,
+  diamond: 4,
+  pearl: 4,
+  platinum: 4,
+  heartgold: 4,
+  soulsilver: 4,
+  black: 5,
+  white: 5,
+  "black-2": 5,
+  "white-2": 5,
+  x: 6,
+  y: 6,
+  "omega-ruby": 6,
+  "alpha-sapphire": 6,
+  sun: 7,
+  moon: 7,
+  "ultra-sun": 7,
+  "ultra-moon": 7,
+  "lets-go-pikachu": 7,
+  "lets-go-eevee": 7,
+  sword: 8,
+  shield: 8,
+  "brilliant-diamond": 8,
+  "shining-pearl": 8,
+  "legends-arceus": 8,
+  scarlet: 9,
+  violet: 9,
+};
+
+/** Generation a game version belongs to, 0 when it isn't a main-series game. */
+const getVersionGeneration = (version: string) =>
+  VERSION_GENERATIONS[version] ?? 0;
+
+function LocationsSection({
+  encounters,
+  isLoading,
+  activeGeneration,
+}: {
+  encounters?: FormattedPokemonEncounter[];
+  isLoading: boolean;
+  activeGeneration: number | null;
+}) {
+  const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
+  const [showAllVersions, setShowAllVersions] = useState(false);
+
+  // Get all unique versions from encounters, organized by generation. While a
+  // generation is selected only its own games are offered.
+  const versionsByGen = useMemo(() => {
+    if (!encounters) return new Map<string, string[]>();
+    const versions = new Set<string>();
+    for (const enc of encounters) {
+      for (const v of enc.versions) {
+        if (
+          activeGeneration !== null &&
+          getVersionGeneration(v.name) !== activeGeneration
+        ) {
+          continue;
+        }
+        versions.add(v.name);
+      }
+    }
+    const sorted = Array.from(versions).sort((a, b) => {
+      const orderA = VERSION_ORDER.indexOf(a);
+      const orderB = VERSION_ORDER.indexOf(b);
+      return (orderA === -1 ? 999 : orderA) - (orderB === -1 ? 999 : orderB);
+    });
+
+    // Group by generation
+    const byGen = new Map<string, string[]>();
+    for (const v of sorted) {
+      const genNum = getVersionGeneration(v);
+      const gen = genNum > 0 ? getGenerationName(genNum) : "Other";
+      if (!byGen.has(gen)) byGen.set(gen, []);
+      byGen.get(gen)?.push(v);
+    }
+    return byGen;
+  }, [encounters, activeGeneration]);
+
+  const availableVersions = useMemo(() => {
+    return Array.from(versionsByGen.values()).flat();
+  }, [versionsByGen]);
+
+  // Filter encounters by selected version
+  const filteredEncounters = useMemo(() => {
+    if (!encounters) return [];
+    if (!selectedVersion) return encounters;
+    return encounters
+      .map((enc) => ({
+        ...enc,
+        versions: enc.versions.filter((v) => v.name === selectedVersion),
+      }))
+      .filter((enc) => enc.versions.length > 0);
+  }, [encounters, selectedVersion]);
+
+  // Get location count for the current selection
+  const locationCount = filteredEncounters.length;
+
+  // Default to the most recent version on offer, and re-pick when switching
+  // generation drops the current one.
+  useEffect(() => {
+    if (availableVersions.length === 0) return;
+    if (selectedVersion && availableVersions.includes(selectedVersion)) return;
+    setSelectedVersion(availableVersions[availableVersions.length - 1]);
+  }, [availableVersions, selectedVersion]);
+
+  if (isLoading) {
+    return (
+      <section className="space-y-4">
+        <Label>locations</Label>
+        {LOCATIONS_SKELETON_KEYS.map((key) => (
+          <Skeleton key={key} className="h-16 w-full" />
+        ))}
+      </section>
+    );
+  }
+
+  if (
+    !encounters ||
+    encounters.length === 0 ||
+    availableVersions.length === 0
+  ) {
+    return (
+      <section className="space-y-3">
+        <Label>locations</Label>
+        <p className="text-sm text-muted-foreground">
+          {activeGeneration === null
+            ? "No wild encounter data available for this Pokemon."
+            : `No wild encounter data for ${getGenerationName(activeGeneration)} (${getGenerationGames(activeGeneration)}).`}
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="space-y-4">
+      <div className="flex items-center justify-between">
+        <Label>locations ({locationCount})</Label>
+        {availableVersions.length > 1 && (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowAllVersions(!showAllVersions)}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {showAllVersions ? "Hide versions" : "Show all versions"}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Version selector - always visible when multiple versions */}
+      {availableVersions.length > 1 && (
+        <div className="space-y-3">
+          {/* Compact dropdown selector */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Game:</span>
+            <Select
+              value={selectedVersion ?? ""}
+              onValueChange={setSelectedVersion}
+            >
+              <SelectTrigger className="h-7 w-48 text-xs">
+                <SelectValue placeholder="Select version" />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from(versionsByGen.entries()).map(([gen, versions]) => (
+                  <div key={gen}>
+                    <div className="px-2 py-1.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                      {gen}
+                    </div>
+                    {versions.map((v) => {
+                      // Count locations for this version
+                      const versionLocationCount = encounters.filter((e) =>
+                        e.versions.some((ver) => ver.name === v),
+                      ).length;
+                      return (
+                        <SelectItem key={v} value={v} className="text-xs">
+                          {VERSION_DISPLAY[v] ?? v} ({versionLocationCount})
+                        </SelectItem>
+                      );
+                    })}
+                  </div>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Expanded version chips for quick switching */}
+          {showAllVersions && (
+            <div className="space-y-2 p-3 border rounded-lg bg-muted/30">
+              {Array.from(versionsByGen.entries()).map(([gen, versions]) => (
+                <div key={gen} className="space-y-1">
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                    {gen}
+                  </span>
+                  <div className="flex flex-wrap gap-1">
+                    {versions.map((v) => {
+                      const isSelected = selectedVersion === v;
+                      const versionColors = getVersionColors(v);
+                      const versionLocationCount = encounters.filter((e) =>
+                        e.versions.some((ver) => ver.name === v),
+                      ).length;
+                      return (
+                        <button
+                          key={v}
+                          type="button"
+                          onClick={() => setSelectedVersion(v)}
+                          className={cn(
+                            "px-2 py-0.5 text-[10px] rounded-full border transition-colors",
+                            versionColors.text,
+                            versionColors.border,
+                            isSelected
+                              ? versionColors.bg
+                              : "bg-transparent opacity-60 hover:opacity-100",
+                          )}
+                        >
+                          {VERSION_DISPLAY[v] ?? v} ({versionLocationCount})
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* No locations message for selected version */}
+      {filteredEncounters.length === 0 && selectedVersion && (
+        <p className="text-sm text-muted-foreground">
+          This Pokemon cannot be found in the wild in{" "}
+          {VERSION_DISPLAY[selectedVersion] ?? selectedVersion}.
+        </p>
+      )}
+
+      {/* Location list */}
+      <div className="space-y-2">
+        {filteredEncounters.map((enc) => (
+          <LocationEncounterCard
+            key={enc.locationAreaId}
+            encounter={enc}
+            selectedVersion={selectedVersion}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function LocationEncounterCard({
+  encounter,
+  selectedVersion,
+}: {
+  encounter: FormattedPokemonEncounter;
+  selectedVersion: string | null;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  // Get the version details for the selected version
+  const versionData = selectedVersion
+    ? encounter.versions.find((v) => v.name === selectedVersion)
+    : encounter.versions[0];
+
+  // Group details by method - must be called before any conditional returns
+  const methodGroups = useMemo(() => {
+    if (!versionData) return new Map();
+    const groups = new Map<
+      string,
+      {
+        minLevel: number;
+        maxLevel: number;
+        totalChance: number;
+        conditions: Set<string>;
+      }
+    >();
+    for (const detail of versionData.details) {
+      const existing = groups.get(detail.method);
+      if (existing) {
+        existing.minLevel = Math.min(existing.minLevel, detail.minLevel);
+        existing.maxLevel = Math.max(existing.maxLevel, detail.maxLevel);
+        existing.totalChance += detail.chance;
+        for (const c of detail.conditions) existing.conditions.add(c);
+      } else {
+        groups.set(detail.method, {
+          minLevel: detail.minLevel,
+          maxLevel: detail.maxLevel,
+          totalChance: detail.chance,
+          conditions: new Set(detail.conditions),
+        });
+      }
+    }
+    return groups;
+  }, [versionData]);
+
+  if (!versionData) return null;
+
+  // Calculate total encounter chance
+  const totalChance = versionData.maxChance;
+
+  return (
+    <div className="border rounded-lg overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between p-3 text-left hover:bg-muted/50 transition-colors"
+      >
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <h4 className="text-sm font-medium truncate">
+              {encounter.locationAreaName}
+            </h4>
+            <span className="text-xs text-muted-foreground tabular-nums shrink-0">
+              {totalChance}% total
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
+            {Array.from(methodGroups.entries()).map(([method, data]) => (
+              <span
+                key={method}
+                className="text-xs text-muted-foreground whitespace-nowrap"
+              >
+                {method}:{" "}
+                {data.minLevel === data.maxLevel
+                  ? `Lv.${data.minLevel}`
+                  : `Lv.${data.minLevel}-${data.maxLevel}`}
+              </span>
+            ))}
+          </div>
+        </div>
+        <ChevronRight
+          className={cn(
+            "size-4 text-muted-foreground shrink-0 transition-transform ml-2",
+            expanded && "rotate-90",
+          )}
+        />
+      </button>
+
+      {expanded && (
+        <div className="border-t px-3 py-2 bg-muted/30 space-y-2">
+          {versionData.details.map((detail, idx) => (
+            <div
+              key={`${detail.method}-${detail.minLevel}-${idx}`}
+              className="flex items-center justify-between text-xs gap-2"
+            >
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <span className="font-medium shrink-0">{detail.method}</span>
+                {detail.conditions.length > 0 && (
+                  <span className="text-muted-foreground truncate">
+                    ({detail.conditions.join(", ")})
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-3 text-muted-foreground shrink-0">
+                <span className="tabular-nums">
+                  {detail.minLevel === detail.maxLevel
+                    ? `Lv.${detail.minLevel}`
+                    : `Lv.${detail.minLevel}-${detail.maxLevel}`}
+                </span>
+                <span className="tabular-nums w-8 text-right">
+                  {detail.chance}%
+                </span>
+              </div>
+            </div>
+          ))}
+
+          {/* Show which other versions have this location */}
+          {encounter.versions.length > 1 && (
+            <div className="pt-2 mt-2 border-t border-muted">
+              <span className="text-[10px] text-muted-foreground">
+                Also in:{" "}
+                {encounter.versions
+                  .filter((v) => v.name !== selectedVersion)
+                  .map((v) => VERSION_DISPLAY[v.name] ?? v.name)
+                  .join(", ")}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// Evolution Section
+// ============================================================================
+
+function EvolutionSection({
+  chain,
+  isLoading,
+  currentSlug,
+  generation,
+}: {
+  chain?: EvolutionChainLink;
+  isLoading: boolean;
+  currentSlug: string;
+  generation: number | null;
+}) {
+  if (isLoading) {
+    return (
+      <section className="space-y-3">
+        <Label>evolution</Label>
+        <div className="flex justify-center gap-4">
+          {EVOLUTION_SKELETON_KEYS.map((key) => (
+            <Skeleton key={key} className="size-20" />
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  if (!chain) {
+    return (
+      <section className="space-y-3">
+        <Label>evolution</Label>
+        <p className="text-sm text-muted-foreground">
+          No evolution data found.
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="space-y-3">
+      <Label>evolution</Label>
+      <EvolutionChainDisplay
+        chain={chain}
+        currentSlug={currentSlug}
+        generation={generation}
+      />
+    </section>
+  );
+}
+
+function EvolutionChainDisplay({
+  chain,
+  currentSlug,
+  generation,
+}: {
+  chain: EvolutionChainLink;
+  currentSlug: string;
+  generation: number | null;
+}) {
+  if (chain.evolvesTo.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        This Pokémon does not evolve.
+      </p>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-2">
+      <EvolutionNode
+        pokemon={chain}
+        currentSlug={currentSlug}
+        generation={generation}
+        isFirst
+      />
+    </div>
+  );
+}
+
+function EvolutionNode({
+  pokemon,
+  currentSlug,
+  generation,
+  isFirst = false,
+}: {
+  pokemon: EvolutionChainLink;
+  currentSlug: string;
+  generation: number | null;
+  isFirst?: boolean;
+}) {
+  const hasBranching = pokemon.evolvesTo.length > 1;
+
+  // Get all variations for this Pokemon, limited to the forms that existed in
+  // the generation being viewed (the current Pokemon always stays listed).
+  const variations = useMemo(
+    () => getDexPokemonVariationsByDexNumber(generation, pokemon.id),
+    [pokemon.id, generation],
+  );
+
+  // Check if this node contains the current Pokemon (either base or a variation)
+  const currentVariation = variations.find((v) => v.slug === currentSlug);
+  const hasCurrentVariation = Boolean(currentVariation);
+
+  return (
+    <div className="flex items-center gap-2">
+      {/* Show evolution method arrow if this isn't the base form */}
+      {!isFirst && pokemon.evolutionDetails.length > 0 && (
+        <div className="text-muted-foreground text-xs flex flex-col items-center">
+          <span>→</span>
+          <div className="text-[10px] text-center max-w-20">
+            {pokemon.evolutionDetails.map((detail, i) => (
+              <div key={`${formatEvolutionMethod(detail)}-${i}`}>
+                {formatEvolutionMethod(detail)}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Pokemon card with variations */}
+      <div className="flex flex-col items-center gap-1">
+        {variations.length > 1 ? (
+          <EvolutionNodeVariations
+            variations={variations}
+            currentSlug={currentSlug}
+            pokemonId={pokemon.id}
+          />
+        ) : (
+          <EvolutionNodeCard
+            name={pokemon.name}
+            sprite={pokemon.sprite}
+            id={pokemon.id}
+            isCurrent={hasCurrentVariation}
+          />
+        )}
+      </div>
+
+      {/* Evolutions */}
+      {pokemon.evolvesTo.length > 0 && (
+        <div
+          className={cn(
+            "flex",
+            hasBranching ? "flex-col gap-2" : "items-center",
+          )}
+        >
+          {pokemon.evolvesTo.map((evo) => (
+            <EvolutionNode
+              key={`${evo.id}-${evo.name}`}
+              pokemon={evo}
+              currentSlug={currentSlug}
+              generation={generation}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EvolutionNodeCard({
+  name,
+  sprite,
+  id,
+  isCurrent,
+  isSmall = false,
+}: {
+  name: string;
+  sprite: string;
+  id: number;
+  isCurrent: boolean;
+  isSmall?: boolean;
+}) {
+  const href = `/pokemon/${toID(name)}`;
+
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "flex flex-col items-center gap-1 p-2 rounded hover:bg-muted transition-colors",
+        isCurrent && "bg-muted ring-1 ring-primary",
+      )}
+    >
+      <PokemonImage
+        src={sprite}
+        alt={name}
+        pokemonId={id}
+        width={96}
+        height={96}
+        className={
+          isSmall ? "size-10 md:size-12" : "size-16 md:size-20 lg:size-24"
+        }
+      />
+      <span className={cn("text-center", isSmall ? "text-[10px]" : "text-xs")}>
+        {name}
+      </span>
+      {!isSmall && (
+        <span className="text-[10px] text-muted-foreground">
+          #{id.toString().padStart(3, "0")}
+        </span>
+      )}
+    </Link>
+  );
+}
+
+function EvolutionNodeVariations({
+  variations,
+  currentSlug,
+  pokemonId,
+}: {
+  variations: ReturnType<typeof getDexPokemonVariationsByDexNumber>;
+  currentSlug: string;
+  pokemonId: number;
+}) {
+  const { defaultPokemonSpriteGen } = useSpritePreferences();
+
+  // Separate base form from other variations
+  const baseVariation = variations.find((v) => !v.isForm) ?? variations[0];
+  const otherVariations = variations.filter((v) => v !== baseVariation);
+
+  const baseSprite =
+    pokemonSprite(baseVariation.name, { set: defaultPokemonSpriteGen }) ?? "";
+  const isBaseCurrentSlug = baseVariation.slug === currentSlug;
+
+  return (
+    <div className="flex flex-col items-center gap-1">
+      {/* Base form - larger */}
+      <EvolutionNodeCard
+        name={baseVariation.name}
+        sprite={baseSprite}
+        id={pokemonId}
+        isCurrent={isBaseCurrentSlug}
+      />
+
+      {/* Other variations - smaller grid */}
+      {otherVariations.length > 0 && (
+        <div className="flex flex-wrap justify-center gap-0.5 max-w-32">
+          {otherVariations.map((v) => {
+            const sprite =
+              pokemonSprite(v.name, { set: defaultPokemonSpriteGen }) ?? "";
+            const isCurrent = v.slug === currentSlug;
+            return (
+              <EvolutionNodeCard
+                key={v.slug}
+                name={v.name}
+                sprite={sprite}
+                id={v.id}
+                isCurrent={isCurrent}
+                isSmall
+              />
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function formatEvolutionMethod(
+  detail: EvolutionChainLink["evolutionDetails"][0],
+): string {
+  if (detail.minLevel) return `Lv.${detail.minLevel}`;
+  if (detail.item) return detail.item;
+  if (detail.minHappiness) return "Friendship";
+  if (detail.knownMove) return detail.knownMove;
+  if (detail.timeOfDay) return detail.timeOfDay;
+  if (detail.heldItem) return `Hold ${detail.heldItem}`;
+  return detail.trigger;
+}
+
+// ============================================================================
+// Details Section
+// ============================================================================
+
+function DetailsSection({
+  pokemon,
+  species,
+  activeGeneration,
+}: {
+  pokemon: Pokemon;
+  species?: PokemonSpecies;
+  activeGeneration: number | null;
+}) {
+  const hasBreeding = (activeGeneration ?? LATEST_GEN) >= FIRST_BREEDING_GEN;
+  const genderDisplay = species
+    ? species.genderRate === -1
+      ? "Genderless"
+      : `${(8 - species.genderRate) * 12.5}% ♂ / ${species.genderRate * 12.5}% ♀`
+    : "—";
+
+  const catchRatePercent = species
+    ? ((species.captureRate / 255) * 100).toFixed(1)
+    : "—";
+
+  const hatchSteps = species
+    ? (species.hatchCounter * 257).toLocaleString()
+    : "—";
+
+  return (
+    <section className="space-y-6">
+      {/* Breeding */}
+      <div className="space-y-2">
+        <Label>breeding</Label>
+        {hasBreeding ? (
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+            <DetailRow
+              label="Egg Groups"
+              value={species?.eggGroups.join(", ") ?? "—"}
+            />
+            <DetailRow label="Gender" value={genderDisplay} />
+            <DetailRow
+              label="Hatch Time"
+              value={species ? `~${hatchSteps} steps` : "—"}
+            />
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Breeding and genders arrived in{" "}
+            {getGenerationName(FIRST_BREEDING_GEN)}.
+          </p>
+        )}
+      </div>
+
+      {/* Training */}
+      <div className="space-y-2">
+        <Label>training</Label>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+          <DetailRow
+            label="Catch Rate"
+            value={
+              species ? `${species.captureRate} (${catchRatePercent}%)` : "—"
+            }
+          />
+          <DetailRow label="Growth Rate" value={species?.growthRate ?? "—"} />
+          <DetailRow
+            label="EV Yield"
+            value={
+              species?.evYield.map((e) => `${e.value} ${e.stat}`).join(", ") ||
+              "—"
+            }
+          />
+          <DetailRow
+            label="Base Happiness"
+            value={species?.baseHappiness?.toString() ?? "—"}
+          />
+        </div>
+      </div>
+
+      {/* About */}
+      <div className="space-y-2">
+        <Label>about</Label>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+          <DetailRow
+            label="Height"
+            value={`${(pokemon.height / 10).toFixed(1)}m`}
+          />
+          <DetailRow
+            label="Weight"
+            value={`${(pokemon.weight / 10).toFixed(1)}kg`}
+          />
+          <DetailRow label="Generation" value={species?.generation ?? "—"} />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <>
+      <span className="text-muted-foreground">{label}</span>
+      <span className="tabular-nums">{value}</span>
+    </>
+  );
+}
+
+// ============================================================================
+// Skeleton
+// ============================================================================
+
+function PokemonPageSkeleton() {
+  return (
+    <div className="p-4 md:p-6">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8">
+        <div className={SUMMARY_RAIL_CLASSES}>
+          <section className="space-y-4">
+            <div className="flex justify-between items-center">
+              <Skeleton className="size-7" />
+              <Skeleton className="h-3 w-12" />
+              <Skeleton className="size-7" />
+            </div>
+            <div className="flex justify-center xl:justify-start gap-2">
+              <Skeleton className="h-4 w-4" />
+              <Skeleton className="h-4 w-4" />
+            </div>
+            <div className="flex flex-col items-center gap-3">
+              <Skeleton className="size-32 md:size-40 xl:size-44 2xl:size-48 mx-auto" />
+              <div className="w-full space-y-2">
+                <Skeleton className="h-6 w-32 mx-auto" />
+                <Skeleton className="h-3 w-24 mx-auto" />
+                <div className="flex justify-center gap-2">
+                  <Skeleton className="h-5 w-16" />
+                  <Skeleton className="h-5 w-16" />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Skeleton className="h-3 w-16" />
+              <div className="flex flex-wrap gap-1">
+                {WEAKNESS_SKELETON_KEYS.map((key) => (
+                  <Skeleton key={key} className="h-5 w-14" />
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-3 w-16" />
+              <div className="flex flex-wrap gap-1">
+                {RESISTANCE_SKELETON_KEYS.map((key) => (
+                  <Skeleton key={key} className="h-5 w-14" />
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* abilities */}
+          <Skeleton className="h-10 w-full" />
+
+          {/* base stats */}
+          <section className="space-y-3">
+            <Skeleton className="h-3 w-16" />
+            {STAT_SKELETON_KEYS.map((key) => (
+              <Skeleton key={key} className="h-4 w-full" />
+            ))}
+          </section>
+
+          {/* evolution */}
+          <Skeleton className="h-10 w-full" />
+
+          {/* variations */}
+          <Skeleton className="h-10 w-full" />
+
+          {/* details */}
+          <Skeleton className="h-10 w-full" />
+        </div>
+
+        <div className="space-y-6 md:col-span-7 lg:col-span-7 xl:col-span-7 2xl:col-span-8">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      </div>
+    </div>
+  );
+}

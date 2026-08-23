@@ -1,0 +1,506 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: #ffffff;
+  --foreground: #000000;
+  --card: #ffffff;
+  --card-foreground: #000000;
+  --popover: #ffffff;
+  --popover-foreground: #000000;
+  --primary: #000000;
+  --primary-foreground: #ffffff;
+  --secondary: #f4f4f4;
+  --secondary-foreground: #000000;
+  --muted: #f4f4f4;
+  --muted-foreground: #666666;
+  --accent: #f4f4f4;
+  --accent-foreground: #000000;
+  --destructive: #ff0000;
+  --destructive-foreground: #ffffff;
+  --success: #00ff00;
+  --success-foreground: #000000;
+  --border: #e0e0e0;
+  --input: #e0e0e0;
+  --ring: #000000;
+  --chart-1: #000000;
+  --chart-2: #666666;
+  --chart-3: #999999;
+  --chart-4: #cccccc;
+  --chart-5: #333333;
+  --radius: 0;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #000000;
+  --sidebar-primary: #000000;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f4f4f4;
+  --sidebar-accent-foreground: #000000;
+  --sidebar-border: #e0e0e0;
+  --sidebar-ring: #666666;
+}
+
+.dark {
+  --background: #0a0a0a;
+  --foreground: #e0e0e0;
+  --card: #0a0a0a;
+  --card-foreground: #e0e0e0;
+  --popover: #0a0a0a;
+  --popover-foreground: #e0e0e0;
+  --primary: #e0e0e0;
+  --primary-foreground: #0a0a0a;
+  --secondary: #1a1a1a;
+  --secondary-foreground: #e0e0e0;
+  --muted: #1a1a1a;
+  --muted-foreground: #888888;
+  --accent: #1a1a1a;
+  --accent-foreground: #e0e0e0;
+  --destructive: #ff3333;
+  --destructive-foreground: #000000;
+  --border: #333333;
+  --input: #333333;
+  --ring: #666666;
+  --chart-1: #e0e0e0;
+  --chart-2: #888888;
+  --chart-3: #666666;
+  --chart-4: #444444;
+  --chart-5: #aaaaaa;
+  --sidebar: #0a0a0a;
+  --sidebar-foreground: #e0e0e0;
+  --sidebar-primary: #e0e0e0;
+  --sidebar-primary-foreground: #0a0a0a;
+  --sidebar-accent: #1a1a1a;
+  --sidebar-accent-foreground: #e0e0e0;
+  --sidebar-border: #333333;
+  --sidebar-ring: #666666;
+}
+
+@theme inline {
+  --font-sans: var(--font-geist-mono);
+  --font-mono: var(--font-geist-mono);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  /*
+   * The app is a fixed shell with one scroll container inside it, so the
+   * document itself must never scroll. On iOS standalone a document that can
+   * scroll — even by a pixel — rubber-bands the whole app away from the
+   * device edges and drags the fixed chrome with it.
+   */
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+    /*
+     * Keep vertical rubber-banding out of the fixed shell, but leave the
+     * horizontal axis alone. Browsers use horizontal overscroll for the
+     * trackpad/touch back and forward gestures.
+     */
+    overscroll-behavior-y: none;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings:
+      "liga" 0,
+      "calt" 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply tracking-tight font-medium;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+}
+
+/* Terminal code styling */
+.code-addition {
+  color: #00ff00;
+}
+
+.code-deletion {
+  color: #ff0000;
+}
+
+/* Pixel art rendering */
+.pixelated {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  object-fit: contain;
+  object-position: center;
+}
+
+/* PWA safe area utilities */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/*
+ * The shell.
+ *
+ * `fixed; inset: 0` rather than a height in `dvh`: it is the one way to say
+ * "exactly the viewport, all four edges" that does not go through a unit the
+ * browser has to compute. Under `viewport-fit=cover` that box is the whole
+ * device, so the bottom nav — the shell's last child in normal flow — is flush
+ * with the bottom of the screen by construction. There is no arithmetic left
+ * to drift out of step with the chrome, which is how a strip of background
+ * used to end up under the nav in standalone mode.
+ *
+ * The top safe area is padding on the shell, so the status bar is never drawn
+ * over. A glass toolbar that wants to sit behind it bleeds back up into it
+ * (see `.pwa-glass-header` below).
+ */
+.app-shell {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-top: env(safe-area-inset-top, 0px);
+
+  /* First-paint estimates of what the chrome eats. AppShell overwrites all
+     three with measured pixels as soon as it mounts, so pages that size
+     themselves against them are exact rather than approximately right. */
+  --app-secondary-height: 3.5rem; /* 56px */
+  --app-top-offset: 0px; /* mobile default (no desktop header) */
+  --app-bottom-offset: 3rem; /* mobile bottom nav (h-12) */
+  --app-top-inset: calc(var(--app-top-offset) + env(safe-area-inset-top, 0px));
+  --app-bottom-inset: calc(
+    var(--app-bottom-offset) +
+    env(safe-area-inset-bottom, 0px)
+  );
+  /* The one height every page is measured against. */
+  --app-content-height: calc(
+    100dvh -
+    var(--app-top-inset) -
+    var(--app-bottom-inset)
+  );
+}
+
+.app-shell[data-secondary="true"] {
+  --app-top-offset: var(--app-secondary-height);
+}
+
+@media (min-width: 1024px) {
+  .app-shell {
+    --app-top-offset: 3.5rem; /* desktop header */
+    --app-bottom-offset: 0px; /* no bottom nav on desktop */
+  }
+
+  .app-shell[data-secondary="true"] {
+    --app-top-offset: 7rem; /* desktop header + secondary */
+  }
+}
+
+/*
+ * The app's single scroll container: whatever the chrome above and below it
+ * leaves over, asked for as "the rest" instead of computed. `min-height: 0` so
+ * a tall page makes it scroll rather than making it grow and push the nav off
+ * the bottom of the screen.
+ */
+.app-shell .app-main {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* PWA standalone mode - only applies on mobile/tablet (below lg breakpoint) */
+@media (display-mode: standalone) and (max-width: 1023px) {
+  /* Glass header that stretches back up under the status bar. The shell pads
+     the top safe area out of the way for everything else; the toolbar is the
+     one thing that wants to sit behind it, so it takes that padding back. */
+  .app-shell .pwa-glass-header {
+    margin-top: calc(-1 * env(safe-area-inset-top, 0px));
+    padding-top: env(safe-area-inset-top, 0px);
+    background: color-mix(in srgb, var(--background) 85%, transparent);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+  }
+
+  /* Glass bottom nav */
+  .app-shell .pwa-glass-nav {
+    background: color-mix(in srgb, var(--background) 85%, transparent);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+  }
+
+  /* Sticky toolbar inside main content - extends blur to cover safe area */
+  .app-shell .pwa-sticky-toolbar {
+    background: color-mix(in srgb, var(--background) 85%, transparent);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+  }
+
+  /* Pseudo-element to extend blur effect into safe area */
+  .app-shell .pwa-sticky-toolbar::before {
+    content: "";
+    position: absolute;
+    top: calc(-1 * env(safe-area-inset-top, 0px));
+    left: 0;
+    right: 0;
+    height: env(safe-area-inset-top, 0px);
+    background: inherit;
+    backdrop-filter: inherit;
+    -webkit-backdrop-filter: inherit;
+  }
+}
+
+/* PWA loading screen - shown instantly before JS loads, only in standalone mode */
+.pwa-loading-screen {
+  display: none;
+}
+
+@media (display-mode: standalone) {
+  .pwa-loading-screen {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    background: #09090b;
+  }
+}
+
+.pwa-loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.pwa-loading-bar {
+  width: 8rem;
+  height: 2px;
+  background: #333333;
+  overflow: hidden;
+}
+
+.pwa-loading-bar-fill {
+  height: 100%;
+  width: 40%;
+  background: #e0e0e0;
+  animation: pwa-loading-slide 1s ease-in-out infinite;
+}
+
+@keyframes pwa-loading-slide {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(350%);
+  }
+}
+
+.pwa-loading-fade-out {
+  animation: pwa-loading-fade 0.3s ease-out forwards;
+}
+
+@keyframes pwa-loading-fade {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/*
+ * Ambient backdrop.
+ *
+ * The wash of an item's own colour down the top of its page — see
+ * `components/ambient-backdrop.tsx`. Gradients of `oklch()`, mixed and faded
+ * in OKLab rather than sRGB: fading a colour to `transparent` in sRGB drags it
+ * through grey on the way out, which is exactly the dishwater halo that dates
+ * a gradient. In OKLab it stays itself until it is gone.
+ *
+ * It is full-bleed and top-anchored on purpose, the way an album page is. The
+ * previous version drew a feathered rectangle around the artwork; a rectangle
+ * has four edges, and four edges are four chances to see the effect instead of
+ * the colour. Running the colour off both sides of the screen and out of the
+ * bottom of itself leaves nothing to catch on.
+ */
+.ambient-backdrop {
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  inset-inline: 0;
+  /* Far enough to hold the artwork and its title, gone before the first
+     paragraph anyone has to read. Viewport-relative so a phone and a desktop
+     are the same picture at different sizes. */
+  height: var(--ambient-height, clamp(17rem, 42vh, 30rem));
+  overflow: hidden;
+  /* Full strength at the top and the whole page to fall through. On white
+     there is paper underneath carrying half the light, so it takes more of
+     itself here than it does on black to land as the same colour. */
+  opacity: 0.72;
+}
+
+/* A card scan is several times the height of a sprite, so the colour has to
+   reach past the bottom of it or the artwork ends up sitting in a band. */
+.ambient-backdrop[data-size="tall"] {
+  --ambient-height: clamp(24rem, 62vh, 44rem);
+}
+
+.dark .ambient-backdrop {
+  /* On near-black there is no white underneath to carry any of the light, so
+     the same wash reads thinner and gets the room back. */
+  opacity: 0.62;
+}
+
+/* A phone puts the artwork under this and nothing else. A desktop puts the
+   moves table beside it, and the same colour that lights a hero sits on top of
+   a list you are reading — so it comes down where there is more page for it to
+   land on. */
+@media (min-width: 1024px) {
+  .ambient-backdrop {
+    opacity: 0.6;
+  }
+
+  .dark .ambient-backdrop {
+    opacity: 0.56;
+  }
+}
+
+/*
+ * Held back until the artwork has been read, then brought up once. Short,
+ * because by the time it runs the sprite is already on screen and the colour
+ * is meant to have arrived with it — a slow fade here reads as the page
+ * catching up with itself.
+ */
+.ambient-layer {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 500ms ease-out;
+
+  /*
+   * Two gradients, in this order: the second colour blooming in over one top
+   * corner, and under it the dominant colour running the width of the page and
+   * dying downward.
+   *
+   * The falloff is stepped rather than left to a straight two-stop fade. A
+   * linear ramp holds too much colour through the middle and then stops all at
+   * once — you can point at where it ends. These stops are an ease-out: most
+   * of the colour spends itself in the top third, and the last of it is thin
+   * enough over the bottom third that there is no line to find.
+   */
+  background-image:
+    radial-gradient(
+      120% 62% at 80% -14%,
+      color-mix(in oklab, var(--ambient-accent) 46%, transparent) 0%,
+      color-mix(in oklab, var(--ambient-accent) 18%, transparent) 46%,
+      transparent 74%
+    ),
+    linear-gradient(
+      to bottom in oklab,
+      var(--ambient-dominant) 0%,
+      var(--ambient-dominant) 8%,
+      color-mix(in oklab, var(--ambient-dominant) 86%, transparent) 20%,
+      color-mix(in oklab, var(--ambient-dominant) 58%, transparent) 38%,
+      color-mix(in oklab, var(--ambient-dominant) 30%, transparent) 58%,
+      color-mix(in oklab, var(--ambient-dominant) 10%, transparent) 78%,
+      transparent 100%
+    );
+
+  /*
+   * Ink on paper. Two colours simply laid over each other average toward grey
+   * where they meet — most of an image's colours sit somewhere near opposite
+   * each other on the wheel, and averaging opposites is the definition of
+   * grey. Multiplying instead is how pigment actually behaves: the overlap
+   * gets deeper and keeps a hue. Only the accent blends; the dominant colour
+   * has nothing under it but the page.
+   */
+  background-blend-mode: multiply, normal;
+}
+
+/* On near-black there is no paper to soak into, so the overlap adds light
+   instead of subtracting it — the same rule, read the other way up. */
+.dark .ambient-layer {
+  background-blend-mode: screen, normal;
+}
+
+.ambient-layer[data-visible="true"] {
+  opacity: 1;
+}
+
+/*
+ * Grain. A gradient this wide and this smooth bands into visible stripes on
+ * an 8-bit display; a little noise over the top dithers the steps away. It is
+ * also the reason the wash reads as printed light rather than as a CSS effect.
+ */
+.ambient-backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.1;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* The cross-fade is a change of hue rather than movement, but a reader who has
+   asked for less of this should get the answer straight away. */
+@media (prefers-reduced-motion: reduce) {
+  .ambient-layer {
+    transition-duration: 1ms;
+  }
+}

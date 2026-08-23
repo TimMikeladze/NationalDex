@@ -1,0 +1,622 @@
+"use client";
+
+import { X } from "lucide-react";
+import Link from "next/link";
+import { useQueryStates } from "nuqs";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { BackToTop, TcgCardGrid } from "@/components/tcg";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  CARDS_PER_PAGE,
+  usePocketSetIds,
+  useTcgCardSearch,
+  useTcgEnergyTypes,
+  useTcgRarities,
+  useTcgRegulationMarks,
+  useTcgSets,
+  useTcgStages,
+  useTcgSuffixes,
+  useTcgTrainerTypes,
+} from "@/hooks/use-tcg";
+import { resolveSpecies, toID } from "@/lib/pkmn";
+import { cn } from "@/lib/utils";
+import type { TcgLanguage, TcgSetBrief } from "@/types/tcg";
+import {
+  DEFAULT_TCG_LANGUAGE,
+  gameForSetId,
+  isTcgLanguage,
+  sortRarities,
+  variantLabel,
+} from "@/types/tcg";
+import { CardsFilterBar } from "./filter-bar";
+import {
+  CARD_FILTER_PARSERS,
+  type CardFilterUpdate,
+  cardOrderValue,
+  type GameFilter,
+  isGameFilter,
+  newShuffleSeed,
+  RANDOM_SORT_VALUE,
+  SET_ORDER_SORT_VALUE,
+  toCardSearchFilters,
+} from "./filters";
+import { useCardScope } from "./use-card-scope";
+
+export interface CardBrowserProps {
+  /**
+   * Pins the browse to one set, which is what a set's own page is. The set
+   * stops being something to pick and becomes the subject, so the controls
+   * that would change it — the games, the set picker, the catalogue — step
+   * aside and everything else narrows within it.
+   */
+  lockedSet?: TcgSetBrief | null;
+  /**
+   * The catalogue the page is fixed to. A set page was reached through one
+   * catalogue's set list and its ids only mean anything there, so the browse
+   * cannot be free to switch.
+   */
+  lockedLanguage?: TcgLanguage;
+}
+
+/**
+ * The card catalogue, filtered. Used whole on `/cards`, and pinned to a single
+ * set on a set's page — one browser rather than a real one and a lesser copy,
+ * so a set page filters by rarity, printing, HP and the rest exactly as the
+ * card browser does.
+ */
+export function CardBrowser(props: CardBrowserProps) {
+  return (
+    <Suspense fallback={<CardsPageSkeleton />}>
+      <CardsBrowser {...props} />
+    </Suspense>
+  );
+}
+
+/** Filters live in the URL, so a card search can be shared or bookmarked. */
+function CardsBrowser({ lockedSet, lockedLanguage }: CardBrowserProps) {
+  const [urlFilters, setQueryFilters] = useQueryStates(CARD_FILTER_PARSERS, {
+    history: "replace",
+    clearOnDefault: true,
+  });
+
+  // A pinned set is the page, not a filter the URL carries — it cannot be
+  // changed or cleared from in here, so it is folded in rather than written.
+  const filters = useMemo(
+    () =>
+      lockedSet
+        ? { ...urlFilters, set: lockedSet.id, game: "all" }
+        : urlFilters,
+    [urlFilters, lockedSet],
+  );
+
+  const setFilters = useCallback(
+    (next: CardFilterUpdate) => {
+      void setQueryFilters(next);
+    },
+    [setQueryFilters],
+  );
+
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const [toolbarCollapsed, setToolbarCollapsed] = useState(false);
+
+  // Each language is its own catalogue of sets, not a translation of one.
+  const language: TcgLanguage =
+    lockedLanguage ??
+    (isTcgLanguage(filters.lang) ? filters.lang : DEFAULT_TCG_LANGUAGE);
+
+  const pocketSetIds = usePocketSetIds(language);
+  const { data: sets } = useTcgSets(language);
+  const { data: rarities } = useTcgRarities(language);
+  const { data: stages } = useTcgStages(language);
+  const { data: suffixes } = useTcgSuffixes(language);
+  const { data: regulationMarks } = useTcgRegulationMarks(language);
+  const { data: trainerTypes } = useTcgTrainerTypes(language);
+  const { data: energyTypes } = useTcgEnergyTypes(language);
+
+  const game: GameFilter = isGameFilter(filters.game) ? filters.game : "all";
+
+  // An open browse is a shuffle, drawn from sets picked at random; asking for
+  // an order reads the newest sets in it. Searching by name or asking for a set
+  // is asking about the whole catalogue, so both step aside there.
+  const {
+    scopeIsLive,
+    randomIsLive,
+    scopedSetIds,
+    fanOutSetIds,
+    shuffleSeed,
+    isReady,
+  } = useCardScope(filters, game, language);
+
+  const searchFilters = useMemo(
+    () => toCardSearchFilters(filters, scopedSetIds),
+    [filters, scopedSetIds],
+  );
+
+  const {
+    cards,
+    isLoading,
+    isFetching,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+    isError,
+  } = useTcgCardSearch(searchFilters, {
+    language,
+    shuffleSeed,
+    fanOutSetIds,
+    // Firing before the set list lands would search everything and flash
+    // twenty-year-old promos onto the screen.
+    enabled: isReady,
+  });
+
+  // Waiting on the set list reads as loading, because that is what it is: the
+  // search cannot be asked until the sets it runs within are known.
+  const isLoadingCards = isLoading || !isReady;
+
+  // Re-filtering keeps the old results on screen; dimming them says the list
+  // being read is about to be replaced.
+  const isRefiltering = isFetching && !isFetchingNextPage && cards.length > 0;
+
+  const handleObserver = useCallback(
+    (entries: IntersectionObserverEntry[]) => {
+      const [entry] = entries;
+      if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) {
+        void fetchNextPage();
+      }
+    },
+    [fetchNextPage, hasNextPage, isFetchingNextPage],
+  );
+
+  useEffect(() => {
+    const element = loadMoreRef.current;
+    if (!element) return;
+
+    const observer = new IntersectionObserver(handleObserver, {
+      threshold: 0,
+      rootMargin: "400px",
+    });
+    observer.observe(element);
+
+    return () => observer.disconnect();
+  }, [handleObserver]);
+
+  // The toolbar's second row folds away while the grid is scrolled, the same
+  // way the dex toolbar does, so more artwork stays on screen.
+  const lastScrollY = useRef(0);
+  useEffect(() => {
+    const scrollContainer = document.querySelector("main");
+    if (!scrollContainer) return;
+
+    const handleScroll = () => {
+      const currentScrollY = scrollContainer.scrollTop;
+      const delta = currentScrollY - lastScrollY.current;
+
+      if (Math.abs(delta) > 50) {
+        if (delta > 0 && currentScrollY > 100) setToolbarCollapsed(true);
+        else if (delta < 0) setToolbarCollapsed(false);
+        lastScrollY.current = currentScrollY;
+      }
+
+      if (currentScrollY < 50) setToolbarCollapsed(false);
+    };
+
+    scrollContainer.addEventListener("scroll", handleScroll, { passive: true });
+    return () => scrollContainer.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const sortedRarities = useMemo(
+    () => sortRarities(rarities ?? []),
+    [rarities],
+  );
+
+  const selectedSet = useMemo(
+    () => lockedSet ?? sets?.find((set) => set.id === filters.set) ?? null,
+    [lockedSet, sets, filters.set],
+  );
+
+  // Sets narrow to the chosen game so the picker matches the rest of the page.
+  const availableSets = useMemo(() => {
+    if (!sets) return [];
+    if (game === "all") return sets;
+    return sets.filter((set) => gameForSetId(set.id, pocketSetIds) === game);
+  }, [sets, game, pocketSetIds]);
+
+  const crossReferencedPokemon = useMemo(() => {
+    if (filters.dexId === null) return null;
+    const species = resolveSpecies(filters.dexId);
+    return species ? { name: species.name, id: species.num } : null;
+  }, [filters.dexId]);
+
+  // Chips for everything currently narrowing the list, each one removable.
+  const activeChips = useMemo(() => {
+    const chips: { key: string; label: string; clear: CardFilterUpdate }[] = [];
+
+    // A pinned set is the page's subject, so it is not offered as something
+    // to remove — the header already says which set this is.
+    if (lockedSet) {
+      // nothing to show
+    } else if (selectedSet) {
+      chips.push({
+        key: "set",
+        label: selectedSet.name,
+        clear: { set: null },
+      });
+    } else if (filters.set) {
+      chips.push({ key: "set", label: filters.set, clear: { set: null } });
+    }
+
+    for (const type of filters.types) {
+      chips.push({
+        key: `type-${type}`,
+        label: type,
+        clear: {
+          types: filters.types.filter((entry) => entry !== type),
+        },
+      });
+    }
+
+    for (const rarity of filters.rarities) {
+      chips.push({
+        key: `rarity-${rarity}`,
+        label: rarity,
+        clear: {
+          rarities: filters.rarities.filter((entry) => entry !== rarity),
+        },
+      });
+    }
+
+    if (filters.category) {
+      chips.push({
+        key: "category",
+        label: filters.category,
+        clear: { category: null },
+      });
+    }
+
+    if (filters.stage) {
+      chips.push({
+        key: "stage",
+        label: filters.stage,
+        clear: { stage: null },
+      });
+    }
+
+    if (filters.suffix) {
+      chips.push({
+        key: "suffix",
+        label: filters.suffix,
+        clear: { suffix: null },
+      });
+    }
+
+    if (filters.regulationMark) {
+      chips.push({
+        key: "regulationMark",
+        label: `Regulation ${filters.regulationMark}`,
+        clear: { regulationMark: null },
+      });
+    }
+
+    if (filters.trainerType) {
+      chips.push({
+        key: "trainerType",
+        label: filters.trainerType,
+        clear: { trainerType: null },
+      });
+    }
+
+    if (filters.energyType) {
+      chips.push({
+        key: "energyType",
+        label: `${filters.energyType} energy`,
+        clear: { energyType: null },
+      });
+    }
+
+    for (const variant of filters.variants) {
+      chips.push({
+        key: `variant-${variant}`,
+        label: variantLabel(variant),
+        clear: {
+          variants: filters.variants.filter((entry) => entry !== variant),
+        },
+      });
+    }
+
+    if (filters.hpMin !== null || filters.hpMax !== null) {
+      const label =
+        filters.hpMin !== null && filters.hpMax !== null
+          ? `HP ${filters.hpMin}-${filters.hpMax}`
+          : filters.hpMin !== null
+            ? `HP ${filters.hpMin}+`
+            : `HP ≤ ${filters.hpMax}`;
+      chips.push({ key: "hp", label, clear: { hpMin: null, hpMax: null } });
+    }
+
+    if (filters.illustrator) {
+      chips.push({
+        key: "illustrator",
+        label: `illus. ${filters.illustrator}`,
+        clear: { illustrator: null },
+      });
+    }
+
+    return chips;
+  }, [
+    filters.category,
+    filters.hpMax,
+    filters.hpMin,
+    filters.illustrator,
+    filters.rarities,
+    filters.set,
+    filters.stage,
+    filters.suffix,
+    filters.regulationMark,
+    filters.trainerType,
+    filters.energyType,
+    filters.variants,
+    filters.types,
+    selectedSet,
+    lockedSet,
+  ]);
+
+  const panelFilterCount = activeChips.length;
+
+  // Sorting and shuffling are the same question — what order are these cards
+  // in — so they are answered in one place. A shuffle clears the sort field,
+  // because the API has no random order to ask for and sorting the results
+  // before shuffling them only decides which page they were drawn from. Every
+  // other order is written down, set order included: an unwritten order is a
+  // shuffle now, so choosing to read a browse straight through has to be said.
+  const setOrder = useCallback(
+    (value: string) => {
+      if (value === RANDOM_SORT_VALUE) {
+        setFilters({ seed: newShuffleSeed(), sort: null });
+        return;
+      }
+      setFilters({ sort: value, seed: null });
+    },
+    [setFilters],
+  );
+
+  const clearAll = () =>
+    setFilters({
+      // A pinned set is not in the URL to begin with, so a reset has nothing
+      // to clear there — and must not write a cleared `set` that would then
+      // fight the lock.
+      ...(lockedSet ? null : { set: null }),
+      types: null,
+      rarities: null,
+      category: null,
+      stage: null,
+      suffix: null,
+      regulationMark: null,
+      trainerType: null,
+      energyType: null,
+      variants: null,
+      illustrator: null,
+      hpMin: null,
+      hpMax: null,
+      dexId: null,
+    });
+
+  const resultLabel =
+    isLoadingCards && cards.length === 0
+      ? "loading..."
+      : `${cards.length}${hasNextPage ? "+" : ""} cards`;
+
+  return (
+    <div>
+      <div className="pwa-sticky-toolbar sticky top-0 z-30 border-b bg-background px-4 py-3 md:px-6 lg:bg-background/95 lg:backdrop-blur lg:supports-[backdrop-filter]:bg-background/80">
+        <CardsFilterBar
+          filters={filters}
+          setFilters={setFilters}
+          game={game}
+          order={cardOrderValue(filters)}
+          shuffleSeed={shuffleSeed}
+          onOrderChange={setOrder}
+          sets={availableSets}
+          selectedSet={selectedSet}
+          language={language}
+          hasPocket={pocketSetIds.length > 0}
+          rarities={sortedRarities}
+          stages={stages ?? []}
+          suffixes={suffixes ?? []}
+          regulationMarks={regulationMarks ?? []}
+          trainerTypes={trainerTypes ?? []}
+          energyTypes={energyTypes ?? []}
+          panelFilterCount={panelFilterCount}
+          resultLabel={resultLabel}
+          collapsed={toolbarCollapsed}
+          lockedSet={lockedSet ?? null}
+        />
+      </div>
+
+      <div className="p-4 md:p-6">
+        {/* What is currently narrowing the list, and how to undo any of it */}
+        {(crossReferencedPokemon || activeChips.length > 0) && (
+          <div className="mb-4 flex flex-wrap items-center gap-1.5">
+            {crossReferencedPokemon && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-foreground py-1 pl-2.5 pr-1 text-xs font-medium text-background">
+                <Link
+                  href={`/pokemon/${toID(crossReferencedPokemon.name)}`}
+                  className="hover:underline"
+                >
+                  {crossReferencedPokemon.name} #
+                  {crossReferencedPokemon.id.toString().padStart(3, "0")}
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setFilters({ dexId: null })}
+                  title="Clear Pokemon filter"
+                  className="p-0.5 opacity-70 hover:opacity-100"
+                >
+                  <X className="size-3" />
+                </button>
+              </span>
+            )}
+
+            {activeChips.map((chip) => (
+              <span
+                key={chip.key}
+                className="inline-flex items-center gap-1 rounded-full bg-muted py-1 pl-2.5 pr-1 text-xs font-medium text-muted-foreground"
+              >
+                {chip.label}
+                <button
+                  type="button"
+                  onClick={() => setFilters(chip.clear)}
+                  title={`Remove ${chip.label}`}
+                  className="p-0.5 hover:text-foreground"
+                >
+                  <X className="size-3" />
+                </button>
+              </span>
+            ))}
+
+            {activeChips.length > 1 && (
+              <button
+                type="button"
+                onClick={clearAll}
+                className="px-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
+              >
+                clear all
+              </button>
+            )}
+          </div>
+        )}
+
+        <p className="mb-3 text-xs tabular-nums text-muted-foreground sm:hidden">
+          {resultLabel}
+        </p>
+
+        {isError ? (
+          <div className="py-16 text-center">
+            <p className="text-sm text-muted-foreground">
+              Could not load cards right now.
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Card data comes from TCGdex — check your connection and try again.
+            </p>
+          </div>
+        ) : (
+          <div aria-busy={isRefiltering}>
+            <TcgCardGrid
+              className={cn(
+                "transition-opacity duration-150",
+                isRefiltering && "opacity-50",
+              )}
+              cards={cards}
+              language={language}
+              pocketSetIds={pocketSetIds}
+              showGame={game === "all"}
+              isLoading={isLoadingCards}
+              skeletonCount={CARDS_PER_PAGE}
+              emptyMessage={
+                randomIsLive
+                  ? "No cards in this shuffle match these filters"
+                  : scopeIsLive
+                    ? "No cards in the newest sets match these filters"
+                    : "No cards match these filters"
+              }
+              emptyAction={
+                // Inside the newest sets, widening is the likelier fix — the
+                // filters may well have matches further back in the catalogue.
+                randomIsLive ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setOrder(SET_ORDER_SORT_VALUE)}
+                  >
+                    back to set order
+                  </Button>
+                ) : scopeIsLive ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setFilters({ scope: "all" })}
+                  >
+                    search every set
+                  </Button>
+                ) : panelFilterCount > 0 ? (
+                  <Button variant="outline" size="sm" onClick={clearAll}>
+                    clear filters
+                  </Button>
+                ) : undefined
+              }
+            />
+
+            {hasNextPage ? (
+              <div
+                ref={loadMoreRef}
+                className="flex justify-center py-8 text-xs text-muted-foreground"
+              >
+                loading more...
+              </div>
+            ) : (
+              cards.length > 0 && (
+                <div className="flex flex-col items-center gap-2 py-8">
+                  <p className="text-center text-xs tabular-nums text-muted-foreground">
+                    {randomIsLive
+                      ? "end of the shuffle"
+                      : scopeIsLive
+                        ? "end of the newest sets"
+                        : "end of results"}{" "}
+                    — {cards.length} card{cards.length === 1 ? "" : "s"}
+                  </p>
+                  {randomIsLive && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setFilters({ seed: newShuffleSeed() })}
+                    >
+                      shuffle again
+                    </Button>
+                  )}
+                  {scopeIsLive && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setFilters({ scope: "all" })}
+                    >
+                      keep going through every set
+                    </Button>
+                  )}
+                </div>
+              )
+            )}
+          </div>
+        )}
+      </div>
+
+      <BackToTop />
+    </div>
+  );
+}
+
+function CardsPageSkeleton() {
+  return (
+    <div>
+      <div className="sticky top-0 z-30 border-b bg-background px-4 py-3 md:px-6">
+        <div className="space-y-3">
+          <Skeleton className="h-9 w-full" />
+          <div className="flex gap-1">
+            {["all", "tcg", "pocket"].map((key) => (
+              <Skeleton key={key} className={cn("h-6 w-20 rounded-full")} />
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="p-4 md:p-6">
+        <TcgCardGrid cards={[]} isLoading skeletonCount={CARDS_PER_PAGE} />
+      </div>
+    </div>
+  );
+}
