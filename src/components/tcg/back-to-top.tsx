@@ -34,8 +34,10 @@ export function BackToTop({ threshold = 1600 }: { threshold?: number }) {
       aria-label="Back to top"
       title="Back to top"
       className={cn(
-        // Clears the mobile bottom nav, and its safe area on a PWA.
-        "fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] right-4 z-40 lg:bottom-6",
+        // Sits on the mobile bottom nav, home indicator included, using the
+        // height the shell measured rather than a guess at it plus a raw
+        // safe-area inset the browser may already have reserved.
+        "fixed bottom-[calc(var(--app-bottom-inset,3.5rem)+0.5rem)] right-4 z-40 lg:bottom-6",
         "flex size-10 items-center justify-center border bg-background/90 text-muted-foreground shadow-sm backdrop-blur",
         "transition-all duration-200 hover:text-foreground",
         visible

@@ -7,6 +7,7 @@ import { ComparisonProvider } from "@/hooks/use-comparison";
 import { QueryProvider } from "@/lib/query-provider";
 import { AppShell } from "./app-shell";
 import { NavProvider } from "./navigation/nav-provider";
+import { ThemeColor } from "./theme-color";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -17,6 +18,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         enableSystem
         disableTransitionOnChange
       >
+        <ThemeColor />
         <QueryProvider>
           <ComparisonProvider>
             <NavProvider>

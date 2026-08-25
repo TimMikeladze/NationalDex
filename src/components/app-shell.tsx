@@ -110,6 +110,55 @@ interface AppShellProps {
 const useIsomorphicLayoutEffect =
   typeof window === "undefined" ? useEffect : useLayoutEffect;
 
+// The most any device chrome takes off an edge — a home indicator, a gesture
+// bar, a status bar, or all of them at once — with room to spare. Anything
+// larger is a software keyboard or a reading taken mid-rotation, and reading
+// either as device chrome would pull the nav up over the content.
+const MAX_CHROME_INSET = 160;
+
+const isStandalone = () =>
+  window.matchMedia?.("(display-mode: standalone)").matches ||
+  window.matchMedia?.("(display-mode: fullscreen)").matches ||
+  (window.navigator as Navigator & { standalone?: boolean }).standalone ===
+    true;
+
+// A focused field means a software keyboard is on its way in or out, and the
+// visible viewport is mid-flight with it.
+const isTyping = () => {
+  const el = document.activeElement;
+  if (!el || el === document.body) return false;
+
+  return (
+    el instanceof HTMLInputElement ||
+    el instanceof HTMLTextAreaElement ||
+    (el instanceof HTMLElement && el.isContentEditable)
+  );
+};
+
+/**
+ * How much of the screen the browser is keeping to itself at the edges.
+ *
+ * Installed, there is no browser chrome, so every pixel between the viewport
+ * and the screen is chrome the OS has already reserved — and every one of them
+ * is a pixel `env(safe-area-inset-*)` is about to ask us to reserve a second
+ * time. In a tab the same gap is the address bar, which is not ours to reclaim,
+ * so this is standalone-only.
+ */
+const reservedByBrowser = () => {
+  const screen = window.screen;
+  if (!screen || !isStandalone()) return 0;
+
+  // iOS reports the screen unrotated, so the taller of the two dimensions is
+  // the screen's height only while the device is upright.
+  const portrait = window.innerHeight >= window.innerWidth;
+  const screenHeight = portrait
+    ? Math.max(screen.width, screen.height)
+    : Math.min(screen.width, screen.height);
+
+  const gap = screenHeight - window.innerHeight;
+  return gap > 0 && gap <= MAX_CHROME_INSET ? gap : 0;
+};
+
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const { setMoreOpen } = useNav();
@@ -149,11 +198,26 @@ export function AppShell({ children }: AppShellProps) {
 
     let frame = 0;
 
+    // Reads back what `env(safe-area-inset-*)` actually resolves to on this
+    // device. It has to be a real element in the document: the values are not
+    // exposed anywhere else, and they change with rotation.
+    const probe = document.createElement("div");
+    probe.setAttribute("aria-hidden", "true");
+    probe.style.cssText = [
+      "position:absolute",
+      "top:0",
+      "left:0",
+      "width:0",
+      "height:0",
+      "visibility:hidden",
+      "pointer-events:none",
+      "padding-top:env(safe-area-inset-top, 0px)",
+      "padding-bottom:env(safe-area-inset-bottom, 0px)",
+    ].join(";");
+    document.body.appendChild(probe);
+
     const publish = () => {
       frame = 0;
-      const shellTop = shell.getBoundingClientRect().top;
-      const mainBox = main.getBoundingClientRect();
-      const navHeight = navRef.current?.getBoundingClientRect().height ?? 0;
 
       // On the root as well as the shell: anything portalled out of the shell
       // — toasts, sheets — has to clear the same nav, and cannot inherit a
@@ -163,6 +227,53 @@ export function AppShell({ children }: AppShellProps) {
         shell.style.setProperty(name, px);
         document.documentElement.style.setProperty(name, px);
       };
+
+      // The safe areas, less whatever the browser has already held back. On a
+      // browser that hands over the whole screen — every desktop one, Android,
+      // iOS up to 25 and from 26.1 — nothing is held back and these are the raw
+      // `env()` values. On an installed iOS 26.0 app the bottom strip has been
+      // reserved twice, and this is the copy we drop; without it the nav floats
+      // a home indicator's worth of empty background above the bottom edge.
+      const probeStyle = getComputedStyle(probe);
+      const safeTop = Number.parseFloat(probeStyle.paddingTop) || 0;
+      const safeBottom = Number.parseFloat(probeStyle.paddingBottom) || 0;
+
+      // Bottom first: iOS draws under the status bar in a standalone app but
+      // stops short of the home indicator, so a gap is the bottom's until the
+      // bottom cannot account for it.
+      const reserved = reservedByBrowser();
+      const reservedBottom = Math.min(reserved, safeBottom);
+      const reservedTop = Math.min(reserved - reservedBottom, safeTop);
+
+      set("--app-safe-top", Math.max(0, safeTop - reservedTop));
+      set("--app-safe-bottom", Math.max(0, safeBottom - reservedBottom));
+
+      // And the other half of the same problem: a viewport-sized fixed box that
+      // is taller than the window is showing. Only worth overriding when the
+      // visible viewport is measurably shorter for a reason the size of device
+      // chrome — a keyboard takes far more than that, and shrinking the shell
+      // around one would drag the nav up onto the content. A keyboard is also
+      // ruled out by hand rather than by size alone, so the shell does not
+      // flinch on its way in or out, when it is briefly chrome-sized.
+      const visual = window.visualViewport;
+      const shortfall = visual
+        ? document.documentElement.clientHeight - visual.height
+        : 0;
+      const clipped =
+        isStandalone() &&
+        !isTyping() &&
+        shortfall >= 4 &&
+        shortfall <= MAX_CHROME_INSET;
+      shell.style.setProperty(
+        "--app-viewport-height",
+        clipped && visual
+          ? `${Math.round(visual.height * 100) / 100}px`
+          : "auto",
+      );
+
+      const shellTop = shell.getBoundingClientRect().top;
+      const mainBox = main.getBoundingClientRect();
+      const navHeight = navRef.current?.getBoundingClientRect().height ?? 0;
 
       // Measured from the top of the viewport, so the top safe area the shell
       // pads out is already part of it.
@@ -190,11 +301,19 @@ export function AppShell({ children }: AppShellProps) {
     window.addEventListener("resize", schedule);
     window.addEventListener("orientationchange", schedule);
 
+    // The visual viewport moves without the layout viewport ever changing size
+    // — that is the whole point of it — so it needs its own listener for the
+    // shell to notice the window is showing less than it was handed.
+    const visual = window.visualViewport;
+    visual?.addEventListener("resize", schedule);
+
     return () => {
       if (frame) cancelAnimationFrame(frame);
       observer.disconnect();
+      probe.remove();
       window.removeEventListener("resize", schedule);
       window.removeEventListener("orientationchange", schedule);
+      visual?.removeEventListener("resize", schedule);
     };
   }, []);
 

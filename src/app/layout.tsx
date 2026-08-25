@@ -19,7 +19,17 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  themeColor: "#e53935",
+  // Android tints its status bar with this, so it has to be the colour of the
+  // app right under the bar rather than the brand's red, which belongs to no
+  // surface the app ever draws. Installed, the first thing on screen is the
+  // loading screen, which is `#09090b` whatever the theme; everywhere else the
+  // app opens light, which is what a visitor with scripting off keeps. From
+  // there `ThemeColor` takes over and follows the theme that resolved.
+  themeColor: [
+    { media: "(display-mode: standalone)", color: "#09090b" },
+    { media: "(display-mode: fullscreen)", color: "#09090b" },
+    { color: "#ffffff" },
+  ],
 };
 
 export const metadata: Metadata = {
