@@ -186,13 +186,27 @@
   object-position: center;
 }
 
-/* PWA safe area utilities */
+/*
+ * PWA safe area utilities.
+ *
+ * `--app-safe-top` / `--app-safe-bottom` are the *usable* insets: the raw
+ * `env()` value minus whatever the browser has already kept clear of the
+ * device chrome on its own. AppShell measures both and publishes them on the
+ * root element; until it does — and in any browser where the two agree — the
+ * raw `env()` fallback is exactly what these were before.
+ *
+ * The distinction is the whole bug on an installed iOS app: `env()` describes
+ * the unsafe strip of the *screen*, not of the viewport it hands you, and iOS
+ * 26 hands standalone apps a viewport that already stops above the home
+ * indicator while still reporting the full inset. Padding by the raw number
+ * there lays a second, empty home indicator under the bottom nav.
+ */
 .pb-safe {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-bottom: var(--app-safe-bottom, env(safe-area-inset-bottom, 0px));
 }
 
 .pt-safe {
-  padding-top: env(safe-area-inset-top, 0px);
+  padding-top: var(--app-safe-top, env(safe-area-inset-top, 0px));
 }
 
 /*
@@ -209,14 +223,22 @@
  * The top safe area is padding on the shell, so the status bar is never drawn
  * over. A glass toolbar that wants to sit behind it bleeds back up into it
  * (see `.pwa-glass-header` below).
+ *
+ * `--app-viewport-height` is the escape hatch for the one case where "the
+ * viewport" and "what is on screen" are not the same box: an installed iOS app
+ * on 26.0 can hand a viewport-sized fixed container more height than the window
+ * actually shows (WebKit fixed this in 26.1). AppShell only sets it when it has
+ * measured a real difference; `auto` leaves `inset: 0` in charge, which is the
+ * behaviour everywhere else.
  */
 .app-shell {
   position: fixed;
   inset: 0;
+  height: var(--app-viewport-height, auto);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding-top: env(safe-area-inset-top, 0px);
+  padding-top: var(--app-safe-top, env(safe-area-inset-top, 0px));
 
   /* First-paint estimates of what the chrome eats. AppShell overwrites all
      three with measured pixels as soon as it mounts, so pages that size
@@ -224,10 +246,13 @@
   --app-secondary-height: 3.5rem; /* 56px */
   --app-top-offset: 0px; /* mobile default (no desktop header) */
   --app-bottom-offset: 3rem; /* mobile bottom nav (h-12) */
-  --app-top-inset: calc(var(--app-top-offset) + env(safe-area-inset-top, 0px));
+  --app-top-inset: calc(
+    var(--app-top-offset) +
+    var(--app-safe-top, env(safe-area-inset-top, 0px))
+  );
   --app-bottom-inset: calc(
     var(--app-bottom-offset) +
-    env(safe-area-inset-bottom, 0px)
+    var(--app-safe-bottom, env(safe-area-inset-bottom, 0px))
   );
   /* The one height every page is measured against. */
   --app-content-height: calc(
@@ -269,8 +294,8 @@
      the top safe area out of the way for everything else; the toolbar is the
      one thing that wants to sit behind it, so it takes that padding back. */
   .app-shell .pwa-glass-header {
-    margin-top: calc(-1 * env(safe-area-inset-top, 0px));
-    padding-top: env(safe-area-inset-top, 0px);
+    margin-top: calc(-1 * var(--app-safe-top, env(safe-area-inset-top, 0px)));
+    padding-top: var(--app-safe-top, env(safe-area-inset-top, 0px));
     background: color-mix(in srgb, var(--background) 85%, transparent);
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
@@ -294,10 +319,10 @@
   .app-shell .pwa-sticky-toolbar::before {
     content: "";
     position: absolute;
-    top: calc(-1 * env(safe-area-inset-top, 0px));
+    top: calc(-1 * var(--app-safe-top, env(safe-area-inset-top, 0px)));
     left: 0;
     right: 0;
-    height: env(safe-area-inset-top, 0px);
+    height: var(--app-safe-top, env(safe-area-inset-top, 0px));
     background: inherit;
     backdrop-filter: inherit;
     -webkit-backdrop-filter: inherit;
