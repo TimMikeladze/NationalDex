@@ -190,10 +190,12 @@
  * PWA safe area utilities.
  *
  * `--app-safe-top` / `--app-safe-bottom` are the *usable* insets: the raw
- * `env()` value minus whatever the browser has already kept clear of the
- * device chrome on its own. AppShell measures both and publishes them on the
- * root element; until it does — and in any browser where the two agree — the
- * raw `env()` fallback is exactly what these were before.
+ * `env()` value minus whatever is already being kept clear of the device
+ * chrome — by the browser, or by the shell having been clipped to the part of
+ * the window that is actually on screen (`--app-viewport-height` below).
+ * AppShell measures both and publishes them on the root element; until it does
+ * — and in any browser where they agree — the raw `env()` fallback is exactly
+ * what these were before.
  *
  * The distinction is the whole bug on an installed iOS app: `env()` describes
  * the unsafe strip of the *screen*, not of the viewport it hands you, and iOS
