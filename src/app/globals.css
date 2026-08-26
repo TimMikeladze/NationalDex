@@ -212,6 +212,27 @@
 }
 
 /*
+ * The bottom nav clears the home indicator instead of reserving the whole
+ * inset iOS asks a tab bar for.
+ *
+ * That inset is 34px, but the indicator itself is a 5px bar sitting 8px off
+ * the bottom edge — the rest of it is empty background, and on an installed
+ * app it reads as a band of nothing under the nav rather than as breathing
+ * room. `--app-nav-safe-bottom` is the most the nav will spend on it: enough
+ * for the labels to clear the indicator, and no more.
+ *
+ * `min()` rather than a flat value, so this is still the inset wherever the
+ * inset is smaller — an Android gesture bar, a device with no indicator at
+ * all, or a viewport that already stops above one (`--app-safe-bottom`).
+ */
+.pb-safe-nav {
+  padding-bottom: min(
+    var(--app-safe-bottom, env(safe-area-inset-bottom, 0px)),
+    var(--app-nav-safe-bottom, 1rem)
+  );
+}
+
+/*
  * The shell.
  *
  * `fixed; inset: 0` rather than a height in `dvh`: it is the one way to say
@@ -246,6 +267,7 @@
      three with measured pixels as soon as it mounts, so pages that size
      themselves against them are exact rather than approximately right. */
   --app-secondary-height: 3.5rem; /* 56px */
+  --app-nav-safe-bottom: 1rem; /* 16px — the home indicator's own clearance */
   --app-top-offset: 0px; /* mobile default (no desktop header) */
   --app-bottom-offset: 3rem; /* mobile bottom nav (h-12) */
   --app-top-inset: calc(
@@ -254,7 +276,10 @@
   );
   --app-bottom-inset: calc(
     var(--app-bottom-offset) +
-    var(--app-safe-bottom, env(safe-area-inset-bottom, 0px))
+    min(
+      var(--app-safe-bottom, env(safe-area-inset-bottom, 0px)),
+      var(--app-nav-safe-bottom)
+    )
   );
   /* The one height every page is measured against. */
   --app-content-height: calc(
