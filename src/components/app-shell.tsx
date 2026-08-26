@@ -136,15 +136,23 @@ const isTyping = () => {
 };
 
 /**
- * How much of the screen the browser is keeping to itself at the edges.
+ * How much of the screen the shell is not covering.
  *
- * Installed, there is no browser chrome, so every pixel between the viewport
- * and the screen is chrome the OS has already reserved — and every one of them
+ * Installed, there is no browser chrome, so every pixel between the shell and
+ * the screen is chrome something has already kept clear — and every one of them
  * is a pixel `env(safe-area-inset-*)` is about to ask us to reserve a second
  * time. In a tab the same gap is the address bar, which is not ours to reclaim,
  * so this is standalone-only.
+ *
+ * Measured against the shell rather than the window, because the shell is the
+ * short one in the case that matters: on an installed iOS 26.0 app the window
+ * is the full screen while only the visual viewport is on show, and clipping
+ * the shell to it (`--app-viewport-height`) already ends the app above the home
+ * indicator. Asking the window there says nothing is reserved, and the nav gets
+ * padded past a bottom edge it is already sitting on — an empty home
+ * indicator's worth of background under a nav that had stopped short anyway.
  */
-const reservedByBrowser = () => {
+const reservedAroundShell = (shellHeight: number) => {
   const screen = window.screen;
   if (!screen || !isStandalone()) return 0;
 
@@ -155,7 +163,7 @@ const reservedByBrowser = () => {
     ? Math.max(screen.width, screen.height)
     : Math.min(screen.width, screen.height);
 
-  const gap = screenHeight - window.innerHeight;
+  const gap = screenHeight - shellHeight;
   return gap > 0 && gap <= MAX_CHROME_INSET ? gap : 0;
 };
 
@@ -228,33 +236,16 @@ export function AppShell({ children }: AppShellProps) {
         document.documentElement.style.setProperty(name, px);
       };
 
-      // The safe areas, less whatever the browser has already held back. On a
-      // browser that hands over the whole screen — every desktop one, Android,
-      // iOS up to 25 and from 26.1 — nothing is held back and these are the raw
-      // `env()` values. On an installed iOS 26.0 app the bottom strip has been
-      // reserved twice, and this is the copy we drop; without it the nav floats
-      // a home indicator's worth of empty background above the bottom edge.
-      const probeStyle = getComputedStyle(probe);
-      const safeTop = Number.parseFloat(probeStyle.paddingTop) || 0;
-      const safeBottom = Number.parseFloat(probeStyle.paddingBottom) || 0;
-
-      // Bottom first: iOS draws under the status bar in a standalone app but
-      // stops short of the home indicator, so a gap is the bottom's until the
-      // bottom cannot account for it.
-      const reserved = reservedByBrowser();
-      const reservedBottom = Math.min(reserved, safeBottom);
-      const reservedTop = Math.min(reserved - reservedBottom, safeTop);
-
-      set("--app-safe-top", Math.max(0, safeTop - reservedTop));
-      set("--app-safe-bottom", Math.max(0, safeBottom - reservedBottom));
-
-      // And the other half of the same problem: a viewport-sized fixed box that
-      // is taller than the window is showing. Only worth overriding when the
+      // How tall the shell gets to be, first: a viewport-sized fixed box can be
+      // taller than the window is showing. Only worth overriding when the
       // visible viewport is measurably shorter for a reason the size of device
       // chrome — a keyboard takes far more than that, and shrinking the shell
       // around one would drag the nav up onto the content. A keyboard is also
       // ruled out by hand rather than by size alone, so the shell does not
-      // flinch on its way in or out, when it is briefly chrome-sized.
+      // flinch on its way in or out, when it is briefly chrome-sized. An offset
+      // visual viewport is somebody scrolled or zoomed rather than a window
+      // that stops short, and the shell is pinned to the top either way, so
+      // shortening it would only lift the nav off the bottom edge.
       const visual = window.visualViewport;
       const shortfall = visual
         ? document.documentElement.clientHeight - visual.height
@@ -263,7 +254,8 @@ export function AppShell({ children }: AppShellProps) {
         isStandalone() &&
         !isTyping() &&
         shortfall >= 4 &&
-        shortfall <= MAX_CHROME_INSET;
+        shortfall <= MAX_CHROME_INSET &&
+        Math.abs(visual?.offsetTop ?? 0) < 1;
       shell.style.setProperty(
         "--app-viewport-height",
         clipped && visual
@@ -271,7 +263,33 @@ export function AppShell({ children }: AppShellProps) {
           : "auto",
       );
 
-      const shellTop = shell.getBoundingClientRect().top;
+      // Then the safe areas, less whatever is already being kept clear of the
+      // device chrome — by the browser, or by the line above. On a browser that
+      // hands over the whole screen and shows all of it — every desktop one,
+      // Android, iOS up to 25 and from 26.1 — nothing is held back and these
+      // are the raw `env()` values. On an installed iOS 26.0 app the bottom
+      // strip has been reserved twice, and this is the copy we drop; without it
+      // the nav floats a home indicator's worth of empty background above the
+      // bottom edge.
+      const probeStyle = getComputedStyle(probe);
+      const safeTop = Number.parseFloat(probeStyle.paddingTop) || 0;
+      const safeBottom = Number.parseFloat(probeStyle.paddingBottom) || 0;
+
+      // Read back after the height above, so the shell being clipped counts as
+      // space already reserved rather than space still to pad out.
+      const shellBox = shell.getBoundingClientRect();
+
+      // Bottom first: iOS draws under the status bar in a standalone app but
+      // stops short of the home indicator, so a gap is the bottom's until the
+      // bottom cannot account for it.
+      const reserved = reservedAroundShell(shellBox.height);
+      const reservedBottom = Math.min(reserved, safeBottom);
+      const reservedTop = Math.min(reserved - reservedBottom, safeTop);
+
+      set("--app-safe-top", Math.max(0, safeTop - reservedTop));
+      set("--app-safe-bottom", Math.max(0, safeBottom - reservedBottom));
+
+      const shellTop = shellBox.top;
       const mainBox = main.getBoundingClientRect();
       const navHeight = navRef.current?.getBoundingClientRect().height ?? 0;
 
