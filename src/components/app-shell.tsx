@@ -585,11 +585,12 @@ export function AppShell({ children }: AppShellProps) {
         </main>
 
         {/* Mobile/Tablet Bottom Nav - hidden on desktop. Last child of the
-            shell, so its padding is the last thing before the bottom edge of
-            the device and the home indicator sits on it. */}
+            shell, so it runs to the bottom edge of the device; `pb-safe-nav`
+            keeps the labels clear of the home indicator without reserving the
+            whole strip iOS asks for. */}
         <nav
           ref={navRef}
-          className="shrink-0 z-50 border-t bg-background pb-safe lg:hidden pwa-glass-nav"
+          className="shrink-0 z-50 border-t bg-background pb-safe-nav lg:hidden pwa-glass-nav"
         >
           <div className="flex h-12 items-center justify-around max-w-lg mx-auto">
             {navItems.map((item) => renderNavItem(item, "mobile"))}
