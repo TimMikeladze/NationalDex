@@ -39,6 +39,7 @@ import {
   LocationsIcon,
   QuizIcon,
   TeamsIcon,
+  TrainersIcon,
 } from "./navigation/app-icons";
 import { MoreSheet } from "./navigation/more-sheet";
 import { useNav } from "./navigation/nav-provider";
@@ -92,6 +93,7 @@ const desktopExtraNavItems = [
   { href: "/whos-that-pokemon", icon: QuizIcon, label: "quiz" },
   { href: "/comparison", icon: CompareIcon, label: "compare" },
   { href: "/locations", icon: LocationsIcon, label: "locations" },
+  { href: "/trainers", icon: TrainersIcon, label: "trainers" },
 ];
 
 // Items that stay in the "more" dropdown/sheet

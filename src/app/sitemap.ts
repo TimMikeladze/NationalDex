@@ -9,6 +9,7 @@ import {
 } from "@/lib/pkmn";
 import { getAllRegions } from "@/lib/pokeapi";
 import { getTcgSeriesWithSets } from "@/lib/tcg";
+import { getAllTrainers } from "@/lib/trainers";
 import { SITE_URL } from "@/lib/utils";
 
 /**
@@ -72,6 +73,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.5,
     },
     {
+      url: `${baseUrl}/trainers`,
+      changeFrequency: "monthly",
+      priority: 0.5,
+    },
+    {
       url: `${baseUrl}/feedback`,
       changeFrequency: "monthly",
       priority: 0.2,
@@ -130,8 +136,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.3,
     }));
 
+  const trainerPages: MetadataRoute.Sitemap = getAllTrainers().map((t) => ({
+    url: `${baseUrl}/trainers/${t.slug}`,
+    changeFrequency: "monthly" as const,
+    priority: 0.4,
+  }));
+
   return [
     ...staticPages,
+    ...trainerPages,
     ...pokemonPages,
     ...movePages,
     ...abilityPages,

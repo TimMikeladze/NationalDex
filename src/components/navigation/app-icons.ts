@@ -12,6 +12,7 @@ export {
   LibraryBig as SetsIcon,
   ListChecks as ListsIcon,
   MapPinned as LocationsIcon,
+  Medal as TrainersIcon,
   Scale as CompareIcon,
   UsersRound as TeamsIcon,
   WalletCards as DecksIcon,

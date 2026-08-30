@@ -31,6 +31,7 @@ import {
   LocationsIcon,
   QuizIcon,
   TeamsIcon,
+  TrainersIcon,
 } from "./app-icons";
 import { useNav } from "./nav-provider";
 
@@ -73,6 +74,12 @@ const toolItems: MenuItem[] = [
     icon: LocationsIcon,
     label: "Locations",
     hint: "where they spawn",
+  },
+  {
+    href: "/trainers",
+    icon: TrainersIcon,
+    label: "Trainers",
+    hint: "gym leaders & league",
   },
 ];
 

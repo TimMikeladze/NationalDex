@@ -13,6 +13,7 @@
     "generate:regulations": "bun run scripts/generate-regulations.ts",
     "generate:icons": "bun run scripts/generate-icons.ts",
     "check:deck-rules": "bun run scripts/check-deck-rules.ts",
+    "check:trainers": "bun run scripts/check-trainers.ts",
     "prepare": "simple-git-hooks",
     "release": "release-it"
   },

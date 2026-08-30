@@ -25,6 +25,7 @@ bun run generate:icons
 - **Pokemon comparison** with side-by-side stat breakdowns
 - **Favorites and custom lists** persisted in local storage — Pokemon and cards alike
 - **Location finder** for Pokemon across all regions and games
+- **Trainers** — every gym leader, trial captain, kahuna, Elite Four member and champion from Gen I to Gen IX, filterable by generation and role, each with their type, badge, location, games and ace Pokemon
 - **PWA support** — installable on any device for a native-like experience, with the NationalDex mark supplied as the app icon and launch-screen branding
 - **Dark mode** with automatic theme detection
 
@@ -56,6 +57,7 @@ No database or environment variables are required. All Pokemon data is bundled a
 | `bun lint` | Run linting and format checks |
 | `bun lint:fix` | Auto-fix linting issues |
 | `bun check:deck-rules` | Check the deck formats against the rules they enforce |
+| `bun check:trainers` | Check the hand-kept trainer dataset for bad slugs, types, badges and aces |
 
 ## Contributing
 
