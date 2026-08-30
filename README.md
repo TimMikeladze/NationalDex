@@ -25,7 +25,7 @@ bun run generate:icons
 - **Pokemon comparison** with side-by-side stat breakdowns
 - **Favorites and custom lists** persisted in local storage — Pokemon and cards alike
 - **Location finder** for Pokemon across all regions and games
-- **PWA support** — installable on any device for a native-like experience, with the NationalDex mark supplied as the app icon and launch-screen branding
+- **PWA support** — installable on any device for a native-like experience, with the NationalDex mark supplied as the app icon and launch-screen branding. A service worker ([`public/sw.js`](public/sw.js)) keeps visited pages, build assets, and sprites available offline, falls back to `/offline` for anything unseen, and offers a reload toast when a new version is deployed. It is only registered in production builds so it never interferes with `next dev`.
 - **Dark mode** with automatic theme detection
 
 ## Running locally

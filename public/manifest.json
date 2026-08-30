@@ -2,8 +2,44 @@
   "name": "NationalDex",
   "short_name": "NationalDex",
   "description": "Every generation, indexed.",
+  "id": "/",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
+  "categories": ["games", "reference", "entertainment"],
+  "shortcuts": [
+    {
+      "name": "Cards",
+      "url": "/cards",
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Teams",
+      "url": "/teams",
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Favorites",
+      "url": "/favorites",
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
   "background_color": "#09090b",
   "theme_color": "#09090b",
   "icons": [
