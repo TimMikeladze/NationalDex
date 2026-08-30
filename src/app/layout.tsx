@@ -4,6 +4,7 @@ import Script from "next/script";
 import { Logo } from "@/components/brand/logo";
 import { Providers } from "@/components/providers";
 import { PwaLoadingScreen } from "@/components/pwa-loading-screen";
+import { PwaRegister } from "@/components/pwa-register";
 import { SITE_URL } from "@/lib/utils";
 import "./globals.css";
 
@@ -135,6 +136,7 @@ export default function RootLayout({
           </div>
         </div>
         <PwaLoadingScreen />
+        <PwaRegister />
         <Providers>{children}</Providers>
       </body>
     </html>
