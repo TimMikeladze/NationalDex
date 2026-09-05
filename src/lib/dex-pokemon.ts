@@ -52,6 +52,16 @@ export const STAT_LABELS: Record<RangeStatKey, string> = {
   bst: "Total",
 };
 
+/** The short forms of `STAT_LABELS` for dense rows: stat lines, the OG card. */
+export const STAT_ABBREVIATIONS: Record<StatKey, string> = {
+  hp: "HP",
+  atk: "ATK",
+  def: "DEF",
+  spa: "SPA",
+  spd: "SPD",
+  spe: "SPE",
+};
+
 /**
  * Baby Pokemon. @pkmn/dex has no `isBaby` flag (its `canHatch` marks every
  * breedable base stage), so the canonical list is kept here.

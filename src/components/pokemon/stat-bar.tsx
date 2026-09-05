@@ -1,5 +1,6 @@
 "use client";
 
+import { getStatColor } from "@/lib/pkmn";
 import { cn } from "@/lib/utils";
 import type { PokemonStat } from "@/types/pokemon";
 
@@ -22,8 +23,7 @@ export function StatBar({
 }: StatBarProps) {
   const percentage = Math.min((stat.value / maxValue) * 100, 100);
 
-  const barColor =
-    percentage > 75 ? "#22c55e" : percentage > 50 ? "#eab308" : "#ef4444";
+  const barColor = getStatColor(percentage);
 
   return (
     <div

@@ -10,66 +10,19 @@ import { useComparison } from "@/hooks/use-comparison";
 import { useFavorites } from "@/hooks/use-favorites";
 import { useGenerationPreference } from "@/hooks/use-generation-preference";
 import { calculateTypeEffectiveness, usePokemon } from "@/hooks/use-pokemon";
-import { LATEST_GEN, toID } from "@/lib/pkmn";
+import {
+  getBaseName,
+  getRegionFromDexNumber,
+  getVariantFromName,
+  LATEST_GEN,
+  toID,
+  VARIANT_DISPLAY_NAMES,
+} from "@/lib/pkmn";
 import { cn } from "@/lib/utils";
 import type { Pokemon, PokemonType, TypeEffectiveness } from "@/types/pokemon";
 import { PokemonImage } from "./pokemon-image";
 import { StatsGrid } from "./stat-bar";
 import { TypeBadge } from "./type-badge";
-
-// =============================================================================
-// Variant Helpers
-// =============================================================================
-
-const VARIANT_SUFFIXES = [
-  "Gmax",
-  "Mega",
-  "Mega-X",
-  "Mega-Y",
-  "Mega-Z",
-  "Alola",
-  "Galar",
-  "Hisui",
-  "Paldea",
-];
-
-/**
- * Extract the variant suffix from a Pokemon name.
- * e.g., "Pikachu-Gmax" -> "Gmax", "Raichu-Alola" -> "Alola"
- */
-function getVariantFromName(name: string): string | null {
-  for (const suffix of VARIANT_SUFFIXES) {
-    if (name.endsWith(`-${suffix}`)) {
-      return suffix;
-    }
-  }
-  return null;
-}
-
-/**
- * Get the base name without the variant suffix.
- * e.g., "Pikachu-Gmax" -> "Pikachu", "Raichu-Alola" -> "Raichu"
- */
-function getBaseName(name: string): string {
-  const variant = getVariantFromName(name);
-  if (variant) {
-    return name.slice(0, -(variant.length + 1)); // Remove "-Variant"
-  }
-  return name;
-}
-
-// Variant display names for prettier rendering
-const VARIANT_DISPLAY_NAMES: Record<string, string> = {
-  Gmax: "Gigantamax",
-  Mega: "Mega",
-  "Mega-X": "Mega X",
-  "Mega-Y": "Mega Y",
-  "Mega-Z": "Mega Z",
-  Alola: "Alolan",
-  Galar: "Galarian",
-  Hisui: "Hisuian",
-  Paldea: "Paldean",
-};
 
 function VariantBadge({
   variant,
@@ -91,42 +44,11 @@ function VariantBadge({
   );
 }
 
-// =============================================================================
-// Region Helpers
-// =============================================================================
-
-type Region =
-  | "Kanto"
-  | "Johto"
-  | "Hoenn"
-  | "Sinnoh"
-  | "Unova"
-  | "Kalos"
-  | "Alola"
-  | "Galar"
-  | "Paldea";
-
-/**
- * Get the region a Pokemon is originally from based on its dex number.
- */
-function getRegionFromDexNumber(dexNumber: number): Region | null {
-  if (dexNumber >= 1 && dexNumber <= 151) return "Kanto";
-  if (dexNumber >= 152 && dexNumber <= 251) return "Johto";
-  if (dexNumber >= 252 && dexNumber <= 386) return "Hoenn";
-  if (dexNumber >= 387 && dexNumber <= 493) return "Sinnoh";
-  if (dexNumber >= 494 && dexNumber <= 649) return "Unova";
-  if (dexNumber >= 650 && dexNumber <= 721) return "Kalos";
-  if (dexNumber >= 722 && dexNumber <= 809) return "Alola";
-  if (dexNumber >= 810 && dexNumber <= 905) return "Galar";
-  if (dexNumber >= 906 && dexNumber <= 1025) return "Paldea";
-  return null;
-}
-
 function RegionBadge({
   region,
   size = "sm",
 }: {
-  region: Region;
+  region: string;
   size?: "sm" | "default";
 }) {
   return (
