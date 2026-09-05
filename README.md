@@ -8,7 +8,7 @@ NationalDex is a modern web-based Pokedex covering the full National Dex across 
 
 The NationalDex logo is the compact Pokédex mark used throughout the desktop app bar, mobile launch screen, browser favicon, and installable PWA. The canonical source artwork lives at [`public/icons/logo-app.svg`](public/icons/logo-app.svg); every brand surface references that same device mark so it stays consistent across platforms.
 
-After editing that SVG, run `bun run generate:icons` to re-render the derived assets — the favicon, the PWA icons, and the Apple touch icon — from it:
+The Open Graph images read that file at render time, so they follow an edit on their own. After editing that SVG, run `bun run generate:icons` to re-render the derived assets — the favicon, the PWA icons, and the Apple touch icon — from it:
 
 ```bash
 bun run generate:icons
