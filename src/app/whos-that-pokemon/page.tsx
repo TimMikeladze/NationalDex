@@ -7,7 +7,7 @@ const FAQS = [
   {
     question: "How do you play Who's That Pokémon?",
     answer:
-      "A Pokémon's silhouette is shown with its colours blacked out. Type its name to guess. Guess right and your streak grows; ask for a hint or reveal the answer and you score fewer points.",
+      "A Pokémon's silhouette is shown with its colours flattened to a solid shape. Type its name to guess. Guess right and your streak grows; ask for a hint or reveal the answer and you score fewer points.",
   },
   {
     question: "Can I limit the quiz to one generation?",

@@ -320,7 +320,10 @@ export function WhosThatPokemonClient() {
                 difficulty === "hard"
                   ? "size-32 scale-150"
                   : "size-48 md:size-56",
-                !revealed && "brightness-0",
+                // The silhouette is the sprite crushed to a solid shape.
+                // Black reads well on the light panel; in dark mode it
+                // disappears into it, so flip the shape to white instead.
+                !revealed && "brightness-0 dark:invert",
               )}
             />
             {revealed && !honorSystem && (
