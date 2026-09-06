@@ -1,9 +1,10 @@
 "use client";
 
-import { Pencil, X } from "lucide-react";
+import { Link2, Pencil, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useMemo, useState } from "react";
+import { ShareLinkDialog } from "@/components/sharing/share-link-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,6 +27,7 @@ export default function ListDetailPage({ params }: PageProps) {
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [editedName, setEditedName] = useState("");
   const [editedDescription, setEditedDescription] = useState("");
+  const [isShareLinkOpen, setIsShareLinkOpen] = useState(false);
 
   const list = useMemo(() => getList(listId), [getList, listId]);
 
@@ -80,9 +82,11 @@ export default function ListDetailPage({ params }: PageProps) {
   };
 
   const handleSaveDescription = () => {
-    const newDesc = editedDescription.trim() || undefined;
-    if (newDesc !== list.description) {
-      updateList(listId, { description: newDesc });
+    const newDesc = editedDescription.trim();
+    if ((newDesc || undefined) !== list.description) {
+      // `null`, not `undefined`, clears it on the server — an undefined key
+      // is dropped from the JSON body and the old description would stay.
+      updateList(listId, { description: newDesc || null });
     }
     setIsEditingDescription(false);
   };
@@ -193,10 +197,28 @@ export default function ListDetailPage({ params }: PageProps) {
           </p>
         )}
 
-        <p className="text-xs text-muted-foreground mt-2">
-          {list.items.length} {list.items.length === 1 ? "item" : "items"}
-        </p>
+        <div className="mt-2 flex items-center justify-between">
+          <p className="text-xs text-muted-foreground">
+            {list.items.length} {list.items.length === 1 ? "item" : "items"}
+          </p>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setIsShareLinkOpen(true)}
+            title="Share link"
+          >
+            <Link2 className="size-4" />
+            <span className="ml-1">share</span>
+          </Button>
+        </div>
       </div>
+
+      <ShareLinkDialog
+        resource="lists"
+        id={listId}
+        open={isShareLinkOpen}
+        onOpenChange={setIsShareLinkOpen}
+      />
 
       {list.items.length === 0 ? (
         <div className="py-16 text-center">

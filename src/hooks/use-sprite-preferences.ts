@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useMemo, useSyncExternalStore } from "react";
+import { useCallback, useMemo } from "react";
 import { useGenerationPreference } from "@/hooks/use-generation-preference";
+import { usePreferencesStore } from "@/hooks/use-preferences-store";
 import { LATEST_GEN } from "@/lib/pkmn";
 import {
   getSpriteSet,
@@ -10,94 +11,33 @@ import {
   spriteSetForGeneration,
 } from "@/lib/sprites";
 
-const STORAGE_KEY = "pokedex-sprite-preferences";
-
-type SpritePreferences = {
-  /**
-   * Explicitly chosen sprite set. Null means "follow the generation the dex is
-   * viewed as", which is the default — the two pickers live in the same menu
-   * and move together unless the user pins a set.
-   */
-  spriteSetOverride: SpriteSetId | null;
-  /** False until the stored value has been read, to keep hydration stable. */
-  isLoaded: boolean;
-};
-
-const DEFAULT_PREFERENCES: SpritePreferences = {
-  spriteSetOverride: null,
-  isLoaded: false,
-};
-
-function parseOverride(value: string | null): SpriteSetId | null {
-  if (!value) return null;
-  try {
-    const parsed = JSON.parse(value) as { spriteSetOverride?: unknown };
-    // Guards against sprite set ids removed in a later release.
-    return isSpriteSetId(parsed.spriteSetOverride)
-      ? parsed.spriteSetOverride
-      : null;
-  } catch {
-    return null;
-  }
-}
-
-// Read by the app header, the dex grid and every detail page, all of which have
-// to move the instant the set changes — so it lives in one store rather than in
-// each hook's own state. Mirrors use-generation-preference.
-let state: SpritePreferences = DEFAULT_PREFERENCES;
-const listeners = new Set<() => void>();
-
-function setState(next: SpritePreferences) {
-  state = next;
-  for (const listener of listeners) listener();
-}
-
-function readFromStorage() {
-  setState({
-    spriteSetOverride: parseOverride(localStorage.getItem(STORAGE_KEY)),
-    isLoaded: true,
-  });
-}
-
-function subscribe(onStoreChange: () => void) {
-  if (!state.isLoaded) readFromStorage();
-  listeners.add(onStoreChange);
-
-  // Keep other tabs in step.
-  const onStorage = (event: StorageEvent) => {
-    if (event.key === STORAGE_KEY) readFromStorage();
-  };
-  window.addEventListener("storage", onStorage);
-
-  return () => {
-    listeners.delete(onStoreChange);
-    window.removeEventListener("storage", onStorage);
-  };
-}
-
-const getSnapshot = () => state;
-const getServerSnapshot = () => DEFAULT_PREFERENCES;
-
 /**
  * Which sprite sheet Pokemon are drawn with across cards, evolutions and detail
  * pages. Follows the viewed generation until the user pins a set explicitly.
+ *
+ * Thin wrapper around the consolidated `pokedex-preferences` store (see
+ * `use-preferences-store.ts`), which also syncs this to the server for
+ * signed-in users. Depends on `useGenerationPreference` for the generation to
+ * follow, same as before — both now ultimately read from the shared store, so
+ * they stay consistent.
  */
 export function useSpritePreferences() {
-  const { spriteSetOverride, isLoaded } = useSyncExternalStore(
-    subscribe,
-    getSnapshot,
-    getServerSnapshot,
-  );
+  const { preferences, isLoaded, setPreference } = usePreferencesStore();
   const { preferredGeneration } = useGenerationPreference();
 
-  const setSpriteSetOverride = useCallback((set: SpriteSetId | null) => {
-    const next = isSpriteSetId(set) ? set : null;
-    setState({ spriteSetOverride: next, isLoaded: true });
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ spriteSetOverride: next }),
-    );
-  }, []);
+  // Guards against sprite set ids removed in a later release.
+  const spriteSetOverride: SpriteSetId | null = isSpriteSetId(
+    preferences.spriteSetOverride,
+  )
+    ? preferences.spriteSetOverride
+    : null;
+
+  const setSpriteSetOverride = useCallback(
+    (set: SpriteSetId | null) => {
+      setPreference({ spriteSetOverride: isSpriteSetId(set) ? set : null });
+    },
+    [setPreference],
+  );
 
   const resetSpritePreferences = useCallback(() => {
     setSpriteSetOverride(null);

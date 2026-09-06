@@ -14,6 +14,17 @@ export interface TeamMember {
   id: number;
   name: string;
   sprite: string;
+  /**
+   * Full Showdown set config — populated when a member comes from a Showdown
+   * import (`importTeamShowdown`), left undefined for members added through
+   * the Pokemon picker. There's no editing UI for these yet.
+   */
+  item?: string;
+  ability?: string;
+  nature?: string;
+  evs?: Record<string, number>;
+  ivs?: Record<string, number>;
+  moves?: string[];
 }
 
 export interface Team {
@@ -72,6 +83,14 @@ export const GENERATION_INFO: Record<
     pokemonRange: [906, 1025],
   },
 };
+
+/**
+ * Display name for a stored generation string — rows from the database are
+ * plain text, so a value no longer in `GENERATION_INFO` falls back to itself.
+ */
+export function generationName(generation: string): string {
+  return GENERATION_INFO[generation as Generation]?.name ?? generation;
+}
 
 export const GENERATIONS_LIST: Generation[] = [
   "national-dex",

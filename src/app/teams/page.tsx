@@ -1,6 +1,13 @@
 "use client";
 
-import { ChevronRight, Download, Plus, Trash2, Upload } from "lucide-react";
+import {
+  ChevronRight,
+  Download,
+  Globe,
+  Plus,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -81,6 +88,17 @@ export default function TeamsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            asChild
+            title="Browse teams other trainers have shared"
+          >
+            <Link href="/teams/browse">
+              <Globe className="size-4" />
+              <span className="hidden sm:inline ml-1">browse</span>
+            </Link>
+          </Button>
           <Button
             size="sm"
             variant="ghost"

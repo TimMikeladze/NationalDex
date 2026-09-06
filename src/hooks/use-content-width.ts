@@ -1,36 +1,37 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useMemo } from "react";
+import {
+  type ContentWidth,
+  usePreferencesStore,
+} from "@/hooks/use-preferences-store";
 
-export type ContentWidth = "contained" | "full";
+export type { ContentWidth } from "@/hooks/use-preferences-store";
 
-const STORAGE_KEY = "nationaldex-content-width";
-
+/**
+ * Thin wrapper around the consolidated `pokedex-preferences` store (see
+ * `use-preferences-store.ts`), which also syncs this to the server for
+ * signed-in users.
+ */
 export function useContentWidth() {
-  const [contentWidth, setContentWidth] = useState<ContentWidth>("contained");
-  const [isLoaded, setIsLoaded] = useState(false);
+  const { preferences, isLoaded, setPreference } = usePreferencesStore();
+  const contentWidth = preferences.contentWidth;
 
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === "contained" || stored === "full") {
-      setContentWidth(stored);
-    }
-    setIsLoaded(true);
-  }, []);
+  const setContentWidth = useCallback(
+    (value: ContentWidth) => {
+      setPreference({ contentWidth: value });
+    },
+    [setPreference],
+  );
 
-  useEffect(() => {
-    if (!isLoaded) return;
-    localStorage.setItem(STORAGE_KEY, contentWidth);
-  }, [contentWidth, isLoaded]);
+  const setContained = useCallback(
+    () => setContentWidth("contained"),
+    [setContentWidth],
+  );
+  const setFull = useCallback(() => setContentWidth("full"), [setContentWidth]);
 
-  const setContained = useCallback(() => setContentWidth("contained"), []);
-  const setFull = useCallback(() => setContentWidth("full"), []);
-
-  return {
-    contentWidth,
-    isLoaded,
-    setContentWidth,
-    setContained,
-    setFull,
-  };
+  return useMemo(
+    () => ({ contentWidth, isLoaded, setContentWidth, setContained, setFull }),
+    [contentWidth, isLoaded, setContentWidth, setContained, setFull],
+  );
 }

@@ -1,43 +1,31 @@
 "use client";
 
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback } from "react";
 import { copiesAllowed, deckSize } from "@/lib/deck";
+import type { WriteRequest } from "@/lib/sync/outbox";
+import { SYNCED_STORAGE_KEYS } from "@/lib/sync/storage-keys";
+import {
+  createStorageStore,
+  parseJsonArray,
+  useStorageStore,
+} from "@/lib/sync/storage-store";
+import { useRemoteSync } from "@/lib/sync/use-remote-sync";
 import type { Deck, DeckCard, DeckEntry, DeckFormatId } from "@/types/deck";
 import { DEFAULT_DECK_FORMAT_ID, deckFormat, emptyDeck } from "@/types/deck";
 import type { TcgLanguage } from "@/types/tcg";
 import { DEFAULT_TCG_LANGUAGE } from "@/types/tcg";
 
-const STORAGE_KEY = "pokedex-decks";
-
 function generateId(): string {
   return `deck-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-// =============================================================================
-// Shared store
-//
-// The builder reads the deck from half a dozen places at once — the binder, the
-// counters, the legality panel, every tile in the search results — so they read
-// one store rather than each holding a copy that would overwrite its
-// neighbour's change on the next save.
-// =============================================================================
-
-interface DecksSnapshot {
-  decks: Deck[];
-  isLoaded: boolean;
-}
-
-const EMPTY: Deck[] = [];
-const SERVER_SNAPSHOT: DecksSnapshot = { decks: EMPTY, isLoaded: false };
-
-let snapshot: DecksSnapshot = SERVER_SNAPSHOT;
-const listeners = new Set<() => void>();
-
 /** A stored deck, re-checked — old saves predate fields the builder now reads. */
-function reviveDeck(deck: Deck): Deck | null {
+export function reviveDeck(item: unknown): Deck | null {
+  const deck = item as Partial<Deck> | null;
   if (!deck || typeof deck.id !== "string") return null;
   return {
     ...deck,
+    id: deck.id,
     name: deck.name || "Untitled deck",
     formatId: deck.formatId ?? DEFAULT_DECK_FORMAT_ID,
     language: deck.language ?? DEFAULT_TCG_LANGUAGE,
@@ -53,69 +41,45 @@ function reviveDeck(deck: Deck): Deck | null {
   };
 }
 
-function readStorage(): Deck[] {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) return EMPTY;
-    const parsed = JSON.parse(stored);
-    if (!Array.isArray(parsed)) return EMPTY;
-    return parsed.map(reviveDeck).filter((deck): deck is Deck => deck !== null);
-  } catch {
-    return EMPTY;
-  }
-}
+// The builder reads the deck from half a dozen places at once — the binder,
+// the counters, the legality panel, every tile in the search results — so they
+// all read one store (see storage-store).
+const store = createStorageStore<Deck[]>(SYNCED_STORAGE_KEYS.decks, {
+  parse: (raw) => parseJsonArray(raw, reviveDeck),
+});
 
-function emit() {
-  for (const listener of listeners) listener();
-}
+const getId = (deck: Deck) => deck.id;
+const fromApi = (rows: Deck[]) => rows;
 
-function hydrate() {
-  if (snapshot.isLoaded || typeof window === "undefined") return;
-  snapshot = { decks: readStorage(), isLoaded: true };
-}
+/** The request that creates (or wholesale replaces) one deck — also used by the backup restorer. */
+export const createDeckRequest = (deck: Deck): WriteRequest => ({
+  method: "POST",
+  path: "/api/decks",
+  body: deck,
+});
+const deleteRequest = (deck: Deck): WriteRequest => ({
+  method: "DELETE",
+  path: `/api/decks/${deck.id}`,
+});
 
-function setDecks(next: Deck[]) {
-  snapshot = { decks: next, isLoaded: true };
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  } catch {
-    // Storage can be full or blocked; the deck still updates on screen.
-  }
-  emit();
-}
-
-function subscribe(listener: () => void) {
-  hydrate();
-  listeners.add(listener);
-
-  const onStorage = (event: StorageEvent) => {
-    if (event.key !== STORAGE_KEY) return;
-    snapshot = { decks: readStorage(), isLoaded: true };
-    emit();
-  };
-  window.addEventListener("storage", onStorage);
-
-  return () => {
-    listeners.delete(listener);
-    window.removeEventListener("storage", onStorage);
-  };
-}
-
-function getSnapshot() {
-  return snapshot;
-}
-
-function getServerSnapshot() {
-  return SERVER_SNAPSHOT;
-}
-
-/** Applies a change to one deck and stamps it as the most recently touched. */
-function mutateDeck(id: string, mutate: (deck: Deck) => Deck) {
-  setDecks(
-    snapshot.decks.map((deck) =>
-      deck.id === id ? { ...mutate(deck), updatedAt: Date.now() } : deck,
-    ),
+/**
+ * Applies a change to one deck and stamps it as the most recently touched.
+ * Returns the updated deck (or `undefined` if no deck matched `id`) so
+ * callers can sync the result up without re-deriving it.
+ */
+function mutateDeck(
+  id: string,
+  mutate: (deck: Deck) => Deck,
+): Deck | undefined {
+  let updated: Deck | undefined;
+  store.set(
+    store.get().map((deck) => {
+      if (deck.id !== id) return deck;
+      updated = { ...mutate(deck), updatedAt: Date.now() };
+      return updated;
+    }),
   );
+  return updated;
 }
 
 /** What happened when a card was asked for, so the builder can say why not. */
@@ -125,11 +89,49 @@ export type AddCardResult =
   | { ok: false; reason: "missing-deck" };
 
 export function useDecks() {
-  const { decks, isLoaded } = useSyncExternalStore(
-    subscribe,
-    getSnapshot,
-    getServerSnapshot,
+  const { value: decks, isLoaded } = useStorageStore(store);
+
+  const { syncWrite, clearAll } = useRemoteSync<Deck, Deck>({
+    resource: "decks",
+    apiPath: "/api/decks",
+    store,
+    isLocalLoaded: isLoaded,
+    getId,
+    fromApi,
+    importLocal: createDeckRequest,
+    deleteRequest,
+  });
+
+  /** After any mutator that changes a deck's entry list, push the whole list. */
+  const syncEntries = useCallback(
+    (deckId: string, entries: DeckEntry[]) => {
+      void syncWrite({
+        method: "PATCH",
+        path: `/api/decks/${deckId}/entries`,
+        body: { entries },
+      });
+    },
+    [syncWrite],
   );
+
+  /** Adds a brand-new deck locally and creates it remotely. */
+  const addDeck = useCallback(
+    (deck: Deck) => {
+      store.set([...store.get(), deck]);
+      void syncWrite(createDeckRequest(deck));
+    },
+    [syncWrite],
+  );
+
+  /**
+   * Adds a deck that already exists on the server under this user — a clone
+   * of a shared deck — to the local mirror, without sending anything.
+   */
+  const receiveDeck = useCallback((deck: Deck) => {
+    const current = store.get();
+    if (current.some((entry) => entry.id === deck.id)) return;
+    store.set([...current, deck]);
+  }, []);
 
   const createDeck = useCallback(
     (
@@ -138,31 +140,38 @@ export function useDecks() {
       language: TcgLanguage = DEFAULT_TCG_LANGUAGE,
     ): Deck => {
       const deck = emptyDeck(generateId(), name, formatId, language);
-      setDecks([...snapshot.decks, deck]);
+      addDeck(deck);
       return deck;
     },
-    [],
+    [addDeck],
   );
 
-  const deleteDeck = useCallback((id: string) => {
-    setDecks(snapshot.decks.filter((deck) => deck.id !== id));
-  }, []);
+  const deleteDeck = useCallback(
+    (id: string) => {
+      store.set(store.get().filter((deck) => deck.id !== id));
+      void syncWrite({ method: "DELETE", path: `/api/decks/${id}` });
+    },
+    [syncWrite],
+  );
 
-  const duplicateDeck = useCallback((id: string): Deck | null => {
-    const source = snapshot.decks.find((deck) => deck.id === id);
-    if (!source) return null;
-    const now = Date.now();
-    const copy: Deck = {
-      ...source,
-      id: generateId(),
-      name: `${source.name} copy`,
-      entries: source.entries.map((entry) => ({ ...entry })),
-      createdAt: now,
-      updatedAt: now,
-    };
-    setDecks([...snapshot.decks, copy]);
-    return copy;
-  }, []);
+  const duplicateDeck = useCallback(
+    (id: string): Deck | null => {
+      const source = store.get().find((deck) => deck.id === id);
+      if (!source) return null;
+      const now = Date.now();
+      const copy: Deck = {
+        ...source,
+        id: generateId(),
+        name: `${source.name} copy`,
+        entries: source.entries.map((entry) => ({ ...entry })),
+        createdAt: now,
+        updatedAt: now,
+      };
+      addDeck(copy);
+      return copy;
+    },
+    [addDeck],
+  );
 
   const updateDeck = useCallback(
     (
@@ -171,9 +180,16 @@ export function useDecks() {
         Pick<Deck, "name" | "formatId" | "language" | "notes" | "typeFocus">
       >,
     ) => {
-      mutateDeck(id, (deck) => ({ ...deck, ...updates }));
+      const updated = mutateDeck(id, (deck) => ({ ...deck, ...updates }));
+      if (updated) {
+        void syncWrite({
+          method: "PATCH",
+          path: `/api/decks/${id}`,
+          body: updates,
+        });
+      }
     },
-    [],
+    [syncWrite],
   );
 
   const getDeck = useCallback(
@@ -190,7 +206,7 @@ export function useDecks() {
    */
   const addCard = useCallback(
     (deckId: string, card: DeckCard, count = 1): AddCardResult => {
-      const deck = snapshot.decks.find((entry) => entry.id === deckId);
+      const deck = store.get().find((entry) => entry.id === deckId);
       if (!deck) return { ok: false, reason: "missing-deck" };
 
       const format = deckFormat(deck.formatId);
@@ -209,7 +225,7 @@ export function useDecks() {
       const adding = Math.min(count, allowed);
       const existing = deck.entries.find((entry) => entry.card.id === card.id);
 
-      mutateDeck(deckId, (current) => ({
+      const updated = mutateDeck(deckId, (current) => ({
         ...current,
         entries: existing
           ? current.entries.map((entry) =>
@@ -222,15 +238,16 @@ export function useDecks() {
               { card, count: adding, addedAt: Date.now() } satisfies DeckEntry,
             ],
       }));
+      if (updated) syncEntries(deckId, updated.entries);
 
       return { ok: true, count: (existing?.count ?? 0) + adding };
     },
-    [],
+    [syncEntries],
   );
 
   const setCardCount = useCallback(
     (deckId: string, cardId: string, count: number) => {
-      mutateDeck(deckId, (deck) => ({
+      const updated = mutateDeck(deckId, (deck) => ({
         ...deck,
         entries:
           count <= 0
@@ -239,13 +256,14 @@ export function useDecks() {
                 entry.card.id === cardId ? { ...entry, count } : entry,
               ),
       }));
+      if (updated) syncEntries(deckId, updated.entries);
     },
-    [],
+    [syncEntries],
   );
 
   const removeCard = useCallback(
     (deckId: string, cardId: string, count = 1) => {
-      mutateDeck(deckId, (deck) => ({
+      const updated = mutateDeck(deckId, (deck) => ({
         ...deck,
         entries: deck.entries.flatMap((entry) => {
           if (entry.card.id !== cardId) return [entry];
@@ -253,35 +271,48 @@ export function useDecks() {
           return next > 0 ? [{ ...entry, count: next }] : [];
         }),
       }));
+      if (updated) syncEntries(deckId, updated.entries);
     },
-    [],
+    [syncEntries],
   );
 
-  const clearDeck = useCallback((deckId: string) => {
-    mutateDeck(deckId, (deck) => ({ ...deck, entries: [] }));
-  }, []);
+  const clearDeck = useCallback(
+    (deckId: string) => {
+      const updated = mutateDeck(deckId, (deck) => ({ ...deck, entries: [] }));
+      if (updated) syncEntries(deckId, updated.entries);
+    },
+    [syncEntries],
+  );
 
   /** Used by an import, which arrives as a whole list rather than card by card. */
-  const replaceEntries = useCallback((deckId: string, entries: DeckEntry[]) => {
-    mutateDeck(deckId, (deck) => ({ ...deck, entries }));
-  }, []);
+  const replaceEntries = useCallback(
+    (deckId: string, entries: DeckEntry[]) => {
+      const updated = mutateDeck(deckId, (deck) => ({ ...deck, entries }));
+      if (updated) syncEntries(deckId, updated.entries);
+    },
+    [syncEntries],
+  );
 
-  const importDeck = useCallback((deck: Omit<Deck, "id">): Deck => {
-    const now = Date.now();
-    const imported: Deck = {
-      ...deck,
-      id: generateId(),
-      createdAt: now,
-      updatedAt: now,
-    };
-    setDecks([...snapshot.decks, imported]);
-    return imported;
-  }, []);
+  const importDeck = useCallback(
+    (deck: Omit<Deck, "id">): Deck => {
+      const now = Date.now();
+      const imported: Deck = {
+        ...deck,
+        id: generateId(),
+        createdAt: now,
+        updatedAt: now,
+      };
+      addDeck(imported);
+      return imported;
+    },
+    [addDeck],
+  );
 
   return {
     decks,
     isLoaded,
     createDeck,
+    receiveDeck,
     deleteDeck,
     duplicateDeck,
     updateDeck,
@@ -292,6 +323,8 @@ export function useDecks() {
     clearDeck,
     replaceEntries,
     importDeck,
+    /** Settings' "reset everything" action — see `useRemoteSync`'s `clearAll`. */
+    clearDecks: clearAll,
   };
 }
 

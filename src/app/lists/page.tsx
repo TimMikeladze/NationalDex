@@ -1,6 +1,6 @@
 "use client";
 
-import { ListPlus, Plus, Trash2 } from "lucide-react";
+import { Globe, ListPlus, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -44,7 +44,18 @@ export default function ListsPage() {
 
   return (
     <div className="p-4 md:p-6">
-      <div className="mb-6 flex items-center justify-end">
+      <div className="mb-6 flex items-center justify-end gap-2">
+        <Button
+          size="sm"
+          variant="ghost"
+          asChild
+          title="Browse lists other trainers have shared"
+        >
+          <Link href="/lists/browse">
+            <Globe className="size-4" />
+            <span className="ml-1 hidden sm:inline">browse</span>
+          </Link>
+        </Button>
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
             <Button size="sm" variant="outline">
