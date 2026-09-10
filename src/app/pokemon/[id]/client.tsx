@@ -64,12 +64,16 @@ import {
 import {
   FIRST_ABILITY_GEN,
   FIRST_BREEDING_GEN,
+  getBaseName,
   getGenerationGames,
   getGenerationName,
   getOffensiveTypeMatchups,
+  getRegionFromDexNumber,
   getSpeciesGenerations,
+  getVariantFromName,
   LATEST_GEN,
   toID,
+  VARIANT_DISPLAY_NAMES,
 } from "@/lib/pkmn";
 import type { FormattedPokemonEncounter, PokedexEntry } from "@/lib/pokeapi";
 import { getSpriteSet, pokemonSprite, type SpriteSetId } from "@/lib/sprites";
@@ -94,73 +98,8 @@ const SUMMARY_RAIL_CLASSES =
   "space-y-6 md:col-span-5 lg:col-span-5 xl:col-span-5 2xl:col-span-4 md:self-start md:sticky md:top-6 md:max-h-[calc(var(--app-content-height)-3rem)] md:overflow-y-auto md:overscroll-contain md:-mr-2 md:pr-2";
 
 // =============================================================================
-// Variant & Region Helpers
+// Variant & Region Badge
 // =============================================================================
-
-const VARIANT_SUFFIXES = [
-  "Gmax",
-  "Mega",
-  "Mega-X",
-  "Mega-Y",
-  "Mega-Z",
-  "Alola",
-  "Galar",
-  "Hisui",
-  "Paldea",
-];
-
-function getVariantFromName(name: string): string | null {
-  for (const suffix of VARIANT_SUFFIXES) {
-    if (name.endsWith(`-${suffix}`)) {
-      return suffix;
-    }
-  }
-  return null;
-}
-
-function getBaseName(name: string): string {
-  const variant = getVariantFromName(name);
-  if (variant) {
-    return name.slice(0, -(variant.length + 1));
-  }
-  return name;
-}
-
-const VARIANT_DISPLAY_NAMES: Record<string, string> = {
-  Gmax: "Gigantamax",
-  Mega: "Mega",
-  "Mega-X": "Mega X",
-  "Mega-Y": "Mega Y",
-  "Mega-Z": "Mega Z",
-  Alola: "Alolan",
-  Galar: "Galarian",
-  Hisui: "Hisuian",
-  Paldea: "Paldean",
-};
-
-type Region =
-  | "Kanto"
-  | "Johto"
-  | "Hoenn"
-  | "Sinnoh"
-  | "Unova"
-  | "Kalos"
-  | "Alola"
-  | "Galar"
-  | "Paldea";
-
-function getRegionFromDexNumber(dexNumber: number): Region | null {
-  if (dexNumber >= 1 && dexNumber <= 151) return "Kanto";
-  if (dexNumber >= 152 && dexNumber <= 251) return "Johto";
-  if (dexNumber >= 252 && dexNumber <= 386) return "Hoenn";
-  if (dexNumber >= 387 && dexNumber <= 493) return "Sinnoh";
-  if (dexNumber >= 494 && dexNumber <= 649) return "Unova";
-  if (dexNumber >= 650 && dexNumber <= 721) return "Kalos";
-  if (dexNumber >= 722 && dexNumber <= 809) return "Alola";
-  if (dexNumber >= 810 && dexNumber <= 905) return "Galar";
-  if (dexNumber >= 906 && dexNumber <= 1025) return "Paldea";
-  return null;
-}
 
 function VariantOrRegionBadge({
   name,

@@ -1,6 +1,14 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getAllSpecies, getSpecies, toID } from "@/lib/pkmn";
+import { STAT_ABBREVIATIONS, STAT_KEYS } from "@/lib/dex-pokemon";
+import {
+  getAllSpecies,
+  getRegionFromDexNumber,
+  getSpecies,
+  getVariantFromName,
+  toID,
+  VARIANT_DISPLAY_NAMES,
+} from "@/lib/pkmn";
 import { getPokedexEntry } from "@/lib/pokeapi";
 import { PrefetchBoundary } from "@/lib/prefetch";
 import {
@@ -24,61 +32,6 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-const VARIANT_SUFFIXES = [
-  "Gmax",
-  "Mega",
-  "Mega-X",
-  "Mega-Y",
-  "Mega-Z",
-  "Alola",
-  "Galar",
-  "Hisui",
-  "Paldea",
-];
-
-const VARIANT_DISPLAY_NAMES: Record<string, string> = {
-  Gmax: "Gigantamax",
-  Mega: "Mega",
-  "Mega-X": "Mega X",
-  "Mega-Y": "Mega Y",
-  "Mega-Z": "Mega Z",
-  Alola: "Alolan",
-  Galar: "Galarian",
-  Hisui: "Hisuian",
-  Paldea: "Paldean",
-};
-
-function getVariantFromName(name: string): string | null {
-  for (const suffix of VARIANT_SUFFIXES) {
-    if (name.endsWith(`-${suffix}`)) return suffix;
-  }
-  return null;
-}
-
-function getRegionFromDexNumber(dexNumber: number): string | null {
-  if (dexNumber >= 1 && dexNumber <= 151) return "Kanto";
-  if (dexNumber >= 152 && dexNumber <= 251) return "Johto";
-  if (dexNumber >= 252 && dexNumber <= 386) return "Hoenn";
-  if (dexNumber >= 387 && dexNumber <= 493) return "Sinnoh";
-  if (dexNumber >= 494 && dexNumber <= 649) return "Unova";
-  if (dexNumber >= 650 && dexNumber <= 721) return "Kalos";
-  if (dexNumber >= 722 && dexNumber <= 809) return "Alola";
-  if (dexNumber >= 810 && dexNumber <= 905) return "Galar";
-  if (dexNumber >= 906 && dexNumber <= 1025) return "Paldea";
-  return null;
-}
-
-const STAT_LABELS: Record<string, string> = {
-  hp: "HP",
-  atk: "ATK",
-  def: "DEF",
-  spa: "SPA",
-  spd: "SPD",
-  spe: "SPE",
-};
-
-const STAT_ORDER = ["hp", "atk", "def", "spa", "spd", "spe"] as const;
-
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
@@ -99,8 +52,8 @@ export async function generateMetadata({
   // Build detailed description with all info rendered in the OG image
   const variant = getVariantFromName(species.name);
   const region = getRegionFromDexNumber(species.num);
-  const statsSummary = STAT_ORDER.map(
-    (key) => `${STAT_LABELS[key]} ${species.baseStats[key] ?? 0}`,
+  const statsSummary = STAT_KEYS.map(
+    (key) => `${STAT_ABBREVIATIONS[key]} ${species.baseStats[key] ?? 0}`,
   ).join(", ");
   const badges: string[] = [];
   if (variant) badges.push(VARIANT_DISPLAY_NAMES[variant] ?? variant);
@@ -213,9 +166,9 @@ export default async function PokemonPage({ params }: PageProps) {
             name: "Base stat total",
             value: String(bst),
           },
-          ...STAT_ORDER.map((key) => ({
+          ...STAT_KEYS.map((key) => ({
             "@type": "PropertyValue" as const,
-            name: STAT_LABELS[key],
+            name: STAT_ABBREVIATIONS[key],
             value: String(species.baseStats[key] ?? 0),
           })),
         ],

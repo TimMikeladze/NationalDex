@@ -1,5 +1,6 @@
 import { Generations } from "@pkmn/data";
 import { Dex } from "@pkmn/dex";
+import { REGION_LABELS } from "@/types/pokemon";
 
 export const gens = new Generations(Dex);
 export const currentGen = gens.get(9);
@@ -314,15 +315,78 @@ export const GENERATIONS = [
 ] as const;
 
 export const GEN_RANGES = [
-  { id: "gen-1", name: "Gen I", label: "Red/Blue", min: 1, max: 151 },
-  { id: "gen-2", name: "Gen II", label: "Gold/Silver", min: 152, max: 251 },
-  { id: "gen-3", name: "Gen III", label: "Ruby/Sapphire", min: 252, max: 386 },
-  { id: "gen-4", name: "Gen IV", label: "Diamond/Pearl", min: 387, max: 493 },
-  { id: "gen-5", name: "Gen V", label: "Black/White", min: 494, max: 649 },
-  { id: "gen-6", name: "Gen VI", label: "X/Y", min: 650, max: 721 },
-  { id: "gen-7", name: "Gen VII", label: "Sun/Moon", min: 722, max: 809 },
-  { id: "gen-8", name: "Gen VIII", label: "Sword/Shield", min: 810, max: 905 },
-  { id: "gen-9", name: "Gen IX", label: "Scarlet/Violet", min: 906, max: 1025 },
+  {
+    id: "gen-1",
+    name: "Gen I",
+    label: "Red/Blue",
+    region: "kanto",
+    min: 1,
+    max: 151,
+  },
+  {
+    id: "gen-2",
+    name: "Gen II",
+    label: "Gold/Silver",
+    region: "johto",
+    min: 152,
+    max: 251,
+  },
+  {
+    id: "gen-3",
+    name: "Gen III",
+    label: "Ruby/Sapphire",
+    region: "hoenn",
+    min: 252,
+    max: 386,
+  },
+  {
+    id: "gen-4",
+    name: "Gen IV",
+    label: "Diamond/Pearl",
+    region: "sinnoh",
+    min: 387,
+    max: 493,
+  },
+  {
+    id: "gen-5",
+    name: "Gen V",
+    label: "Black/White",
+    region: "unova",
+    min: 494,
+    max: 649,
+  },
+  {
+    id: "gen-6",
+    name: "Gen VI",
+    label: "X/Y",
+    region: "kalos",
+    min: 650,
+    max: 721,
+  },
+  {
+    id: "gen-7",
+    name: "Gen VII",
+    label: "Sun/Moon",
+    region: "alola",
+    min: 722,
+    max: 809,
+  },
+  {
+    id: "gen-8",
+    name: "Gen VIII",
+    label: "Sword/Shield",
+    region: "galar",
+    min: 810,
+    max: 905,
+  },
+  {
+    id: "gen-9",
+    name: "Gen IX",
+    label: "Scarlet/Violet",
+    region: "paldea",
+    min: 906,
+    max: 1025,
+  },
 ] as const;
 
 export function getGenerationByPokemonId(pokemonId: number): string | null {
@@ -336,6 +400,71 @@ export function getGenerationByPokemonId(pokemonId: number): string | null {
 
 export function getGenerationName(genNum: number): string {
   return GENERATIONS.find((g) => g.num === genNum)?.name ?? `Gen ${genNum}`;
+}
+
+export const VARIANT_SUFFIXES = [
+  "Gmax",
+  "Mega",
+  "Mega-X",
+  "Mega-Y",
+  "Mega-Z",
+  "Alola",
+  "Galar",
+  "Hisui",
+  "Paldea",
+];
+
+export const VARIANT_DISPLAY_NAMES: Record<string, string> = {
+  Gmax: "Gigantamax",
+  Mega: "Mega",
+  "Mega-X": "Mega X",
+  "Mega-Y": "Mega Y",
+  "Mega-Z": "Mega Z",
+  Alola: "Alolan",
+  Galar: "Galarian",
+  Hisui: "Hisuian",
+  Paldea: "Paldean",
+};
+
+/**
+ * Extract the variant suffix from a Pokemon name.
+ * e.g., "Pikachu-Gmax" -> "Gmax", "Raichu-Alola" -> "Alola"
+ */
+export function getVariantFromName(name: string): string | null {
+  for (const suffix of VARIANT_SUFFIXES) {
+    if (name.endsWith(`-${suffix}`)) {
+      return suffix;
+    }
+  }
+  return null;
+}
+
+/**
+ * Get the base name without the variant suffix.
+ * e.g., "Pikachu-Gmax" -> "Pikachu", "Raichu-Alola" -> "Raichu"
+ */
+export function getBaseName(name: string): string {
+  const variant = getVariantFromName(name);
+  if (variant) {
+    return name.slice(0, -(variant.length + 1)); // Remove "-Variant"
+  }
+  return name;
+}
+
+/**
+ * Display name of the region a Pokemon debuted in, from its dex number:
+ * the region of the generation that introduced it.
+ */
+export function getRegionFromDexNumber(dexNumber: number): string | null {
+  const gen = GEN_RANGES.find((g) => dexNumber >= g.min && dexNumber <= g.max);
+  return gen ? REGION_LABELS[gen.region] : null;
+}
+
+/** Bar color for a stat, thresholded on its percentage of the max stat value. */
+export function getStatColor(percentage: number): string {
+  if (percentage > 75) return "#22c55e";
+  if (percentage > 50) return "#eab308";
+  return "#ef4444";
 }
 
 /** Games a generation covers, e.g. "Gold/Silver" for gen 2. */

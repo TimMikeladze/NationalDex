@@ -4,6 +4,7 @@
  */
 
 import pokedexData from "@/data/pokedex-entries.json";
+import { ONE_WEEK_SECONDS } from "@/lib/utils";
 
 const POKEAPI_BASE = "https://pokeapi.co/api/v2";
 
@@ -104,7 +105,7 @@ async function fetchFromAPI(
 ): Promise<PokedexEntry | null> {
   try {
     const res = await fetch(`${POKEAPI_BASE}/pokemon-species/${pokemonId}`, {
-      next: { revalidate: 604800 }, // Cache for 1 week
+      next: { revalidate: ONE_WEEK_SECONDS },
     });
 
     if (!res.ok) {
@@ -255,7 +256,7 @@ export async function getAllRegions(): Promise<RegionWithLocations[]> {
   try {
     // Fetch region list
     const listRes = await fetch(`${POKEAPI_BASE}/region?limit=20`, {
-      next: { revalidate: 604800 },
+      next: { revalidate: ONE_WEEK_SECONDS },
     });
     if (!listRes.ok) return [];
 
@@ -267,7 +268,7 @@ export async function getAllRegions(): Promise<RegionWithLocations[]> {
     // Fetch all regions in parallel
     const regions = await Promise.all(
       regionUrls.map(async (url) => {
-        const res = await fetch(url, { next: { revalidate: 604800 } });
+        const res = await fetch(url, { next: { revalidate: ONE_WEEK_SECONDS } });
         if (!res.ok) return null;
         return res.json() as Promise<PokeAPIRegion>;
       }),
@@ -308,7 +309,7 @@ export async function getAllLocations(): Promise<LocationListItem[]> {
   try {
     // First fetch to get total count
     const initialRes = await fetch(`${POKEAPI_BASE}/location?limit=1`, {
-      next: { revalidate: 604800 },
+      next: { revalidate: ONE_WEEK_SECONDS },
     });
     if (!initialRes.ok) return [];
 
@@ -317,7 +318,7 @@ export async function getAllLocations(): Promise<LocationListItem[]> {
 
     // Fetch all locations
     const res = await fetch(`${POKEAPI_BASE}/location?limit=${total}`, {
-      next: { revalidate: 604800 },
+      next: { revalidate: ONE_WEEK_SECONDS },
     });
     if (!res.ok) return [];
 
@@ -345,7 +346,7 @@ export async function getLocation(
 ): Promise<PokeAPILocation | null> {
   try {
     const res = await fetch(`${POKEAPI_BASE}/location/${idOrName}`, {
-      next: { revalidate: 604800 },
+      next: { revalidate: ONE_WEEK_SECONDS },
     });
     if (!res.ok) return null;
     return res.json();
@@ -362,7 +363,7 @@ export async function getLocationArea(
 ): Promise<PokeAPILocationArea | null> {
   try {
     const res = await fetch(`${POKEAPI_BASE}/location-area/${idOrName}`, {
-      next: { revalidate: 604800 },
+      next: { revalidate: ONE_WEEK_SECONDS },
     });
     if (!res.ok) return null;
     return res.json();
@@ -379,7 +380,7 @@ export async function getPokemonEncounters(
 ): Promise<PokeAPIPokemonEncounter[]> {
   try {
     const res = await fetch(`${POKEAPI_BASE}/pokemon/${pokemonId}/encounters`, {
-      next: { revalidate: 604800 },
+      next: { revalidate: ONE_WEEK_SECONDS },
     });
     if (!res.ok) return [];
     return res.json();

@@ -1,99 +1,58 @@
 import { ImageResponse } from "next/og";
-import { getAllSpecies, getSpecies, toID } from "@/lib/pkmn";
+import { STAT_ABBREVIATIONS, STAT_KEYS } from "@/lib/dex-pokemon";
+import {
+  getAllSpecies,
+  getBaseName,
+  getRegionFromDexNumber,
+  getSpecies,
+  getStatColor,
+  getVariantFromName,
+  toID,
+  VARIANT_DISPLAY_NAMES,
+} from "@/lib/pkmn";
 import { getPokedexEntry } from "@/lib/pokeapi";
-import { pokemonDbSlug } from "@/lib/sprites";
+import { pokemonSprite } from "@/lib/sprites";
 import { type PokemonType, TYPE_COLORS } from "@/types/pokemon";
+import {
+  DexMark,
+  loadOgAssets,
+  OG_BORDER,
+  OG_CARD,
+  OG_CONTENT_TYPE,
+  OG_FG,
+  OG_MUTED,
+  OG_SIZE,
+  OgFooter,
+  OgFrame,
+  ogFetchInit,
+  ogImageOptions,
+} from "../../og-shared";
 
 export const alt = "Pokémon stats and type information";
-export const size = { width: 1200, height: 630 };
-export const contentType = "image/png";
+export const size = OG_SIZE;
+export const contentType = OG_CONTENT_TYPE;
 
 export async function generateStaticParams() {
   const species = getAllSpecies(9, { includeFormes: true });
   return species.map((s) => ({ id: toID(s.name) }));
 }
 
-const STAT_LABELS: Record<string, string> = {
-  hp: "HP",
-  atk: "ATK",
-  def: "DEF",
-  spa: "SPA",
-  spd: "SPD",
-  spe: "SPE",
-};
-
-const STAT_ORDER = ["hp", "atk", "def", "spa", "spd", "spe"] as const;
 const MAX_STAT = 255;
 
-// Matches stat-bar.tsx color logic
-function getStatColor(value: number): string {
-  const pct = (value / MAX_STAT) * 100;
-  if (pct > 75) return "#22c55e";
-  if (pct > 50) return "#eab308";
-  return "#ef4444";
-}
+/** Where the brand mark sits on every per-Pokémon card. */
+const FOOTER_CORNER = { position: "absolute", bottom: 32, right: 48 } as const;
 
-// Matches pokemon-card.tsx variant logic
-const VARIANT_SUFFIXES = [
-  "Gmax",
-  "Mega",
-  "Mega-X",
-  "Mega-Y",
-  "Mega-Z",
-  "Alola",
-  "Galar",
-  "Hisui",
-  "Paldea",
-];
-
-const VARIANT_DISPLAY_NAMES: Record<string, string> = {
-  Gmax: "Gigantamax",
-  Mega: "Mega",
-  "Mega-X": "Mega X",
-  "Mega-Y": "Mega Y",
-  "Mega-Z": "Mega Z",
-  Alola: "Alolan",
-  Galar: "Galarian",
-  Hisui: "Hisuian",
-  Paldea: "Paldean",
-};
-
-function getVariantFromName(name: string): string | null {
-  for (const suffix of VARIANT_SUFFIXES) {
-    if (name.endsWith(`-${suffix}`)) return suffix;
-  }
-  return null;
-}
-
-function getBaseName(name: string): string {
-  const variant = getVariantFromName(name);
-  if (variant) return name.slice(0, -(variant.length + 1));
-  return name;
-}
-
-// Matches pokemon-card.tsx region logic
-type Region =
-  | "Kanto"
-  | "Johto"
-  | "Hoenn"
-  | "Sinnoh"
-  | "Unova"
-  | "Kalos"
-  | "Alola"
-  | "Galar"
-  | "Paldea";
-
-function getRegionFromDexNumber(dexNumber: number): Region | null {
-  if (dexNumber >= 1 && dexNumber <= 151) return "Kanto";
-  if (dexNumber >= 152 && dexNumber <= 251) return "Johto";
-  if (dexNumber >= 252 && dexNumber <= 386) return "Hoenn";
-  if (dexNumber >= 387 && dexNumber <= 493) return "Sinnoh";
-  if (dexNumber >= 494 && dexNumber <= 649) return "Unova";
-  if (dexNumber >= 650 && dexNumber <= 721) return "Kalos";
-  if (dexNumber >= 722 && dexNumber <= 809) return "Alola";
-  if (dexNumber >= 810 && dexNumber <= 905) return "Galar";
-  if (dexNumber >= 906 && dexNumber <= 1025) return "Paldea";
-  return null;
+/**
+ * Name size that keeps the longest formes clear of the quote box. JetBrains
+ * Mono advances 0.6em per glyph and the name column is about 460px wide
+ * when a quote is showing, so each step keeps its bracket of names on one
+ * line (the dex number may wrap under it).
+ */
+function nameFontSize(name: string): number {
+  if (name.length <= 10) return 56;
+  if (name.length <= 13) return 44;
+  if (name.length <= 19) return 36;
+  return 30;
 }
 
 export default async function OGImage({
@@ -104,24 +63,42 @@ export default async function OGImage({
   const { id } = await params;
   const species = getSpecies(id);
 
+  const { fonts, mark } = await loadOgAssets();
+
   if (!species) {
     return new ImageResponse(
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: "#09090b",
-          color: "#fff",
-          fontSize: 48,
-          fontFamily: "monospace",
-        }}
-      >
-        Pokémon not found
-      </div>,
-      { ...size },
+      <OgFrame>
+        <div
+          style={{
+            position: "relative",
+            zIndex: 1,
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 24,
+              padding: "56px 72px",
+              backgroundColor: OG_CARD,
+              border: `1px solid ${OG_BORDER}`,
+            }}
+          >
+            <DexMark src={mark} size={64} />
+            <div style={{ fontSize: 48, fontWeight: 700 }}>
+              Pokémon not found
+            </div>
+          </div>
+        </div>
+        <OgFooter mark={mark} style={FOOTER_CORNER} />
+      </OgFrame>,
+      ogImageOptions(fonts),
     );
   }
 
@@ -132,9 +109,9 @@ export default async function OGImage({
     Boolean,
   ) as string[];
   const primaryType = types[0] as PokemonType;
-  const typeColor = TYPE_COLORS[primaryType] ?? "#6D6C54";
+  const typeColor = TYPE_COLORS[primaryType] ?? OG_MUTED;
 
-  const stats: { key: string; value: number }[] = STAT_ORDER.map((key) => ({
+  const stats = STAT_KEYS.map((key) => ({
     key,
     value: species.baseStats[key] ?? 0,
   }));
@@ -154,51 +131,40 @@ export default async function OGImage({
     const MAX_QUOTE_LENGTH = 120;
     const uniqueTexts = [
       ...new Set(pokedexEntry.entries.map((e) => e.flavorText)),
-    ];
+    ].filter((t) => t.length > 0);
     // Prefer the longest entry that still fits within the limit
     const fitting = uniqueTexts
       .filter((t) => t.length <= MAX_QUOTE_LENGTH)
       .sort((a, b) => b.length - a.length);
-    quote = fitting[0] ?? null;
     // If nothing fits, truncate the shortest available entry
-    if (!quote) {
+    if (fitting.length > 0) {
+      quote = fitting[0];
+    } else if (uniqueTexts.length > 0) {
       const shortest = uniqueTexts.sort((a, b) => a.length - b.length)[0];
       quote = `${shortest.slice(0, MAX_QUOTE_LENGTH - 1)}…`;
     }
   }
 
-  // Sprite
-  const slug = pokemonDbSlug(name);
-  const spriteUrl = `https://play.pokemonshowdown.com/sprites/gen5/${slug}.png`;
+  // Sprite — the same Gen 5 Showdown set the app draws, so alternate formes
+  // resolve to Showdown's own file names instead of PokemonDB's.
+  const spriteUrl = pokemonSprite(name, { set: "gen5" });
 
   let spriteBase64: string | null = null;
   try {
-    const res = await fetch(spriteUrl);
+    const res = await fetch(spriteUrl, ogFetchInit());
     if (res.ok) {
       const buffer = await res.arrayBuffer();
       const base64 = Buffer.from(buffer).toString("base64");
       spriteBase64 = `data:image/png;base64,${base64}`;
     }
   } catch {
-    // Sprite fetch failed — render without it
+    // Sprite fetch failed or timed out — render without it
   }
 
   return new ImageResponse(
-    <div
-      style={{
-        width: "100%",
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        padding: "48px 56px",
-        backgroundColor: "#000000",
-        color: "#fff",
-        fontFamily: "monospace",
-        position: "relative",
-      }}
-    >
-      {/* Top section: sprite + name + types + badges */}
-      <div style={{ display: "flex", alignItems: "center", gap: "32px" }}>
+    <OgFrame style={{ flexDirection: "column", padding: "48px 56px" }}>
+      {/* Top section: sprite, name + types + badges, then the quote */}
+      <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
         {/* Sprite */}
         {spriteBase64 ? (
           <div
@@ -206,11 +172,10 @@ export default async function OGImage({
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              width: "200px",
-              height: "200px",
-              borderRadius: "24px",
-              backgroundColor: "rgba(255,255,255,0.06)",
-              border: `2px solid ${typeColor}33`,
+              width: 200,
+              height: 200,
+              backgroundColor: `${typeColor}20`,
+              border: `2px solid ${typeColor}66`,
               flexShrink: 0,
             }}
           >
@@ -229,13 +194,12 @@ export default async function OGImage({
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              width: "200px",
-              height: "200px",
-              borderRadius: "24px",
-              backgroundColor: "rgba(255,255,255,0.06)",
-              border: "2px solid rgba(255,255,255,0.1)",
+              width: 200,
+              height: 200,
+              backgroundColor: OG_CARD,
+              border: `2px solid ${OG_BORDER}`,
               flexShrink: 0,
-              fontSize: "64px",
+              fontSize: 64,
               opacity: 0.3,
             }}
           >
@@ -248,49 +212,61 @@ export default async function OGImage({
           style={{
             display: "flex",
             flexDirection: "column",
-            gap: "12px",
+            gap: 12,
+            flex: 1,
           }}
         >
           <div
             style={{
               display: "flex",
+              flexWrap: "wrap",
               alignItems: "baseline",
-              gap: "16px",
+              gap: 16,
             }}
           >
-            <span style={{ fontSize: "56px", fontWeight: 700 }}>
+            <span
+              style={{
+                fontSize: nameFontSize(baseName),
+                fontWeight: 700,
+                color: OG_FG,
+              }}
+            >
               {baseName}
             </span>
             <span
               style={{
-                fontSize: "32px",
+                fontSize: 32,
                 fontWeight: 400,
-                opacity: 0.5,
+                color: OG_MUTED,
               }}
             >
               #{String(dexNum).padStart(3, "0")}
             </span>
           </div>
-          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-            {types.map((t) => (
-              <div
-                key={t}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  padding: "6px 20px",
-                  borderRadius: "9999px",
-                  backgroundColor:
-                    TYPE_COLORS[t as PokemonType] ?? "rgba(255,255,255,0.2)",
-                  fontSize: "22px",
-                  fontWeight: 600,
-                  letterSpacing: "0.5px",
-                }}
-              >
-                {t}
-              </div>
-            ))}
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            {types.map((t) => {
+              const color = TYPE_COLORS[t as PokemonType] ?? OG_MUTED;
+              return (
+                <div
+                  key={t}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "6px 20px",
+                    borderRadius: 6,
+                    backgroundColor: `${color}20`,
+                    color,
+                    fontSize: 22,
+                    fontWeight: 700,
+                    letterSpacing: 0.5,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {t}
+                </div>
+              );
+            })}
             {badges.map((badge) => (
               <div
                 key={badge}
@@ -299,12 +275,11 @@ export default async function OGImage({
                   alignItems: "center",
                   justifyContent: "center",
                   padding: "6px 16px",
-                  borderRadius: "9999px",
-                  backgroundColor: "rgba(255,255,255,0.1)",
-                  border: "1px solid rgba(255,255,255,0.2)",
-                  fontSize: "20px",
-                  fontWeight: 500,
-                  color: "rgba(255,255,255,0.8)",
+                  backgroundColor: OG_CARD,
+                  border: `1px solid ${OG_BORDER}`,
+                  fontSize: 20,
+                  fontWeight: 400,
+                  color: OG_MUTED,
                 }}
               >
                 {badge}
@@ -312,6 +287,27 @@ export default async function OGImage({
             ))}
           </div>
         </div>
+
+        {/* Pokédex quote — laid out in the row so it can't paint over the name */}
+        {quote && (
+          <div
+            style={{
+              display: "flex",
+              alignSelf: "flex-start",
+              flexShrink: 0,
+              maxWidth: 360,
+              padding: "14px 18px",
+              backgroundColor: OG_CARD,
+              border: `1px solid ${OG_BORDER}`,
+              fontSize: 17,
+              fontStyle: "italic",
+              lineHeight: 1.5,
+              color: OG_MUTED,
+            }}
+          >
+            {quote}
+          </div>
+        )}
       </div>
 
       {/* Stats section */}
@@ -319,8 +315,8 @@ export default async function OGImage({
         style={{
           display: "flex",
           flexDirection: "column",
-          gap: "12px",
-          marginTop: "36px",
+          gap: 12,
+          marginTop: 36,
         }}
       >
         {stats.map((s) => (
@@ -329,26 +325,27 @@ export default async function OGImage({
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "12px",
+              gap: 12,
             }}
           >
             <span
               style={{
-                fontSize: "20px",
-                fontWeight: 600,
-                width: "48px",
+                fontSize: 20,
+                fontWeight: 700,
+                width: 48,
                 textAlign: "right",
-                opacity: 0.6,
+                color: OG_MUTED,
               }}
             >
-              {STAT_LABELS[s.key]}
+              {STAT_ABBREVIATIONS[s.key]}
             </span>
             <span
               style={{
-                fontSize: "20px",
+                fontSize: 20,
                 fontWeight: 700,
-                width: "44px",
+                width: 44,
                 textAlign: "right",
+                color: OG_FG,
               }}
             >
               {s.value}
@@ -358,9 +355,9 @@ export default async function OGImage({
               style={{
                 display: "flex",
                 flex: 1,
-                height: "20px",
-                borderRadius: "10px",
-                backgroundColor: "rgba(255,255,255,0.08)",
+                height: 20,
+                borderRadius: 10,
+                backgroundColor: OG_CARD,
                 overflow: "hidden",
               }}
             >
@@ -369,8 +366,8 @@ export default async function OGImage({
                 style={{
                   width: `${(s.value / MAX_STAT) * 100}%`,
                   height: "100%",
-                  borderRadius: "10px",
-                  backgroundColor: getStatColor(s.value),
+                  borderRadius: 10,
+                  backgroundColor: getStatColor((s.value / MAX_STAT) * 100),
                 }}
               />
             </div>
@@ -382,27 +379,28 @@ export default async function OGImage({
           style={{
             display: "flex",
             alignItems: "center",
-            gap: "12px",
-            marginTop: "4px",
+            gap: 12,
+            marginTop: 4,
           }}
         >
           <span
             style={{
-              fontSize: "20px",
-              fontWeight: 600,
-              width: "48px",
+              fontSize: 20,
+              fontWeight: 700,
+              width: 48,
               textAlign: "right",
-              opacity: 0.6,
+              color: OG_MUTED,
             }}
           >
             BST
           </span>
           <span
             style={{
-              fontSize: "20px",
+              fontSize: 20,
               fontWeight: 700,
-              width: "44px",
+              width: 44,
               textAlign: "right",
+              color: OG_FG,
             }}
           >
             {bst}
@@ -410,43 +408,9 @@ export default async function OGImage({
         </div>
       </div>
 
-      {/* Pokédex quote — top-right corner */}
-      {quote && (
-        <div
-          style={{
-            position: "absolute",
-            top: "48px",
-            right: "56px",
-            maxWidth: "420px",
-            display: "flex",
-            padding: "14px 18px",
-            borderRadius: "12px",
-            backgroundColor: "rgba(255,255,255,0.05)",
-            border: `1px solid rgba(255,255,255,0.12)`,
-            fontSize: "17px",
-            fontStyle: "italic",
-            lineHeight: "1.5",
-            color: "rgba(255,255,255,0.7)",
-          }}
-        >
-          {quote}
-        </div>
-      )}
-
       {/* Branding */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: "32px",
-          right: "48px",
-          fontSize: "22px",
-          fontWeight: 600,
-          opacity: 0.35,
-        }}
-      >
-        nationaldex.app
-      </div>
-    </div>,
-    { ...size },
+      <OgFooter mark={mark} style={FOOTER_CORNER} />
+    </OgFrame>,
+    ogImageOptions(fonts),
   );
 }

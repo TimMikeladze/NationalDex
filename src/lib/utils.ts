@@ -3,6 +3,12 @@ import { twMerge } from "tailwind-merge";
 
 export const SITE_URL = "https://www.nationaldex.app";
 
+/**
+ * Next data-cache window for upstream assets that all but never change —
+ * PokeAPI records, sprite files, font files.
+ */
+export const ONE_WEEK_SECONDS = 60 * 60 * 24 * 7;
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
