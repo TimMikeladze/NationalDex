@@ -1,59 +1,87 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
+import type { WriteRequest } from "@/lib/sync/outbox";
+import { SYNCED_STORAGE_KEYS } from "@/lib/sync/storage-keys";
+import {
+  createStorageStore,
+  parseJsonArray,
+  useStorageStore,
+} from "@/lib/sync/storage-store";
+import { useRemoteSync } from "@/lib/sync/use-remote-sync";
 
-const STORAGE_KEY = "pokedex-favorites";
+interface FavoriteRow {
+  pokemonId: number;
+}
+
+const store = createStorageStore<number[]>(SYNCED_STORAGE_KEYS.favorites, {
+  parse: (raw) =>
+    parseJsonArray<number>(raw, (item) =>
+      typeof item === "number" ? item : null,
+    ),
+});
+
+const getId = (id: number) => id;
+const fromApi = (rows: FavoriteRow[]) => rows.map((row) => row.pokemonId);
+
+/** The request that favourites one Pokemon — also used by the backup restorer. */
+export const createFavoriteRequest = (id: number): WriteRequest => ({
+  method: "POST",
+  path: "/api/favorites",
+  body: { pokemonId: id },
+});
+const deleteRequest = (id: number): WriteRequest => ({
+  method: "DELETE",
+  path: `/api/favorites/${id}`,
+});
 
 export function useFavorites() {
-  const [favorites, setFavorites] = useState<number[]>([]);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const { value: favorites, isLoaded } = useStorageStore(store);
 
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        setFavorites(JSON.parse(stored));
-      } catch {
-        setFavorites([]);
-      }
-    }
-    setIsLoaded(true);
-  }, []);
+  const { syncWrite, clearAll } = useRemoteSync<number, FavoriteRow>({
+    resource: "favorites",
+    apiPath: "/api/favorites",
+    store,
+    isLocalLoaded: isLoaded,
+    getId,
+    fromApi,
+    importLocal: createFavoriteRequest,
+    deleteRequest,
+  });
 
-  useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(favorites));
-    }
-  }, [favorites, isLoaded]);
+  const addFavorite = useCallback(
+    (id: number) => {
+      const current = store.get();
+      if (current.includes(id)) return;
+      store.set([...current, id]);
+      void syncWrite(createFavoriteRequest(id));
+    },
+    [syncWrite],
+  );
 
-  const addFavorite = useCallback((id: number) => {
-    setFavorites((prev) => {
-      if (prev.includes(id)) return prev;
-      return [...prev, id];
-    });
-  }, []);
-
-  const removeFavorite = useCallback((id: number) => {
-    setFavorites((prev) => prev.filter((fav) => fav !== id));
-  }, []);
-
-  const toggleFavorite = useCallback((id: number) => {
-    setFavorites((prev) => {
-      if (prev.includes(id)) {
-        return prev.filter((fav) => fav !== id);
-      }
-      return [...prev, id];
-    });
-  }, []);
+  const removeFavorite = useCallback(
+    (id: number) => {
+      store.set(store.get().filter((fav) => fav !== id));
+      void syncWrite(deleteRequest(id));
+    },
+    [syncWrite],
+  );
 
   const isFavorite = useCallback(
     (id: number) => favorites.includes(id),
     [favorites],
   );
 
-  const clearFavorites = useCallback(() => {
-    setFavorites([]);
-  }, []);
+  const toggleFavorite = useCallback(
+    (id: number) => {
+      if (isFavorite(id)) {
+        removeFavorite(id);
+      } else {
+        addFavorite(id);
+      }
+    },
+    [isFavorite, addFavorite, removeFavorite],
+  );
 
   return {
     favorites,
@@ -62,6 +90,7 @@ export function useFavorites() {
     removeFavorite,
     toggleFavorite,
     isFavorite,
-    clearFavorites,
+    /** Settings' "reset everything" action — see `useRemoteSync`'s `clearAll`. */
+    clearFavorites: clearAll,
   };
 }

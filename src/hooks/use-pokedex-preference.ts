@@ -1,60 +1,42 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
+import { usePreferencesStore } from "@/hooks/use-preferences-store";
 
-const STORAGE_KEY = "pokedex-game-preference";
-
-type PokedexPreference = {
-  preferredGameVersion: string | null; // null means "use most recent"
-};
-
-const DEFAULT_PREFERENCE: PokedexPreference = {
-  preferredGameVersion: null,
-};
-
-function parsePreference(value: string | null): PokedexPreference | null {
-  if (!value) return null;
-  try {
-    const parsed = JSON.parse(value) as Partial<PokedexPreference>;
-    return {
-      preferredGameVersion: parsed.preferredGameVersion ?? null,
-    };
-  } catch {
-    return null;
-  }
-}
-
+/**
+ * Which game version's data the dex is filtered/labeled by; null means "use
+ * most recent".
+ *
+ * Thin wrapper around the consolidated `pokedex-preferences` store (see
+ * `use-preferences-store.ts`), which also syncs this to the server for
+ * signed-in users.
+ */
 export function usePokedexPreference() {
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [preference, setPreference] =
-    useState<PokedexPreference>(DEFAULT_PREFERENCE);
+  const { preferences, isLoaded, setPreference } = usePreferencesStore();
 
-  useEffect(() => {
-    const stored = parsePreference(localStorage.getItem(STORAGE_KEY));
-    if (stored) setPreference(stored);
-    setIsLoaded(true);
-  }, []);
-
-  useEffect(() => {
-    if (!isLoaded) return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(preference));
-  }, [isLoaded, preference]);
-
-  const setPreferredGameVersion = useCallback((version: string | null) => {
-    setPreference((prev) => ({ ...prev, preferredGameVersion: version }));
-  }, []);
+  const setPreferredGameVersion = useCallback(
+    (version: string | null) => {
+      setPreference({ preferredGameVersion: version });
+    },
+    [setPreference],
+  );
 
   const resetPokedexPreference = useCallback(() => {
-    setPreference(DEFAULT_PREFERENCE);
-  }, []);
+    setPreferredGameVersion(null);
+  }, [setPreferredGameVersion]);
 
   return useMemo(
     () => ({
-      ...preference,
+      preferredGameVersion: preferences.preferredGameVersion,
       isLoaded,
       setPreferredGameVersion,
       resetPokedexPreference,
     }),
-    [preference, isLoaded, setPreferredGameVersion, resetPokedexPreference],
+    [
+      preferences.preferredGameVersion,
+      isLoaded,
+      setPreferredGameVersion,
+      resetPokedexPreference,
+    ],
   );
 }

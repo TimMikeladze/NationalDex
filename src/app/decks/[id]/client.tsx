@@ -7,6 +7,7 @@ import {
   Ellipsis,
   Eraser,
   LayoutGrid,
+  Link2,
   List,
   Pencil,
   Share2,
@@ -16,6 +17,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { ShareLinkDialog } from "@/components/sharing/share-link-dialog";
 import { DeckAnalysisPanel } from "@/components/tcg/deck/deck-analysis";
 import { DeckBinder, type DeckView } from "@/components/tcg/deck/deck-binder";
 import {
@@ -151,6 +153,7 @@ function Builder({ deckId }: { deckId: string }) {
   const [isEditingName, setIsEditingName] = useState(false);
   const [draftName, setDraftName] = useState(deck.name);
   const [shareOpen, setShareOpen] = useState(false);
+  const [shareLinkOpen, setShareLinkOpen] = useState(false);
   const [confirm, setConfirm] = useState<"clear" | "delete" | null>(null);
 
   // A deck deleted in another tab should not leave the builder sitting on
@@ -464,6 +467,7 @@ function Builder({ deckId }: { deckId: string }) {
               grouping={grouping}
               onGroupingChange={setGrouping}
               onShare={() => setShareOpen(true)}
+              onShareLink={() => setShareLinkOpen(true)}
               onClear={() => setConfirm("clear")}
               onDelete={() => setConfirm("delete")}
             />
@@ -578,6 +582,13 @@ function Builder({ deckId }: { deckId: string }) {
         open={shareOpen}
         onOpenChange={setShareOpen}
         onImport={handleImport}
+      />
+
+      <ShareLinkDialog
+        resource="decks"
+        id={deck.id}
+        open={shareLinkOpen}
+        onOpenChange={setShareLinkOpen}
       />
 
       <AlertDialog
@@ -794,6 +805,7 @@ function DeckMenu({
   grouping,
   onGroupingChange,
   onShare,
+  onShareLink,
   onClear,
   onDelete,
 }: {
@@ -802,6 +814,7 @@ function DeckMenu({
   grouping: DeckGrouping;
   onGroupingChange: (grouping: DeckGrouping) => void;
   onShare: () => void;
+  onShareLink: () => void;
   onClear: () => void;
   onDelete: () => void;
 }) {
@@ -864,6 +877,13 @@ function DeckMenu({
         <DropdownMenuItem onClick={onShare} className="cursor-pointer text-xs">
           <Share2 className="size-3.5" />
           Export or import
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={onShareLink}
+          className="cursor-pointer text-xs"
+        >
+          <Link2 className="size-3.5" />
+          Share link
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onClear} className="cursor-pointer text-xs">
           <Eraser className="size-3.5" />

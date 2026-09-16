@@ -1,6 +1,7 @@
 "use client";
 
-import { ArrowLeft, Plus, Share2, X } from "lucide-react";
+import { useQueries } from "@tanstack/react-query";
+import { ArrowLeft, Link2, Plus, Share2, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -10,6 +11,7 @@ import type { PokemonPickerResult } from "@/components/pokemon/pokemon-picker";
 import { PokemonPicker } from "@/components/pokemon/pokemon-picker";
 import { TeamTypeCoverage } from "@/components/pokemon/team-type-coverage";
 import { TypeBadge } from "@/components/pokemon/type-badge";
+import { ShareLinkDialog } from "@/components/sharing/share-link-dialog";
 import { TeamImportExportDialog } from "@/components/team-import-export-dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -27,8 +29,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useComparison } from "@/hooks/use-comparison";
 import { useGenerationPreference } from "@/hooks/use-generation-preference";
 import { usePokemon } from "@/hooks/use-pokemon";
+import { useSpritePreferences } from "@/hooks/use-sprite-preferences";
 import { useTeams } from "@/hooks/use-teams";
 import { toID } from "@/lib/pkmn";
+import { pokemonQuery } from "@/lib/queries";
 import { pokemonSpriteById } from "@/lib/sprites";
 import { cn } from "@/lib/utils";
 import type { TeamMember } from "@/types/team";
@@ -42,6 +46,7 @@ export default function TeamDetailPage() {
   const { addToComparison, isInComparison } = useComparison();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
+  const [isShareLinkOpen, setIsShareLinkOpen] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState("");
   const [activeTab, setActiveTab] = useState("team");
@@ -186,6 +191,15 @@ export default function TeamDetailPage() {
                 <span className="hidden sm:inline ml-1">export</span>
               </Button>
             )}
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setIsShareLinkOpen(true)}
+              title="Share link"
+            >
+              <Link2 className="size-4" />
+              <span className="hidden sm:inline ml-1">share</span>
+            </Button>
           </div>
         </div>
       </div>
@@ -266,6 +280,13 @@ export default function TeamDetailPage() {
         onOpenChange={setIsExportOpen}
         mode="export"
         teamId={teamId}
+      />
+
+      <ShareLinkDialog
+        resource="teams"
+        id={teamId}
+        open={isShareLinkOpen}
+        onOpenChange={setIsShareLinkOpen}
       />
 
       {/* Remove Confirmation Dialog */}
@@ -403,11 +424,14 @@ function TeamCoverageTab({ teamId }: { teamId: string }) {
 
 function TeamCoverageContent({ members }: { members: TeamMember[] }) {
   const { preferredGeneration } = useGenerationPreference();
-  // Fetch Pokemon data for all members
-  const pokemonQueries = members.map(
-    // biome-ignore lint/correctness/useHookAtTopLevel: members array is stable from localStorage state
-    (m) => usePokemon(m.id, preferredGeneration),
-  );
+  const { defaultPokemonSpriteGen } = useSpritePreferences();
+  // A single batched query, so the member count changing (e.g. a remote sync
+  // replacing the team mid-render) can't change the number of hooks called.
+  const pokemonQueries = useQueries({
+    queries: members.map((m) =>
+      pokemonQuery(m.id, defaultPokemonSpriteGen, preferredGeneration),
+    ),
+  });
   const allLoaded = pokemonQueries.every((q) => q.data);
 
   if (!allLoaded) {

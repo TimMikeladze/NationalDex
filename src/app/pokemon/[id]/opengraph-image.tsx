@@ -1,11 +1,12 @@
 import { ImageResponse } from "next/og";
+import { fallbackImage, OG_SIZE } from "@/lib/og";
 import { getAllSpecies, getSpecies, toID } from "@/lib/pkmn";
 import { getPokedexEntry } from "@/lib/pokeapi";
 import { pokemonDbSlug } from "@/lib/sprites";
 import { type PokemonType, TYPE_COLORS } from "@/types/pokemon";
 
 export const alt = "Pokémon stats and type information";
-export const size = { width: 1200, height: 630 };
+export const size = OG_SIZE;
 export const contentType = "image/png";
 
 export async function generateStaticParams() {
@@ -105,24 +106,7 @@ export default async function OGImage({
   const species = getSpecies(id);
 
   if (!species) {
-    return new ImageResponse(
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: "#09090b",
-          color: "#fff",
-          fontSize: 48,
-          fontFamily: "monospace",
-        }}
-      >
-        Pokémon not found
-      </div>,
-      { ...size },
-    );
+    return fallbackImage("Pokémon not found");
   }
 
   const name = species.name;

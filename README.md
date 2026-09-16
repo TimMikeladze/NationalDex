@@ -23,7 +23,8 @@ bun run generate:icons
 - **Game-relative view** — read the entire dex as any generation's games: learnsets, base stats, types, abilities, items, moves, evolutions, type charts, and search all scoped to the games you're playing
 - **Team builder** with type coverage analysis and Showdown import/export
 - **Pokemon comparison** with side-by-side stat breakdowns
-- **Favorites and custom lists** persisted in local storage — Pokemon and cards alike
+- **Favorites and custom lists** — Pokemon and cards alike, usable instantly as a guest and synced across devices once you sign in
+- **Accounts and sharing** — guest mode by default (nothing to sign up for), and an optional account to sync favorites/lists/decks/teams across devices and share a deck, team, or list by URL
 - **Location finder** for Pokemon across all regions and games
 - **PWA support** — installable on any device for a native-like experience, with the NationalDex mark supplied as the app icon and launch-screen branding. A service worker ([`public/sw.js`](public/sw.js)) keeps visited pages, build assets, and sprites available offline, falls back to `/offline` for anything unseen, and offers a reload toast when a new version is deployed. It is only registered in production builds so it never interferes with `next dev`.
 - **Dark mode** with automatic theme detection
@@ -42,9 +43,32 @@ bun install
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3000](http://localhost:3000) in your browser (or whichever port `next dev` picked — in development any origin is trusted for sign-in).
 
-No database or environment variables are required. All Pokemon data is bundled at build time or fetched from public APIs. User data (favorites, teams, lists) is stored in the browser's local storage.
+All Pokemon data is bundled at build time or fetched from public APIs. User data — favorites, lists, decks, teams, preferences — is kept in the browser's local storage *and* in Postgres: every visitor gets a guest session on first load, so the app needs a database to run.
+
+### Database, accounts, and sharing
+
+```bash
+cp .env.example .env
+```
+
+| Variable | Purpose |
+|---|---|
+| `DATABASE_URL` | Postgres connection string (pooled). **Required** — guest sessions, sync, and sharing all live here. |
+| `BETTER_AUTH_SECRET` | Session signing secret — `openssl rand -base64 32` |
+| `BETTER_AUTH_URL` | The app's own URL (`http://localhost:3000` in dev) |
+| `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | Optional GitHub OAuth — email/password and guest mode work without it |
+
+Then apply the checked-in schema:
+
+```bash
+bun run db:migrate    # applies drizzle/ to DATABASE_URL (or db:push to skip migration files in dev)
+```
+
+After changing `src/db/schema.ts`, run `bun run db:generate` to write the next migration (the drizzle-kit snapshot is checked in, so it emits only the diff) and commit what it produces.
+
+Every visitor gets a guest session automatically (no sign-up wall); everything a guest builds is re-parented onto their account the moment they sign up or sign in from the account section of Settings. Data is written to local storage first and synced to the account behind it, so the installed PWA keeps working offline and replays its writes on reconnect. Backups (Settings → Export) are v2: one consolidated `preferences` record instead of four; older backups still import. Restoring a backup into a signed-in account adds what's missing and replaces the lists, decks and teams the backup contains (items and all); anything not in the backup is left alone. See [`docs/accounts-and-sync.md`](docs/accounts-and-sync.md) for the data model and sync design.
 
 ### Available scripts
 
@@ -55,13 +79,18 @@ No database or environment variables are required. All Pokemon data is bundled a
 | `bun start` | Start the production server |
 | `bun lint` | Run linting and format checks |
 | `bun lint:fix` | Auto-fix linting issues |
+| `bun test` | Run the unit tests (offline outbox replay, share-link updates) |
 | `bun check:deck-rules` | Check the deck formats against the rules they enforce |
+| `bun run db:generate` | Generate Drizzle migrations from `src/db/schema.ts` |
+| `bun run db:push` | Push the schema straight to `DATABASE_URL` (dev) |
+| `bun run db:migrate` | Apply checked-in migrations (CI/production) |
+| `bun run db:studio` | Open Drizzle Studio against `DATABASE_URL` |
 
 ## Contributing
 
 1. Fork the repo and create your branch from `main`
 2. Run `bun install` to set up dependencies
-3. Make your changes and verify they pass `bun lint` and `bun build`
+3. Make your changes and verify they pass `bun lint`, `bun test`, and `bun build`
 4. Open a pull request
 
 ## Data attribution

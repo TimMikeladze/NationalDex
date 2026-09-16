@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, Download, Loader2, Plus, Trash2 } from "lucide-react";
+import { Copy, Download, Globe, Loader2, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -132,6 +132,17 @@ export default function DecksPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            asChild
+            title="Browse decks other players have shared"
+          >
+            <Link href="/decks/browse">
+              <Globe className="size-4" />
+              <span className="ml-1 hidden sm:inline">browse</span>
+            </Link>
+          </Button>
           <Button
             size="sm"
             variant="ghost"
