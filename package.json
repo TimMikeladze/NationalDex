@@ -12,6 +12,7 @@
     "check": "if [ \"$CI\" = \"true\" ]; then bun run lint && bun run tsc; else bun run lint:fix && bun run tsc; fi",
     "generate:regulations": "bun run scripts/generate-regulations.ts",
     "generate:icons": "bun run scripts/generate-icons.ts",
+    "test": "bun test",
     "check:deck-rules": "bun run scripts/check-deck-rules.ts",
     "prepare": "simple-git-hooks",
     "release": "release-it"
@@ -80,6 +81,7 @@
     "@biomejs/biome": "2.3.15",
     "@pkmn/sim": "^0.10.11",
     "@tailwindcss/postcss": "^4.1.18",
+    "@types/bun": "^1.4.2",
     "@types/node": "^25.2.3",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

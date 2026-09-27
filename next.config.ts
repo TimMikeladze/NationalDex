@@ -4,6 +4,30 @@ import packageJson from "./package.json";
 const nextConfig: NextConfig = {
   /* config options here */
   reactCompiler: true,
+  experimental: {
+    // React <ViewTransition> for route changes (AppShell, docs/pwa.md).
+    viewTransition: true,
+  },
+  // The service worker must never be served stale, or a deploy can't replace
+  // it. See docs/pwa.md.
+  async headers() {
+    return [
+      {
+        source: "/sw.js",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "no-cache, no-store, must-revalidate",
+          },
+          { key: "Service-Worker-Allowed", value: "/" },
+          {
+            key: "Content-Type",
+            value: "application/javascript; charset=utf-8",
+          },
+        ],
+      },
+    ];
+  },
   env: {
     NEXT_PUBLIC_APP_VERSION: packageJson.version,
   },

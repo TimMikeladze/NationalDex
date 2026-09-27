@@ -1,25 +1,30 @@
-// NationalDex service worker.
+// NationalDex service worker. See docs/pwa.md.
 //
 // Kept deliberately small and dependency-free: it makes the installed app
 // survive a lost connection rather than trying to mirror the whole site.
 //
-// - Navigations go network-first; when the network fails, a cached copy of
-//   the page is served if there is one, otherwise the `/offline` page.
-// - Next's hashed build assets (`/_next/static/...`) are immutable, so they
-//   are cached on first use and served cache-first forever after.
-// - Icons, sprites, and artwork are cached on first use and refreshed in
-//   the background (stale-while-revalidate) so the dex keeps its pictures
-//   offline without ever showing a stale one for long.
+// - Navigations go network-first (with navigation preload); when the network
+//   fails, a cached copy of the page is served if there is one, otherwise the
+//   precached `/offline` page. Pages are cached because every page here is
+//   public and the same for everyone — user data lives in localStorage. If a
+//   page ever becomes per-user, stop caching navigations.
+// - Content-hashed build assets (`/_next/static/...`) and the app's icons and
+//   splash images are immutable, so they are cache-first.
+// - Sprites and artwork are cached on first use and refreshed in the
+//   background (stale-while-revalidate), capped.
+// - `/api/*`, non-GET, and cross-origin requests to anything but the sprite
+//   hosts are left alone.
 //
-// Bump `VERSION` (or let a deploy do it) to drop every old cache on activate.
+// Bump `VERSION` whenever this file's behaviour changes: activate drops every
+// cache from an older version.
 
-const VERSION = "v1";
+const VERSION = "v2";
 const SHELL_CACHE = `nationaldex-shell-${VERSION}`;
 const ASSET_CACHE = `nationaldex-assets-${VERSION}`;
 const IMAGE_CACHE = `nationaldex-images-${VERSION}`;
 const PAGE_CACHE = `nationaldex-pages-${VERSION}`;
 const OFFLINE_URL = "/offline";
-const PRECACHE = [OFFLINE_URL, "/manifest.json", "/icons/logo-app.svg"];
+const PRECACHE = [OFFLINE_URL, "/manifest.webmanifest", "/icons/logo-app.svg"];
 const MAX_PAGES = 50;
 const MAX_IMAGES = 300;
 
@@ -30,30 +35,59 @@ const IMAGE_HOSTS = [
   "assets.tcgdex.net",
 ];
 
+// Same-origin paths whose bytes never change at a given URL.
+const IMMUTABLE_PREFIXES = [
+  "/_next/static/",
+  "/pwa-icon/",
+  "/pwa-splash/",
+  "/apple-icon",
+];
+
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches
-      .open(SHELL_CACHE)
-      .then((cache) => cache.addAll(PRECACHE))
-      .then(() => self.skipWaiting()),
+    (async () => {
+      const cache = await caches.open(SHELL_CACHE);
+      await cache.addAll(PRECACHE);
+
+      // The offline page is only useful styled, so cache the build assets it
+      // links to as well. They are content-hashed, so they go in the asset
+      // cache like any other.
+      const offline = await cache.match(OFFLINE_URL);
+      if (offline) {
+        const html = await offline.text();
+        const assets = [
+          ...new Set(html.match(/\/_next\/static\/[^"'\s)]+/g) ?? []),
+        ];
+        const assetCache = await caches.open(ASSET_CACHE);
+        await Promise.all(
+          assets.map((url) => assetCache.add(url).catch(() => undefined)),
+        );
+      }
+
+      // The very first worker has nothing to replace and can take over at
+      // once. An update waits for the user to tap "Reload" (SKIP_WAITING), so
+      // nobody is swapped onto a new bundle mid-edit.
+      if (!self.registration.active) await self.skipWaiting();
+    })(),
   );
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches
-      .keys()
-      .then((keys) =>
-        Promise.all(
-          keys
-            .filter(
-              (key) =>
-                key.startsWith("nationaldex-") && !key.endsWith(`-${VERSION}`),
-            )
-            .map((key) => caches.delete(key)),
-        ),
-      )
-      .then(() => self.clients.claim()),
+    (async () => {
+      const keys = await caches.keys();
+      await Promise.all(
+        keys
+          .filter(
+            (key) =>
+              key.startsWith("nationaldex-") && !key.endsWith(`-${VERSION}`),
+          )
+          .map((key) => caches.delete(key)),
+      );
+      // Lets the navigation request start while the worker boots.
+      await self.registration.navigationPreload?.enable();
+      await self.clients.claim();
+    })(),
   );
 });
 
@@ -68,19 +102,25 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   const sameOrigin = url.origin === self.location.origin;
 
+  if (sameOrigin && url.pathname.startsWith("/api/")) return;
+
   if (request.mode === "navigate") {
-    event.respondWith(handleNavigation(request));
+    event.respondWith(handleNavigation(event));
     return;
   }
 
-  if (sameOrigin && url.pathname.startsWith("/_next/static/")) {
+  if (
+    sameOrigin &&
+    IMMUTABLE_PREFIXES.some((prefix) => url.pathname.startsWith(prefix))
+  ) {
     event.respondWith(cacheFirst(request, ASSET_CACHE));
     return;
   }
 
   if (
-    request.destination === "image" ||
-    (sameOrigin && url.pathname.startsWith("/_next/image")) ||
+    (sameOrigin &&
+      (request.destination === "image" ||
+        url.pathname.startsWith("/_next/image"))) ||
     IMAGE_HOSTS.includes(url.hostname)
   ) {
     event.respondWith(staleWhileRevalidate(request, IMAGE_CACHE, MAX_IMAGES));
@@ -94,9 +134,10 @@ self.addEventListener("fetch", (event) => {
   }
 });
 
-async function handleNavigation(request) {
+async function handleNavigation(event) {
+  const { request } = event;
   try {
-    const response = await fetch(request);
+    const response = (await event.preloadResponse) || (await fetch(request));
     // A redirected response replayed from cache for a navigation is rejected
     // by the browser as a security error, so only the final page is kept.
     if (response.ok && !response.redirected) {

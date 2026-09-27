@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect } from "react";
 import { Logo } from "@/components/brand/logo";
 import { GenerationPicker } from "@/components/pokemon/generation-picker";
 import {
@@ -20,6 +21,7 @@ import {
 } from "@/components/ui/sheet";
 import { useComparison } from "@/hooks/use-comparison";
 import { useGenerationPreference } from "@/hooks/use-generation-preference";
+import { isNavActive } from "@/lib/nav";
 import { getGenerationName } from "@/lib/pkmn";
 import { cn } from "@/lib/utils";
 import {
@@ -103,10 +105,16 @@ export function MoreSheet() {
   const { comparison } = useComparison();
   const { preferredGeneration } = useGenerationPreference();
 
-  // "/" prefixes everything, so the dex is only current on the dex itself.
-  const isActive = (href: string) =>
-    href === "/" ? pathname === "/" : pathname.startsWith(href);
+  const isActive = (href: string) => isNavActive(href, pathname);
   const close = () => setMoreOpen(false);
+
+  // Any navigation closes the sheet — a tile, but also the back gesture or a
+  // link inside something the sheet opened — so it never sits over the page
+  // it just took you to.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: pathname is the trigger rather than an input.
+  useEffect(() => {
+    setMoreOpen(false);
+  }, [pathname, setMoreOpen]);
 
   const renderTile = (item: MenuItem) => {
     const active = isActive(item.href);
@@ -159,7 +167,7 @@ export function MoreSheet() {
           the cap keeps a short phone from pushing the header off the top. */}
       <SheetContent
         side="bottom"
-        className="max-h-[90svh] gap-0 overflow-y-auto p-0 pb-safe"
+        className="max-h-[90dvh] gap-0 overflow-y-auto p-0 pb-safe pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]"
       >
         {/* The drawer is the only chrome on the phone that can carry the mark —
             the header above it belongs to the page. */}

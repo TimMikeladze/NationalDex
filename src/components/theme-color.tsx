@@ -3,15 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useEffect } from "react";
-
-// The two colours the surface behind the status bar actually is — `--background`
-// in `:root` and in `.dark`. Android paints its status bar with whichever of
-// these the page names, so naming a third colour is how you get a bar that
-// belongs to no theme.
-const SURFACE = {
-  light: "#ffffff",
-  dark: "#0a0a0a",
-} as const;
+import { SURFACE } from "@/lib/pwa-assets";
 
 /**
  * Keeps the Android status bar the colour of the app underneath it.

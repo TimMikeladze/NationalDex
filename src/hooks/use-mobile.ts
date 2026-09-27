@@ -1,6 +1,12 @@
 import * as React from "react";
 
-const MOBILE_BREAKPOINT = 768;
+/**
+ * A phone: narrow, or a short touch screen — a phone on its side is still a
+ * phone. Mirrors the `max-lg` short-screen rule in globals.css so JS and CSS
+ * agree on what a phone is.
+ */
+export const PHONE_QUERY =
+  "(max-width: 767px), (max-height: 500px) and (pointer: coarse)";
 
 export function useIsMobile() {
   const [isMobile, setIsMobile] = React.useState<boolean | undefined>(
@@ -8,12 +14,10 @@ export function useIsMobile() {
   );
 
   React.useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
-    const onChange = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
-    };
+    const mql = window.matchMedia(PHONE_QUERY);
+    const onChange = () => setIsMobile(mql.matches);
     mql.addEventListener("change", onChange);
-    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+    setIsMobile(mql.matches);
     return () => mql.removeEventListener("change", onChange);
   }, []);
 

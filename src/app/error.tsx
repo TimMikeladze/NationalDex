@@ -10,7 +10,7 @@ export default function GlobalError({
   reset: () => void;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[50vh] p-6 text-center">
+    <div className="flex flex-col items-center justify-center min-h-[50svh] p-6 text-center">
       <h2 className="text-lg font-medium mb-2">something went wrong</h2>
       <p className="text-sm text-muted-foreground mb-6">
         An unexpected error occurred.

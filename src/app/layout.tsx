@@ -5,6 +5,7 @@ import { Logo } from "@/components/brand/logo";
 import { Providers } from "@/components/providers";
 import { PwaLoadingScreen } from "@/components/pwa-loading-screen";
 import { PwaRegister } from "@/components/pwa-register";
+import { SURFACE, startupImages } from "@/lib/pwa-assets";
 import { SITE_URL } from "@/lib/utils";
 import "./globals.css";
 
@@ -17,20 +18,23 @@ const mono = JetBrains_Mono({
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  // An app can't be pinched or double-tapped into zoom. Android obeys these;
+  // iOS ignores them, so `touch-action` in globals.css covers it there.
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  // Android tints its status bar with this, so it has to be the colour of the
-  // app right under the bar rather than the brand's red, which belongs to no
-  // surface the app ever draws. Installed, the first thing on screen is the
-  // loading screen, which is `#09090b` whatever the theme; everywhere else the
-  // app opens light, which is what a visitor with scripting off keeps. From
-  // there `ThemeColor` takes over and follows the theme that resolved.
+  // A software keyboard shrinks the layout instead of sliding over it, so a
+  // focused field is never under the keyboard (Android; iOS ignores it).
+  interactiveWidget: "resizes-content",
+  // The surface under the status bar for a first paint that follows the
+  // system. `ThemeColor` rewrites every one of these with the theme that
+  // actually resolved, since the theme here is a stored choice as often as it
+  // is the system's.
   themeColor: [
-    { media: "(display-mode: standalone)", color: "#09090b" },
-    { media: "(display-mode: fullscreen)", color: "#09090b" },
-    { color: "#ffffff" },
+    { media: "(prefers-color-scheme: light)", color: SURFACE.light },
+    { media: "(prefers-color-scheme: dark)", color: SURFACE.dark },
   ],
+  colorScheme: "light dark",
 };
 
 export const metadata: Metadata = {
@@ -53,7 +57,6 @@ export const metadata: Metadata = {
     "pokemon type coverage",
     "pokemon comparison",
   ],
-  manifest: "/manifest.json",
   applicationName: "NationalDex",
   // `max-image-preview: large` is what lets Google show a Pokemon's artwork
   // next to the result instead of a thumbnail or nothing at all.
@@ -90,16 +93,20 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "NationalDex",
+    // Without a launch image per device iOS opens every launch on white.
+    startupImage: startupImages(),
   },
-  // All of these are rendered from the app bar's mark by `bun run
-  // generate:icons`, so the tab, the installed app, and the header always agree.
-  icons: {
-    // `src/app/favicon.ico` is linked automatically by Next; this adds the
-    // sharper SVG on top for browsers that take it.
-    icon: [{ url: "/icons/logo-app.svg", type: "image/svg+xml" }],
-    // iOS ignores SVG here, so the touch icon has to stay a PNG.
-    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
+  // Numbers in move power, stat totals and card ids are not phone numbers.
+  formatDetection: {
+    telephone: false,
+    email: false,
+    address: false,
+    date: false,
+    url: false,
   },
+  // No `icons` here on purpose: setting it switches off Next's file
+  // conventions, which link `favicon.ico`, `icon.svg` (the app bar's mark) and
+  // `apple-icon.tsx` — the one iOS uses, since it ignores manifest icons.
 };
 
 export default function RootLayout({
@@ -126,10 +133,7 @@ export default function RootLayout({
           aria-hidden="true"
         >
           <div className="pwa-loading-content">
-            <Logo
-              iconClassName="size-16"
-              labelClassName="text-2xl text-[#e0e0e0]"
-            />
+            <Logo iconClassName="size-16" labelClassName="text-2xl" />
             <div className="pwa-loading-bar">
               <div className="pwa-loading-bar-fill" />
             </div>

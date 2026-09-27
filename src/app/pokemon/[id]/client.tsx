@@ -811,7 +811,7 @@ export function PokemonPageClient({
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[50vh] p-6 text-center">
+      <div className="flex flex-col items-center justify-center min-h-[50svh] p-6 text-center">
         <h2 className="text-lg font-medium mb-2">pokemon not found</h2>
         <p className="text-sm text-muted-foreground mb-6">
           Could not load data for &ldquo;{id}&rdquo;.

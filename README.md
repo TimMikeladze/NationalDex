@@ -8,7 +8,7 @@ NationalDex is a modern web-based Pokedex covering the full National Dex across 
 
 The NationalDex logo is the compact Pokédex mark used throughout the desktop app bar, mobile launch screen, browser favicon, and installable PWA. The canonical source artwork lives at [`public/icons/logo-app.svg`](public/icons/logo-app.svg); every brand surface references that same device mark so it stays consistent across platforms.
 
-After editing that SVG, run `bun run generate:icons` to re-render the derived assets — the favicon, the PWA icons, and the Apple touch icon — from it:
+After editing that SVG, run `bun run generate:icons` to re-render the favicon from it. The installed-app icons, the Apple touch icon and the iOS splash screens are rendered from the same mark at build time (`src/components/brand/dex-mark.tsx` — keep it in step with the SVG):
 
 ```bash
 bun run generate:icons
@@ -25,7 +25,7 @@ bun run generate:icons
 - **Pokemon comparison** with side-by-side stat breakdowns
 - **Favorites and custom lists** persisted in local storage — Pokemon and cards alike
 - **Location finder** for Pokemon across all regions and games
-- **PWA support** — installable on any device for a native-like experience, with the NationalDex mark supplied as the app icon and launch-screen branding. A service worker ([`public/sw.js`](public/sw.js)) keeps visited pages, build assets, and sprites available offline, falls back to `/offline` for anything unseen, and offers a reload toast when a new version is deployed. It is only registered in production builds so it never interferes with `next dev`.
+- **PWA support** — installs to a home screen and behaves like a native app: bottom tab bar on phones (landscape included), safe-area aware, iOS splash screens in light and dark, route transitions, no pinch-zoom on touch devices, and home-screen shortcuts built from the same list as the tab bar. A hand-written service worker ([`public/sw.js`](public/sw.js)) keeps visited pages, build assets and sprites available offline, falls back to `/offline` for anything unseen, and offers a reload toast when a new version is deployed. It is only registered in production builds (`NEXT_PUBLIC_SW_DEV=1` opts in under `next dev`). See [`docs/pwa.md`](docs/pwa.md).
 - **Dark mode** with automatic theme detection
 
 ## Running locally
@@ -55,6 +55,7 @@ No database or environment variables are required. All Pokemon data is bundled a
 | `bun start` | Start the production server |
 | `bun lint` | Run linting and format checks |
 | `bun lint:fix` | Auto-fix linting issues |
+| `bun run test` | Run the unit tests (`bun test`) |
 | `bun check:deck-rules` | Check the deck formats against the rules they enforce |
 
 ## Contributing

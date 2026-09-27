@@ -3,6 +3,25 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * Desktop is `lg` — but a landscape phone is still a phone. An 844×390 phone is
+ * wider than a small tablet and must keep the tab bar, so `lg` is "wide, and
+ * not a short touch screen". `max-lg` is the block form on purpose: a comma in
+ * a `@custom-variant` media list breaks the CSS parse. `PHONE_QUERY` in
+ * `hooks/use-mobile.ts` is the JS side of the same rule.
+ */
+@custom-variant lg (@media (min-width: 1024px) and (
+    not ((max-height: 500px) and (pointer: coarse))
+  ));
+@custom-variant max-lg {
+  @media (max-width: 1023px) {
+    @slot;
+  }
+  @media (max-height: 500px) and (pointer: coarse) {
+    @slot;
+  }
+}
+
 :root {
   --background: #ffffff;
   --foreground: #000000;
@@ -138,6 +157,25 @@
      */
     overscroll-behavior-y: none;
   }
+  html {
+    /* No font inflation on rotation, no grey flash on tap. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* No 300ms tap delay and no double-tap zoom on anything you can press. */
+  a,
+  button,
+  input,
+  select,
+  textarea,
+  label,
+  summary,
+  [role="button"],
+  [role="tab"],
+  [role="link"] {
+    touch-action: manipulation;
+  }
   body {
     @apply bg-background text-foreground;
     font-feature-settings:
@@ -153,6 +191,88 @@
   h5,
   h6 {
     @apply tracking-tight font-medium;
+  }
+}
+
+/*
+ * Touch devices behave like an app: no pinch or double-tap zoom. Android obeys
+ * the viewport meta; iOS ignores `user-scalable=no`, and this is what it does
+ * obey. Panning stays. Desktop keeps browser zoom.
+ */
+@media (pointer: coarse) {
+  html {
+    touch-action: pan-x pan-y;
+  }
+
+  /* iOS zooms into any field under 16px when it takes focus. */
+  input,
+  select,
+  textarea {
+    font-size: max(16px, 1em);
+  }
+}
+
+/* Installed, a pull past the top is not a page refresh. Set by PwaRegister. */
+html[data-standalone] {
+  overscroll-behavior-y: none;
+}
+
+/* The header and tab bar are chrome, not content: a long press on a tab is
+   a tab, not a text selection or a link preview. Never put this on content. */
+.app-chrome {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/*
+ * Motion. Only for readers who have not asked for less of it; everyone else
+ * gets the same app, instantly.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  /* Press feedback, the way a native control gives under a finger. */
+  [data-slot="button"],
+  .pressable {
+    transition-property:
+      transform, color, background-color, border-color, box-shadow, opacity;
+    transition-duration: 120ms;
+  }
+
+  [data-slot="button"]:active:not(:disabled),
+  .pressable:active {
+    transform: scale(0.96);
+  }
+
+  /* Route changes (React <ViewTransition default="page"> in AppShell): the
+     old page fades, the new one rises in under it. Without view-transition
+     support there is nothing to style and the page simply changes. */
+  ::view-transition-old(.page) {
+    animation: page-out 120ms ease-out both;
+  }
+
+  ::view-transition-new(.page) {
+    animation: page-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1) 40ms both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none;
+  }
+}
+
+@keyframes page-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
   }
 }
 
@@ -262,6 +382,9 @@
   flex-direction: column;
   overflow: hidden;
   padding-top: var(--app-safe-top, env(safe-area-inset-top, 0px));
+  /* A landscape phone's notch and rounded corners are on the sides. */
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
 
   /* First-paint estimates of what the chrome eats. AppShell overwrites all
      three with measured pixels as soon as it mounts, so pages that size
@@ -269,7 +392,7 @@
   --app-secondary-height: 3.5rem; /* 56px */
   --app-nav-safe-bottom: 1rem; /* 16px — the home indicator's own clearance */
   --app-top-offset: 0px; /* mobile default (no desktop header) */
-  --app-bottom-offset: 3rem; /* mobile bottom nav (h-12) */
+  --app-bottom-offset: 3.5rem; /* phone tab bar (h-14) */
   --app-top-inset: calc(
     var(--app-top-offset) +
     var(--app-safe-top, env(safe-area-inset-top, 0px))
@@ -293,7 +416,15 @@
   --app-top-offset: var(--app-secondary-height);
 }
 
-@media (min-width: 1024px) {
+/* A short landscape phone gets a 44px tab bar. */
+@media (max-height: 500px) and (pointer: coarse) {
+  .app-shell {
+    --app-bottom-offset: 2.75rem;
+  }
+}
+
+/* Keep in step with the `lg` variant at the top of this file. */
+@media (min-width: 1024px) and (not ((max-height: 500px) and (pointer: coarse))) {
   .app-shell {
     --app-top-offset: 3.5rem; /* desktop header */
     --app-bottom-offset: 0px; /* no bottom nav on desktop */
@@ -315,8 +446,9 @@
   min-height: 0;
 }
 
-/* PWA standalone mode - only applies on mobile/tablet (below lg breakpoint) */
-@media (display-mode: standalone) and (max-width: 1023px) {
+/* PWA standalone mode - only applies on phones and tablets (below `lg`) */
+@media (display-mode: standalone) and (max-width: 1023px),
+  (display-mode: standalone) and (max-height: 500px) and (pointer: coarse) {
   /* Glass header that stretches back up under the status bar. The shell pads
      the top safe area out of the way for everything else; the toolbar is the
      one thing that wants to sit behind it, so it takes that padding back. */
@@ -356,9 +488,24 @@
   }
 }
 
-/* PWA loading screen - shown instantly before JS loads, only in standalone mode */
+/*
+ * PWA loading screen - shown instantly before JS loads, only in standalone
+ * mode. It follows the system scheme, like the iOS splash image before it
+ * (`/pwa-splash`), so launch goes splash → this → app without a flash.
+ */
 .pwa-loading-screen {
   display: none;
+  --loading-bg: #ffffff;
+  --loading-fg: #000000;
+  --loading-track: #e0e0e0;
+}
+
+@media (prefers-color-scheme: dark) {
+  .pwa-loading-screen {
+    --loading-bg: #0a0a0a;
+    --loading-fg: #e0e0e0;
+    --loading-track: #333333;
+  }
 }
 
 @media (display-mode: standalone) {
@@ -369,7 +516,8 @@
     z-index: 9999;
     align-items: center;
     justify-content: center;
-    background: #09090b;
+    background: var(--loading-bg);
+    color: var(--loading-fg);
   }
 }
 
@@ -383,14 +531,14 @@
 .pwa-loading-bar {
   width: 8rem;
   height: 2px;
-  background: #333333;
+  background: var(--loading-track);
   overflow: hidden;
 }
 
 .pwa-loading-bar-fill {
   height: 100%;
   width: 40%;
-  background: #e0e0e0;
+  background: var(--loading-fg);
   animation: pwa-loading-slide 1s ease-in-out infinite;
 }
 

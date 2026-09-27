@@ -1,43 +1,21 @@
 /**
- * Renders every favicon / PWA icon from the same SVG the app bar shows, so the
- * browser tab, the installed app icon, and the in-app logo can never drift.
+ * Renders the favicon from the same SVG the app bar shows, so the browser tab
+ * and the in-app logo can never drift. The installed-app icons, the Apple
+ * touch icon and the iOS splash screens are rendered at build time by routes
+ * instead (see docs/pwa.md).
  *
  * Run with: bun run generate:icons
  */
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import sharp from "sharp";
 
 const SOURCE = "public/icons/logo-app.svg";
-/** Manifest `background_color` — the plate behind masked/opaque icons. */
-const BACKDROP = "#09090b";
-
 const source = await readFile(SOURCE);
 
 /** Renders the mark at `size`, keeping its transparent background. */
 async function transparent(size: number) {
   return sharp(source, { density: 512 })
     .resize(size, size, { fit: "contain", background: "#00000000" })
-    .png()
-    .toBuffer();
-}
-
-/**
- * Renders the mark centered on an opaque plate, inset so it survives the
- * circle/squircle crops Android and iOS apply to installed icons. Android's
- * maskable spec only guarantees the middle 80%, so the mark gets more padding
- * there than on the Apple touch icon, which is only rounded at the corners.
- */
-async function plated(size: number, markRatio: number) {
-  const mark = await transparent(Math.round(size * markRatio));
-  return sharp({
-    create: {
-      width: size,
-      height: size,
-      channels: 4,
-      background: BACKDROP,
-    },
-  })
-    .composite([{ input: mark, gravity: "center" }])
     .png()
     .toBuffer();
 }
@@ -67,21 +45,6 @@ function ico(frames: { size: number; png: Buffer }[]) {
   }
 
   return Buffer.concat([header, ...entries, ...frames.map((f) => f.png)]);
-}
-
-await mkdir("public/icons", { recursive: true });
-
-const outputs: [string, Buffer][] = [
-  ["public/icons/icon-192x192.png", await transparent(192)],
-  ["public/icons/icon-512x512.png", await transparent(512)],
-  ["public/icons/icon-maskable-192x192.png", await plated(192, 0.6)],
-  ["public/icons/icon-maskable-512x512.png", await plated(512, 0.6)],
-  ["public/icons/apple-touch-icon.png", await plated(180, 0.82)],
-];
-
-for (const [path, data] of outputs) {
-  await writeFile(path, data);
-  console.log(`Created ${path}`);
 }
 
 const favicon = ico(

@@ -3,24 +3,64 @@
 import { useEffect } from "react";
 import { toast } from "sonner";
 
+const isStandalone = () =>
+  window.matchMedia("(display-mode: standalone)").matches ||
+  window.matchMedia("(display-mode: fullscreen)").matches ||
+  (window.navigator as Navigator & { standalone?: boolean }).standalone ===
+    true;
+
 // Registers `public/sw.js` once the page is interactive. Skipped in
-// development so HMR and the service worker never fight over `/_next/`.
-// When a new worker has installed behind a running one, the user gets a
-// toast to reload into it rather than silently using the old bundle.
+// development so HMR and the service worker never fight over `/_next/`;
+// `NEXT_PUBLIC_SW_DEV=1` opts in for testing it locally. When a new worker has
+// installed behind a running one, the user gets a toast to reload into it
+// rather than silently using the old bundle. See docs/pwa.md.
 export function PwaRegister() {
+  // Marks an installed app on the root, for CSS that only applies there.
   useEffect(() => {
-    if (process.env.NODE_ENV !== "production") return;
+    const root = document.documentElement;
+    const sync = () => {
+      if (isStandalone()) root.dataset.standalone = "";
+      else delete root.dataset.standalone;
+    };
+    sync();
+    const mql = window.matchMedia("(display-mode: standalone)");
+    mql.addEventListener("change", sync);
+    return () => mql.removeEventListener("change", sync);
+  }, []);
+
+  useEffect(() => {
+    if (
+      process.env.NODE_ENV !== "production" &&
+      process.env.NEXT_PUBLIC_SW_DEV !== "1"
+    ) {
+      return;
+    }
     if (!("serviceWorker" in navigator)) return;
 
     let cancelled = false;
+    let registration: ServiceWorkerRegistration | undefined;
+
+    // An installed app can stay open for days; look for a new deploy whenever
+    // it comes back to the foreground.
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        registration?.update().catch(() => undefined);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     const register = async () => {
       try {
-        const registration = await navigator.serviceWorker.register("/sw.js");
+        registration = await navigator.serviceWorker.register("/sw.js", {
+          scope: "/",
+          // Always fetch the worker script itself from the network.
+          updateViaCache: "none",
+        });
         if (cancelled) return;
 
         const promptUpdate = (worker: ServiceWorker) => {
-          toast("A new version of NationalDex is ready", {
+          toast("New version ready", {
+            id: "sw-update",
             action: {
               label: "Reload",
               onClick: () => worker.postMessage("SKIP_WAITING"),
@@ -34,8 +74,9 @@ export function PwaRegister() {
           promptUpdate(registration.waiting);
         }
 
+        const current = registration;
         registration.addEventListener("updatefound", () => {
-          const worker = registration.installing;
+          const worker = current.installing;
           if (!worker) return;
           worker.addEventListener("statechange", () => {
             if (
@@ -71,6 +112,7 @@ export function PwaRegister() {
     return () => {
       cancelled = true;
       window.removeEventListener("load", register);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       navigator.serviceWorker.removeEventListener(
         "controllerchange",
         onControllerChange,

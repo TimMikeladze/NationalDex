@@ -7,6 +7,7 @@ import {
   MoreHorizontal,
   Settings,
 } from "lucide-react";
+import { MotionConfig, motion } from "motion/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -18,6 +19,7 @@ import {
   useMemo,
   useRef,
   useState,
+  ViewTransition,
 } from "react";
 import { Logo } from "@/components/brand/logo";
 import { ComparisonDrawer } from "@/components/comparison/comparison-drawer";
@@ -29,6 +31,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useComparison } from "@/hooks/use-comparison";
+import { isNavActive, PRIMARY_NAV, type PrimaryNavId } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 import {
   CardsIcon,
@@ -65,17 +68,18 @@ export function useSecondaryToolbar() {
   return ctx.setSecondaryToolbar;
 }
 
-// The phone's bottom bar. Six destinations is the most that fits without the
-// labels colliding, so it carries the places you go back to constantly and
-// hands everything else to "more".
-const navItems = [
-  { href: "/", icon: DexIcon, label: "dex" },
-  { href: "/cards", icon: CardsIcon, label: "cards" },
-  { href: "/decks", icon: DecksIcon, label: "decks" },
-  { href: "/teams", icon: TeamsIcon, label: "teams" },
-  { href: "/favorites", icon: Heart, label: "favs" },
-  { href: "#more", icon: MoreHorizontal, label: "more", action: true },
-];
+// Icons for the phone's tab bar. The destinations themselves are
+// `PRIMARY_NAV`, which the manifest's shortcuts are built from too.
+const TAB_ICONS: Record<
+  PrimaryNavId,
+  React.ComponentType<{ className?: string; strokeWidth?: number }>
+> = {
+  dex: DexIcon,
+  cards: CardsIcon,
+  decks: DecksIcon,
+  teams: TeamsIcon,
+  favorites: Heart,
+};
 
 // The desktop header has room for every destination, so it lists them all
 // rather than hiding any behind a menu.
@@ -380,78 +384,46 @@ export function AppShell({ children }: AppShellProps) {
   }, [pathname]);
 
   const isMoreActive = desktopMoreMenuItems.some((item) =>
-    item.href === "/" ? pathname === "/" : pathname.startsWith(item.href),
+    isNavActive(item.href, pathname),
   );
 
-  const renderNavItem = (
-    item: (typeof navItems)[0],
-    variant: "mobile" | "desktop",
-  ) => {
-    const isActive =
-      !item.action &&
-      (item.href === "/" ? pathname === "/" : pathname.startsWith(item.href));
-
-    const mobileClasses =
-      "flex flex-col items-center justify-center gap-0.5 px-2 py-2";
-    const desktopClasses =
-      "flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-muted";
-
-    if (item.action) {
-      // On desktop, don't show the "more" button - we show the items directly
-      if (item.label === "more" && variant === "desktop") {
-        return null;
-      }
-
-      return (
-        <button
-          key={item.label}
-          type="button"
-          onClick={() => setMoreOpen(true)}
-          className={cn(
-            variant === "mobile" ? mobileClasses : desktopClasses,
-            "text-muted-foreground hover:text-foreground transition-colors",
-            item.label === "more" && isMoreActive && "text-foreground",
-          )}
-        >
-          <item.icon className="size-4" strokeWidth={1.5} />
-          <span
-            className={
-              variant === "mobile"
-                ? "text-[9px] uppercase tracking-wider"
-                : "text-xs"
-            }
-          >
-            {item.label}
-          </span>
-        </button>
-      );
-    }
+  const renderNavItem = (item: (typeof desktopPrimaryNavItems)[number]) => {
+    const isActive = isNavActive(item.href, pathname);
 
     return (
       <Link
         key={item.href}
         href={item.href}
+        aria-current={isActive ? "page" : undefined}
         className={cn(
-          variant === "mobile" ? mobileClasses : desktopClasses,
-          "transition-colors",
+          "flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-muted transition-colors",
           isActive
             ? "text-foreground"
             : "text-muted-foreground hover:text-foreground",
         )}
       >
         <item.icon className="size-4" strokeWidth={1.5} />
-        <span
-          className={
-            variant === "mobile"
-              ? "text-[9px] uppercase tracking-wider"
-              : "text-xs"
-          }
-        >
-          {item.label}
-        </span>
+        <span className="text-xs">{item.label}</span>
       </Link>
     );
   };
+
+  // A tab: icon over label, or beside it on a short landscape screen. The pill
+  // behind the current one is a single shared element, so it slides from tab
+  // to tab rather than blinking between them.
+  const tabClasses =
+    "pressable relative flex flex-1 flex-col items-center justify-center gap-0.5 px-1 transition-colors [@media(max-height:500px)]:flex-row [@media(max-height:500px)]:gap-1.5";
+  const tabLabelClasses =
+    "relative text-[9px] uppercase tracking-wider [@media(max-height:500px)]:text-[10px]";
+
+  const renderTabPill = () => (
+    <motion.span
+      layoutId="tab-pill"
+      aria-hidden="true"
+      className="absolute inset-x-1 inset-y-1.5 bg-muted"
+      transition={{ type: "spring", stiffness: 500, damping: 40 }}
+    />
+  );
 
   return (
     <SecondaryToolbarContext.Provider value={secondaryToolbarValue}>
@@ -465,7 +437,7 @@ export function AppShell({ children }: AppShellProps) {
         data-secondary={secondaryToolbar?.content ? "true" : "false"}
       >
         {/* Desktop Header */}
-        <header className="hidden lg:flex shrink-0 z-50 h-14 items-center border-b bg-background px-6">
+        <header className="app-chrome hidden lg:flex shrink-0 z-50 h-14 items-center border-b bg-background px-6">
           <div className="flex w-full items-center justify-between">
             <Link href="/" aria-label="NationalDex home">
               <Logo
@@ -476,9 +448,7 @@ export function AppShell({ children }: AppShellProps) {
               />
             </Link>
             <nav className="flex items-center gap-1">
-              {desktopPrimaryNavItems.map((item) =>
-                renderNavItem(item, "desktop"),
-              )}
+              {desktopPrimaryNavItems.map((item) => renderNavItem(item))}
               {desktopExtraNavItems.map((item) => {
                 const isActive =
                   item.href === "/"
@@ -491,6 +461,7 @@ export function AppShell({ children }: AppShellProps) {
                   <Link
                     key={item.href}
                     href={item.href}
+                    aria-current={isActive ? "page" : undefined}
                     className={cn(
                       "flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-muted transition-colors",
                       isActive
@@ -581,20 +552,68 @@ export function AppShell({ children }: AppShellProps) {
           // above the bottom nav.
           className="app-main overflow-y-auto overflow-x-hidden"
         >
-          <div className="w-full min-h-full">{children}</div>
+          {/* Only the page animates between routes; the chrome around it
+              stays put. `page` is the class `globals.css` styles. */}
+          <ViewTransition default="page">
+            <div className="w-full min-h-full">{children}</div>
+          </ViewTransition>
         </main>
 
-        {/* Mobile/Tablet Bottom Nav - hidden on desktop. Last child of the
-            shell, so it runs to the bottom edge of the device; `pb-safe-nav`
-            keeps the labels clear of the home indicator without reserving the
-            whole strip iOS asks for. */}
+        {/* Phone tab bar - hidden on desktop. Last child of the shell, so it
+            runs to the bottom edge of the device; `pb-safe-nav` keeps the
+            labels clear of the home indicator without reserving the whole
+            strip iOS asks for. */}
         <nav
           ref={navRef}
-          className="shrink-0 z-50 border-t bg-background pb-safe-nav lg:hidden pwa-glass-nav"
+          aria-label="Primary"
+          className="app-chrome shrink-0 z-50 border-t bg-background/85 backdrop-blur-xl backdrop-saturate-150 pb-safe-nav lg:hidden pwa-glass-nav"
         >
-          <div className="flex h-12 items-center justify-around max-w-lg mx-auto">
-            {navItems.map((item) => renderNavItem(item, "mobile"))}
-          </div>
+          <MotionConfig reducedMotion="user">
+            <div className="flex h-14 items-stretch max-w-lg mx-auto px-1 [@media(max-height:500px)]:h-11">
+              {PRIMARY_NAV.map((item) => {
+                const Icon = TAB_ICONS[item.id];
+                const active = isNavActive(item.href, pathname);
+                return (
+                  <Link
+                    key={item.id}
+                    href={item.href}
+                    aria-current={active ? "page" : undefined}
+                    className={cn(
+                      tabClasses,
+                      active
+                        ? "text-foreground"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {active && renderTabPill()}
+                    <Icon
+                      className="relative size-[22px]"
+                      strokeWidth={active ? 2 : 1.5}
+                    />
+                    <span className={tabLabelClasses}>{item.label}</span>
+                  </Link>
+                );
+              })}
+              <button
+                type="button"
+                onClick={() => setMoreOpen(true)}
+                aria-haspopup="dialog"
+                className={cn(
+                  tabClasses,
+                  isMoreActive
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {isMoreActive && renderTabPill()}
+                <MoreHorizontal
+                  className="relative size-[22px]"
+                  strokeWidth={isMoreActive ? 2 : 1.5}
+                />
+                <span className={tabLabelClasses}>more</span>
+              </button>
+            </div>
+          </MotionConfig>
         </nav>
 
         <MoreSheet />
