@@ -28,6 +28,12 @@ Android. Platform APIs only — no PWA library.
   real height, i.e. the "tabbar offset") and `--app-content-height`. Toasts sit
   on `--app-bottom-inset`. Don't size anything with `vh`/`h-screen`; use
   `--app-content-height`, `svh`, or `dvh` for full-screen overlays.
+- **iOS standalone viewport limit.** On iOS 26.5, WebKit can expose only
+  812 CSS pixels of an 874-pixel screen to a Home Screen web app. The 62-pixel
+  strip below the tab bar is drawn by iOS outside the web layer. The shell fills
+  the layout viewport; shortening it to `visualViewport.height` can add another
+  gap, while extending it to the screen height clips the tab bar. WebKit tracks
+  this as [bug 301994](https://bugs.webkit.org/show_bug.cgi?id=301994).
 - **Safe areas.** Shell pads top (status bar, black-translucent) and
   left/right (landscape notch). The tab bar pads the bottom (capped — see
   `.pb-safe-nav`). Sheets pad the edge they sit on.

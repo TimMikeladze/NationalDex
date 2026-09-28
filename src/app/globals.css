@@ -311,8 +311,7 @@ html[data-standalone] {
  *
  * `--app-safe-top` / `--app-safe-bottom` are the *usable* insets: the raw
  * `env()` value minus whatever is already being kept clear of the device
- * chrome — by the browser, or by the shell having been clipped to the part of
- * the window that is actually on screen (`--app-viewport-height` below).
+ * chrome by the browser.
  * AppShell measures both and publishes them on the root element; until it does
  * — and in any browser where they agree — the raw `env()` fallback is exactly
  * what these were before.
@@ -355,29 +354,22 @@ html[data-standalone] {
 /*
  * The shell.
  *
- * `fixed; inset: 0` rather than a height in `dvh`: it is the one way to say
- * "exactly the viewport, all four edges" that does not go through a unit the
- * browser has to compute. Under `viewport-fit=cover` that box is the whole
- * device, so the bottom nav — the shell's last child in normal flow — is flush
- * with the bottom of the screen by construction. There is no arithmetic left
- * to drift out of step with the chrome, which is how a strip of background
- * used to end up under the nav in standalone mode.
+ * `fixed; inset: 0` rather than a height in `dvh` fills the layout viewport
+ * without extra arithmetic. The bottom nav — the shell's last child in normal
+ * flow — is flush with its bottom edge. On affected iOS standalone versions,
+ * WebKit reserves a strip beyond this viewport that no page element can draw.
  *
  * The top safe area is padding on the shell, so the status bar is never drawn
  * over. A glass toolbar that wants to sit behind it bleeds back up into it
  * (see `.pwa-glass-header` below).
  *
- * `--app-viewport-height` is the escape hatch for the one case where "the
- * viewport" and "what is on screen" are not the same box: an installed iOS app
- * on 26.0 can hand a viewport-sized fixed container more height than the window
- * actually shows (WebKit fixed this in 26.1). AppShell only sets it when it has
- * measured a real difference; `auto` leaves `inset: 0` in charge, which is the
- * behaviour everywhere else.
+ * The visual viewport can change independently of the fixed layout viewport.
+ * Keep the shell pinned to the layout viewport's edges so it uses every pixel
+ * WebKit makes available to the page.
  */
 .app-shell {
   position: fixed;
   inset: 0;
-  height: var(--app-viewport-height, auto);
   display: flex;
   flex-direction: column;
   overflow: hidden;
