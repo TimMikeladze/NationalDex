@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/link";
 import { getAllRegions } from "@/lib/pokeapi";
 import { breadcrumbJsonLd, itemListJsonLd, JsonLd } from "@/lib/seo";
 import { LocationsPageClient } from "./client-page";

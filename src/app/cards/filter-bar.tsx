@@ -8,9 +8,9 @@ import {
   Shuffle,
   X,
 } from "lucide-react";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import Link from "@/components/link";
 import {
   DecksIcon,
   SetsIcon,

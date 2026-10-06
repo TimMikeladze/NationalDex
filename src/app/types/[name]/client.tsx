@@ -1,9 +1,9 @@
 "use client";
 
 import { Search, X } from "lucide-react";
-import Link from "next/link";
 import { useMemo, useState } from "react";
 import { AddToListDialog } from "@/components/add-to-list-dialog";
+import Link from "@/components/link";
 import {
   GenerationScope,
   resolveGenerationScope,

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/link";
 import { getAllSpecies, toID } from "@/lib/pkmn";
 import { breadcrumbJsonLd, JsonLd } from "@/lib/seo";
 import { ComparisonPageClient } from "./client-page";

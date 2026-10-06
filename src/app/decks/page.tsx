@@ -1,10 +1,10 @@
 "use client";
 
 import { Copy, Download, Loader2, Plus, Trash2 } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import Link from "@/components/link";
 import { DecksIcon } from "@/components/navigation/app-icons";
 import { DeckFormatBadge } from "@/components/tcg/deck/deck-format-picker";
 import { TcgCardImage } from "@/components/tcg/tcg-card-image";

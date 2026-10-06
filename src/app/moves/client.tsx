@@ -1,8 +1,8 @@
 "use client";
 
 import { Filter, Search, X } from "lucide-react";
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "@/components/link";
 import { useGenerationPreference } from "@/hooks/use-generation-preference";
 import {
   DAMAGE_CLASSES,

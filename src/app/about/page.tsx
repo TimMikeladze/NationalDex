@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/link";
 import type { ContactLink, DataSource, FooterLink } from "./config";
 import { aboutConfig } from "./config";
 

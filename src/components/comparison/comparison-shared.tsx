@@ -1,8 +1,8 @@
 "use client";
 
 import { ChevronDown, Users, X } from "lucide-react";
-import Link from "next/link";
 import { useMemo, useState } from "react";
+import Link from "@/components/link";
 import { TeamTypeCoverage } from "@/components/pokemon/team-type-coverage";
 import { TypeBadge } from "@/components/pokemon/type-badge";
 import { Button } from "@/components/ui/button";

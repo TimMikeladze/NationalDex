@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useInView } from "react-intersection-observer";
+import Link from "@/components/link";
 import {
   DexFilter,
   useDexFilter,

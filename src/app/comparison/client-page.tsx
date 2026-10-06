@@ -1,7 +1,6 @@
 "use client";
 
 import { ArrowLeft, ArrowUpDown, Plus, Trash2 } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
 import {
   ComparisonCard,
@@ -10,6 +9,7 @@ import {
   StatsComparisonTable,
   TeamCoverageSection,
 } from "@/components/comparison/comparison-shared";
+import Link from "@/components/link";
 import { CompareIcon } from "@/components/navigation/app-icons";
 import { GenerationScope } from "@/components/pokemon/generation-scope";
 import { Button } from "@/components/ui/button";

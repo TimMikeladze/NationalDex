@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/link";
 import { getAllMoves, getAllTypes, toID } from "@/lib/pkmn";
 import { breadcrumbJsonLd, itemListJsonLd, JsonLd } from "@/lib/seo";
 import { MovesPageClient } from "./client";

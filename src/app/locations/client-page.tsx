@@ -1,8 +1,8 @@
 "use client";
 
 import { Filter, MapPin, Search, X } from "lucide-react";
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "@/components/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAllRegions } from "@/hooks/use-pokemon";
 import { cn } from "@/lib/utils";

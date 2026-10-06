@@ -8,10 +8,10 @@ import {
   MessageSquare,
   Settings,
 } from "lucide-react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { Logo } from "@/components/brand/logo";
+import Link from "@/components/link";
 import { GenerationPicker } from "@/components/pokemon/generation-picker";
 import {
   Sheet,

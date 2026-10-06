@@ -1,8 +1,8 @@
 "use client";
 
 import { ArrowRight } from "lucide-react";
-import Link from "next/link";
 import { useMemo, useState } from "react";
+import Link from "@/components/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCardsByDexId, usePocketSetIds } from "@/hooks/use-tcg";
 import type { TcgGame } from "@/types/tcg";

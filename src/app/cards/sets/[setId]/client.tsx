@@ -1,8 +1,8 @@
 "use client";
 
 import { Heart } from "lucide-react";
-import Link from "next/link";
 import { useMemo } from "react";
+import Link from "@/components/link";
 import { BackToTop, GameBadge, SectionLabel } from "@/components/tcg";
 import { Button } from "@/components/ui/button";
 import { useCardFavorites } from "@/hooks/use-card-favorites";

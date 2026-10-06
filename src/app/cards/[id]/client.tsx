@@ -7,12 +7,12 @@ import {
   Heart,
   ListPlus,
 } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo } from "react";
 import { AddToListDialog } from "@/components/add-to-list-dialog";
 import { AmbientBackdrop } from "@/components/ambient-backdrop";
 import { useSecondaryToolbar } from "@/components/app-shell";
+import Link from "@/components/link";
 import { PokemonImage } from "@/components/pokemon/pokemon-image";
 import {
   EnergyBadge,

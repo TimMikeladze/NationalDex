@@ -1,8 +1,8 @@
 "use client";
 
 import { Heart } from "lucide-react";
-import Link from "next/link";
 import { useMemo } from "react";
+import Link from "@/components/link";
 import { CompareIcon } from "@/components/navigation/app-icons";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";

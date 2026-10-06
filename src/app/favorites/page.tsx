@@ -1,8 +1,8 @@
 "use client";
 
 import { ArrowDownAZ, ArrowUpDown, Hash, X } from "lucide-react";
-import Link from "next/link";
 import { useMemo, useState } from "react";
+import Link from "@/components/link";
 import { PokemonImage } from "@/components/pokemon/pokemon-image";
 import { TypeBadge } from "@/components/pokemon/type-badge";
 import { TcgCardGrid } from "@/components/tcg";

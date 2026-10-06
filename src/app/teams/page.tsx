@@ -1,9 +1,9 @@
 "use client";
 
 import { ChevronRight, Download, Plus, Trash2, Upload } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import Link from "@/components/link";
 import { CompareIcon, TeamsIcon } from "@/components/navigation/app-icons";
 import { TypeCoverageCompact } from "@/components/pokemon/team-type-coverage";
 import { TeamImportExportDialog } from "@/components/team-import-export-dialog";

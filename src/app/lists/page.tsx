@@ -1,8 +1,8 @@
 "use client";
 
 import { ListPlus, Plus, Trash2 } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
+import Link from "@/components/link";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,

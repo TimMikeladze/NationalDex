@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/link";
 import { breadcrumbJsonLd, JsonLd } from "@/lib/seo";
 import { SwipePageClient } from "./client-page";
 

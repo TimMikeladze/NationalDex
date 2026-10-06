@@ -1,8 +1,8 @@
 "use client";
 
 import { ChevronDown, MapPin } from "lucide-react";
-import Link from "next/link";
 import { useMemo, useState } from "react";
+import Link from "@/components/link";
 import { PokemonImage } from "@/components/pokemon/pokemon-image";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLocation, useLocationAreas } from "@/hooks/use-pokemon";

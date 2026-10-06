@@ -1,8 +1,8 @@
 "use client";
 
 import { Heart, ListPlus, Maximize2 } from "lucide-react";
-import Link from "next/link";
 import { AddToListDialog } from "@/components/add-to-list-dialog";
+import Link from "@/components/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCardFavorites } from "@/hooks/use-card-favorites";
 import { cn } from "@/lib/utils";

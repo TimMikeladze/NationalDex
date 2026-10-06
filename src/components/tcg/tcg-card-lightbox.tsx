@@ -1,8 +1,8 @@
 "use client";
 
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
-import Link from "next/link";
 import { useEffect } from "react";
+import Link from "@/components/link";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import type { TcgCardBrief, TcgLanguage } from "@/types/tcg";
 import {

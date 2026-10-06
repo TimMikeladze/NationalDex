@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/link";
 import { cn } from "@/lib/utils";
 import type { PokemonType } from "@/types/pokemon";
 import { TYPE_COLORS, TYPE_TEXT_COLORS } from "@/types/pokemon";

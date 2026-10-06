@@ -1,7 +1,6 @@
 "use client";
 
 import { X } from "lucide-react";
-import Link from "next/link";
 import { useQueryStates } from "nuqs";
 import {
   Suspense,
@@ -11,6 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
+import Link from "@/components/link";
 import { BackToTop, TcgCardGrid } from "@/components/tcg";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";

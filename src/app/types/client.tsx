@@ -1,8 +1,8 @@
 "use client";
 
 import { Grid3X3, LayoutGrid } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
+import Link from "@/components/link";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {

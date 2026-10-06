@@ -9,13 +9,13 @@ import {
   ListPlus,
   Sparkles,
 } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AddToListDialog } from "@/components/add-to-list-dialog";
 import { AmbientBackdrop } from "@/components/ambient-backdrop";
 import { useSecondaryToolbar } from "@/components/app-shell";
+import Link from "@/components/link";
 import { CompareIcon } from "@/components/navigation/app-icons";
 import { GenerationPicker } from "@/components/pokemon/generation-picker";
 import { GenerationScope } from "@/components/pokemon/generation-scope";

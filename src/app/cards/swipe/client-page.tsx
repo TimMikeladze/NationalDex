@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useQueryStates } from "nuqs";
 import { Suspense, useCallback, useEffect, useMemo } from "react";
+import Link from "@/components/link";
 import { CardsIcon } from "@/components/navigation/app-icons";
 import { TcgSwipeDeck } from "@/components/tcg";
 import { Button } from "@/components/ui/button";

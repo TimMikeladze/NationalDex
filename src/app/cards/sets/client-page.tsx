@@ -1,9 +1,9 @@
 "use client";
 
 import { ChevronRight, Languages, Search, X } from "lucide-react";
-import Link from "next/link";
 import { parseAsString, useQueryState } from "nuqs";
 import { Suspense, useMemo, useState } from "react";
+import Link from "@/components/link";
 import { Chip } from "@/components/tcg";
 import {
   DropdownMenu,

@@ -9,7 +9,6 @@ import {
   X,
 } from "lucide-react";
 import { motion, useMotionValue, useReducedMotion } from "motion/react";
-import Link from "next/link";
 import {
   useCallback,
   useEffect,
@@ -19,6 +18,7 @@ import {
   useState,
 } from "react";
 import { AddToListDialog } from "@/components/add-to-list-dialog";
+import Link from "@/components/link";
 import { Button } from "@/components/ui/button";
 import { useCardFavorites } from "@/hooks/use-card-favorites";
 import { cn } from "@/lib/utils";

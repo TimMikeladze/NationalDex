@@ -2,9 +2,9 @@
 
 import { ArrowLeft, Plus, Share2, X } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "@/components/link";
 import { CompareIcon } from "@/components/navigation/app-icons";
 import type { PokemonPickerResult } from "@/components/pokemon/pokemon-picker";
 import { PokemonPicker } from "@/components/pokemon/pokemon-picker";

@@ -8,7 +8,6 @@ import {
   Settings,
 } from "lucide-react";
 import { MotionConfig, motion } from "motion/react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   createContext,
@@ -23,6 +22,7 @@ import {
 } from "react";
 import { Logo } from "@/components/brand/logo";
 import { ComparisonDrawer } from "@/components/comparison/comparison-drawer";
+import Link from "@/components/link";
 import { GenerationPicker } from "@/components/pokemon/generation-picker";
 import {
   DropdownMenu,

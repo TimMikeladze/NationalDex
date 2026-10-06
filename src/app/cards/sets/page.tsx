@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/link";
 import { breadcrumbJsonLd, itemListJsonLd, JsonLd } from "@/lib/seo";
 import { getTcgSeriesWithSets } from "@/lib/tcg";
 import { CardSetsPageClient } from "./client-page";
