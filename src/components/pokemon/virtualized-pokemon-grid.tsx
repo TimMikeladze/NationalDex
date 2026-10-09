@@ -208,8 +208,6 @@ export function VirtualizedPokemonGrid({
               // card, and type badges wrap onto a second line at some column
               // widths and not others.
               ref={virtualizer.measureElement}
-              // A lifted card must clear the row below it.
-              className="has-[[data-holo-live]]:z-10"
               style={{
                 position: "absolute",
                 top: 0,

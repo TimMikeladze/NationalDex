@@ -17,11 +17,6 @@ interface HoloCardProps {
   /** `sm` for grid tiles, `lg` for a card held up on its own. */
   size?: "sm" | "lg";
   touch?: HoloTouch;
-  /**
-   * `tcg` rounds to a trading card's 3mm corners; `panel` keeps the app's own
-   * square edges, for the dex's Pokémon cards.
-   */
-  shape?: "tcg" | "panel";
   className?: string;
 }
 
@@ -40,8 +35,7 @@ const DRAG_SLOP = 6;
 /**
  * A card you can pick up: resting on its own shadow and — under a pointer or a
  * finger — leaning toward you with the light sliding across its foil. One
- * generic recipe for every trading card and every Pokémon in the dex. Mark a
- * child `holo-pop` and it floats above the face, sliding with the tilt.
+ * generic recipe for every card.
  *
  * The motion never goes through React. A spring writes custom properties on
  * the element each frame and the CSS (`.holo-*` in globals.css) draws from
@@ -51,7 +45,6 @@ export function HoloCard({
   children,
   size = "sm",
   touch = "pan",
-  shape = "tcg",
   className,
 }: HoloCardProps) {
   const ref = useRef<HTMLDivElement>(null);
@@ -139,7 +132,6 @@ export function HoloCard({
     <div
       ref={ref}
       data-touch={touch}
-      data-shape={shape}
       className={cn("holo", className)}
       style={
         {

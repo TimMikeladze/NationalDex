@@ -1,16 +1,13 @@
 "use client";
 
-import { X } from "lucide-react";
 import { useCallback } from "react";
-import { HoloCard } from "@/components/holo-card";
-import Link from "@/components/link";
 import { SwipeDeck } from "@/components/swipe/swipe-deck";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useFavorites } from "@/hooks/use-favorites";
 import { useSpritePreferences } from "@/hooks/use-sprite-preferences";
 import type { DexPokemonListItem } from "@/lib/dex-pokemon";
 import { pokemonSprite, pokemonSpriteById } from "@/lib/sprites";
 import { PokemonSwipeFace } from "./pokemon-swipe-face";
+import { PokemonSwipePeek } from "./pokemon-swipe-peek";
 
 interface PokemonSwipeDeckProps {
   pokemon: DexPokemonListItem[];
@@ -88,81 +85,12 @@ export function PokemonSwipeDeck({
         />
       )}
       renderPeek={(p, onClose) => (
-        <PokemonPeek
+        <PokemonSwipePeek
           pokemon={p}
           sprite={p ? spriteFor(p) : ""}
           onClose={onClose}
         />
       )}
     />
-  );
-}
-
-/**
- * A Pokémon held up close: the same face, larger, in a card you can tilt —
- * and the way through to its full page.
- */
-function PokemonPeek({
-  pokemon,
-  sprite,
-  onClose,
-}: {
-  pokemon: DexPokemonListItem | null;
-  sprite: string;
-  onClose: () => void;
-}) {
-  return (
-    <Dialog
-      open={pokemon !== null}
-      onOpenChange={(next) => {
-        if (!next) onClose();
-      }}
-    >
-      <DialogContent
-        showCloseButton={false}
-        className="w-[min(100vw-1.5rem,28rem)] max-w-none border-0 bg-transparent p-0 shadow-none"
-      >
-        <DialogTitle className="sr-only">
-          {pokemon?.name ?? "Pokémon"}
-        </DialogTitle>
-        {pokemon && (
-          <div className="space-y-2">
-            <HoloCard
-              size="lg"
-              touch="grab"
-              className="mx-auto w-[min(100%,calc(78dvh*63/88))]"
-            >
-              <PokemonSwipeFace
-                pokemon={pokemon}
-                sprite={sprite}
-                priority
-                className="aspect-[63/88] h-auto"
-              />
-            </HoloCard>
-
-            <div className="flex items-center gap-1 bg-background/90 px-1 py-1 backdrop-blur">
-              <p className="min-w-0 flex-1 truncate px-2 text-sm font-medium">
-                {pokemon.name}
-              </p>
-              <Link
-                href={`/pokemon/${pokemon.slug}`}
-                className="shrink-0 px-2 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
-              >
-                full page →
-              </Link>
-              <button
-                type="button"
-                onClick={onClose}
-                title="Close"
-                aria-label="Close"
-                className="shrink-0 p-2 text-muted-foreground transition-colors hover:text-foreground"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
   );
 }

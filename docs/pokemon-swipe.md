@@ -20,8 +20,11 @@ key, and undo works the same.
   card-shaped panel tinted by the Pokémon's types — number, name, types,
   region/variant, the sprite (user's sprite preference, same fallbacks as the
   grid) and all six base stats as bars with the total.
-- **Look closer**: a dialog showing the same face larger inside `HoloCard`
-  (tilt + foil) with a link to the full Pokémon page.
+- **Look closer / expanded**: a scrolling dialog with the face inside
+  `HoloCard` (tilt + foil) and everything the Pokémon page shows — type
+  matchups, abilities, base stats, evolution, details, every move and
+  locations — plus a link to the full page. The sections are shared with the
+  detail page via `components/pokemon/pokemon-details.tsx`.
 - **Filters**: the deck reads the dex's own filter (`useDexFilter`, same URL
   keys + persisted state), so search, types, gens, regulations, traits, stat
   ranges, sort and shuffle carry over from the grid. The swipe page adds a
