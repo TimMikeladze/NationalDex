@@ -37,6 +37,7 @@ import {
   setIdFromCardId,
   sortRarities,
 } from "@/types/tcg";
+import { TcgCardHolo } from "../tcg-card-holo";
 import { TcgCardImage } from "../tcg-card-image";
 import { TcgCardTileSkeleton } from "../tcg-card-tile";
 import { type DragCard, useDeckDragSource } from "./deck-drag";
@@ -376,7 +377,10 @@ function SearchResultTile({
 
   return (
     <div
-      className={cn("group relative", isDragging && "opacity-40")}
+      className={cn(
+        "group relative has-[[data-holo-live]]:z-10",
+        isDragging && "opacity-40",
+      )}
       {...dragProps}
     >
       <button
@@ -393,18 +397,21 @@ function SearchResultTile({
               : `Add ${card.name} to the deck`
         }
         className={cn(
-          "relative block w-full bg-muted/30 ring-1 ring-transparent transition-all",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          "md:hover:ring-foreground/40 md:active:scale-[0.98]",
+          "relative block w-full rounded-[4.76%/3.41%] ring-1 ring-transparent transition-all",
+          "focus-visible:outline-none md:active:scale-[0.98]",
           atLimit && "opacity-45",
         )}
       >
-        <TcgCardImage
-          image={card.image}
-          alt={card.name}
-          localId={card.localId}
-          setName={setIdFromCardId(card.id)}
-        />
+        {/* A drag source too: a finger drags it into the deck, the mouse
+            tilts it. */}
+        <TcgCardHolo touch="off">
+          <TcgCardImage
+            image={card.image}
+            alt={card.name}
+            localId={card.localId}
+            setName={setIdFromCardId(card.id)}
+          />
+        </TcgCardHolo>
 
         {inDeck > 0 && (
           <span

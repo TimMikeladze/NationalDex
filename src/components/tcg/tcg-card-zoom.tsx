@@ -4,6 +4,7 @@ import { Maximize2 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import type { TcgCardBrief, TcgLanguage } from "@/types/tcg";
+import { TcgCardHolo } from "./tcg-card-holo";
 import { TcgCardImage } from "./tcg-card-image";
 import { TcgCardLightbox } from "./tcg-card-lightbox";
 
@@ -36,18 +37,19 @@ export function TcgCardZoom({
         )}
         title={`Enlarge ${card.name}`}
       >
-        <TcgCardImage
-          image={card.image}
-          alt={card.name}
-          setName={setName}
-          localId={card.localId}
-          quality="high"
-          width={600}
-          height={825}
-          priority
-          className="shadow-lg transition-transform duration-200 group-active:scale-[0.99]"
-        />
-        <span className="absolute bottom-2 right-2 flex size-7 items-center justify-center bg-background/85 text-muted-foreground backdrop-blur transition-colors group-hover:text-foreground">
+        <TcgCardHolo size="lg">
+          <TcgCardImage
+            image={card.image}
+            alt={card.name}
+            setName={setName}
+            localId={card.localId}
+            quality="high"
+            width={600}
+            height={825}
+            priority
+          />
+        </TcgCardHolo>
+        <span className="absolute bottom-2 right-2 z-10 flex size-7 items-center justify-center bg-background/85 text-muted-foreground backdrop-blur transition-colors group-hover:text-foreground">
           <Maximize2 className="size-3.5" />
         </span>
       </button>

@@ -12,6 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { Deck, DeckCard, DeckEntry, DeckFormat } from "@/types/deck";
 import { formatLocalId, TCG_ENERGY_COLORS } from "@/types/tcg";
+import { TcgCardHolo } from "../tcg-card-holo";
 import { TcgCardImage } from "../tcg-card-image";
 import { useDeckDragSource } from "./deck-drag";
 
@@ -171,7 +172,10 @@ function BinderPocket({
 
   return (
     <div
-      className={cn("group relative", isDragging && "opacity-40")}
+      className={cn(
+        "group relative has-[[data-holo-live]]:z-10",
+        isDragging && "opacity-40",
+      )}
       {...dragProps}
     >
       {/* The copies behind the top card, so a four-of reads as a stack from
@@ -180,7 +184,7 @@ function BinderPocket({
         <div
           key={`layer-${index}`}
           aria-hidden="true"
-          className="absolute inset-0 rounded-[2px] border bg-muted"
+          className="absolute inset-0 rounded-[4.76%/3.41%] border bg-muted"
           style={{
             transform: `translate(${(index + 1) * 3}px, ${(index + 1) * -3}px)`,
             zIndex: -1,
@@ -200,18 +204,22 @@ function BinderPocket({
             : ""
         }`}
         className={cn(
-          "relative block w-full bg-muted/30 ring-1 ring-transparent transition-shadow",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          "relative block w-full rounded-[4.76%/3.41%] ring-1 ring-transparent transition-shadow",
+          "focus-visible:outline-none",
           flagged && "ring-2 ring-amber-500",
           illegalReason && "ring-2 ring-destructive",
         )}
       >
-        <TcgCardImage
-          image={entry.card.image}
-          alt={entry.card.name}
-          localId={entry.card.localId}
-          setName={entry.card.setName}
-        />
+        {/* The pocket is a drag source, so a finger moves the card rather
+            than tilting it. */}
+        <TcgCardHolo touch="off">
+          <TcgCardImage
+            image={entry.card.image}
+            alt={entry.card.name}
+            localId={entry.card.localId}
+            setName={entry.card.setName}
+          />
+        </TcgCardHolo>
 
         {/* How many copies — the one number a deck list is made of. */}
         <span className="absolute bottom-1 left-1 min-w-6 rounded-sm bg-background/90 px-1 py-0.5 text-center text-xs font-semibold tabular-nums backdrop-blur">
