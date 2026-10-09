@@ -10,6 +10,7 @@ import {
   Shuffle,
   X,
 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import {
   parseAsArrayOf,
   parseAsInteger,
@@ -17,6 +18,8 @@ import {
   useQueryStates,
 } from "nuqs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "@/components/link";
+import { SwipeIcon } from "@/components/navigation/app-icons";
 import { TypeBadge } from "@/components/pokemon/type-badge";
 // The card browser's chip, which is the dex's chip — the two toolbars are the
 // same toolbar, so they share the component rather than each having a pill.
@@ -400,6 +403,12 @@ export function DexFilter({
   filter,
   collapsed = false,
 }: DexFilterProps) {
+  const searchParams = useSearchParams();
+  const swipeHref = useMemo(() => {
+    const query = searchParams.toString();
+    return query ? `/pokemon/swipe?${query}` : "/pokemon/swipe";
+  }, [searchParams]);
+
   const { preferredGeneration } = useGenerationPreference();
   const { speciesCutoffGeneration } = useSpritePreferences();
   const statBounds = useMemo(
@@ -822,6 +831,19 @@ export function DexFilter({
                 {CATEGORY_LABELS[cat]}
               </Chip>
             ))}
+
+            {/* The same Pokémon, one at a time. The deck reads this filter,
+                so whatever is narrowed here is what gets dealt there. */}
+            {filter.category === "pokemon" && (
+              <Link
+                href={swipeHref}
+                title="Swipe through these Pokémon, one at a time"
+                className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground"
+              >
+                <SwipeIcon className="size-3.5" />
+                Swipe
+              </Link>
+            )}
           </div>
 
           {/* Types are the facet reached for first, so they sit in the toolbar
