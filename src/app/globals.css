@@ -698,7 +698,7 @@ html[data-standalone] {
 }
 
 /*
- * Holo cards (`TcgCardHolo`, docs/card-holo.md). A spring in JS writes the
+ * Holo cards (`HoloCard`, docs/card-holo.md). A spring in JS writes the
  * pointer into custom properties on `.holo`; everything here is drawn from
  * them. At rest only the card's shape and shadow show — the light layers sit
  * at zero until a hand is on the card.
@@ -722,6 +722,16 @@ html[data-standalone] {
 
 .dark .holo {
   --holo-shadow-alpha: 0.45;
+}
+
+/* The dex's Pokémon cards keep the app's square edges and their own border
+   and fill, so no plate shows behind them. */
+.holo[data-shape="panel"] {
+  --holo-radius: var(--radius);
+}
+
+.holo[data-shape="panel"] .holo-card {
+  background: none;
 }
 
 .holo[data-touch="grab"] {
@@ -758,6 +768,19 @@ html[data-standalone] {
 }
 
 @media (prefers-reduced-motion: no-preference) {
+  /* A layer that floats above the face — a sprite standing off the card —
+     slides toward the raised edge and lifts, so the card reads as having
+     depth rather than as a tilted picture. */
+  .holo-pop {
+    transform: translate(calc(var(--holo-tx) * 6%), calc(var(--holo-ty) * 6%))
+      scale(calc(1 + var(--holo-a) * 0.08));
+    filter: drop-shadow(
+      calc(var(--holo-tx) * -4px) calc(3px + var(--holo-a) * 4px)
+        calc(2px + var(--holo-a) * 4px)
+        rgb(0 0 0 / calc(var(--holo-a) * var(--holo-shadow-alpha) * 1.6))
+    );
+  }
+
   .holo-card {
     transform: rotateX(calc(var(--holo-ty) * var(--holo-max, 10deg)))
       rotateY(calc(var(--holo-tx) * var(--holo-max, 10deg) * -1))
@@ -832,4 +855,10 @@ html[data-standalone] {
 :focus-visible > * > .holo .holo-card {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
+}
+
+/* A white panel has no artwork for the glare to light; at full strength it
+   only greys out the far side. */
+:root:not(.dark) .holo[data-shape="panel"] .holo-glare {
+  opacity: calc(var(--holo-a) * 0.45);
 }

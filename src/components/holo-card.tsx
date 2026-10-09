@@ -12,11 +12,16 @@ import { cn } from "@/lib/utils";
 /** How a finger is allowed to handle the card. See `docs/card-holo.md`. */
 export type HoloTouch = "pan" | "grab" | "off";
 
-interface TcgCardHoloProps {
+interface HoloCardProps {
   children: React.ReactNode;
   /** `sm` for grid tiles, `lg` for a card held up on its own. */
   size?: "sm" | "lg";
   touch?: HoloTouch;
+  /**
+   * `tcg` rounds to a trading card's 3mm corners; `panel` keeps the app's own
+   * square edges, for the dex's Pokémon cards.
+   */
+  shape?: "tcg" | "panel";
   className?: string;
 }
 
@@ -33,20 +38,22 @@ const SETTLE = 7;
 const DRAG_SLOP = 6;
 
 /**
- * A trading card you can pick up: rounded like the real thing, resting on its
- * own shadow, and — under a pointer or a finger — leaning toward you with the
- * light sliding across its foil. One generic recipe for every card.
+ * A card you can pick up: resting on its own shadow and — under a pointer or a
+ * finger — leaning toward you with the light sliding across its foil. One
+ * generic recipe for every trading card and every Pokémon in the dex. Mark a
+ * child `holo-pop` and it floats above the face, sliding with the tilt.
  *
  * The motion never goes through React. A spring writes custom properties on
  * the element each frame and the CSS (`.holo-*` in globals.css) draws from
  * them, so a grid of tiles costs nothing until one of them is touched.
  */
-export function TcgCardHolo({
+export function HoloCard({
   children,
   size = "sm",
   touch = "pan",
+  shape = "tcg",
   className,
-}: TcgCardHoloProps) {
+}: HoloCardProps) {
   const ref = useRef<HTMLDivElement>(null);
   const target = useRef<CardTilt & { a: number }>({ ...RESTING_TILT, a: 0 });
   const current = useRef<CardTilt & { a: number }>({ ...RESTING_TILT, a: 0 });
@@ -132,6 +139,7 @@ export function TcgCardHolo({
     <div
       ref={ref}
       data-touch={touch}
+      data-shape={shape}
       className={cn("holo", className)}
       style={
         {

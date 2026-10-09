@@ -2,6 +2,7 @@
 
 import { Heart, ListPlus, Maximize2 } from "lucide-react";
 import { AddToListDialog } from "@/components/add-to-list-dialog";
+import { HoloCard } from "@/components/holo-card";
 import Link from "@/components/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCardFavorites } from "@/hooks/use-card-favorites";
@@ -16,7 +17,6 @@ import {
   withTcgLanguage,
 } from "@/types/tcg";
 import { GameBadge } from "./game-badge";
-import { TcgCardHolo } from "./tcg-card-holo";
 import { TcgCardImage } from "./tcg-card-image";
 
 interface TcgCardTileProps {
@@ -62,7 +62,7 @@ export function TcgCardTile({
         {/* Nothing is drawn over the artwork at rest — a card's own frame is
             part of what you are looking at. Under a hand it tilts and catches
             the light instead. */}
-        <TcgCardHolo className="transition-transform duration-150 group-active:scale-[0.98]">
+        <HoloCard className="transition-transform duration-150 group-active:scale-[0.98]">
           <TcgCardImage
             image={card.image}
             alt={card.name}
@@ -72,7 +72,7 @@ export function TcgCardTile({
             setName={setIdFromCardId(card.id)}
             priority={priority}
           />
-        </TcgCardHolo>
+        </HoloCard>
 
         <div className="flex items-center gap-1.5 px-0.5">
           <p

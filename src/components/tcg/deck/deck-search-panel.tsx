@@ -9,6 +9,7 @@ import {
   SET_ORDER_SORT_VALUE,
   toCardSearchFilters,
 } from "@/app/cards/filters";
+import { HoloCard } from "@/components/holo-card";
 import { Chip } from "@/components/tcg/tcg-chip";
 import type { DeckPool } from "@/hooks/use-deck-pool";
 import {
@@ -37,7 +38,6 @@ import {
   setIdFromCardId,
   sortRarities,
 } from "@/types/tcg";
-import { TcgCardHolo } from "../tcg-card-holo";
 import { TcgCardImage } from "../tcg-card-image";
 import { TcgCardTileSkeleton } from "../tcg-card-tile";
 import { type DragCard, useDeckDragSource } from "./deck-drag";
@@ -404,14 +404,14 @@ function SearchResultTile({
       >
         {/* A drag source too: a finger drags it into the deck, the mouse
             tilts it. */}
-        <TcgCardHolo touch="off">
+        <HoloCard touch="off">
           <TcgCardImage
             image={card.image}
             alt={card.name}
             localId={card.localId}
             setName={setIdFromCardId(card.id)}
           />
-        </TcgCardHolo>
+        </HoloCard>
 
         {inDeck > 0 && (
           <span

@@ -2,9 +2,9 @@
 
 import { Maximize2 } from "lucide-react";
 import { useState } from "react";
+import { HoloCard } from "@/components/holo-card";
 import { cn } from "@/lib/utils";
 import type { TcgCardBrief, TcgLanguage } from "@/types/tcg";
-import { TcgCardHolo } from "./tcg-card-holo";
 import { TcgCardImage } from "./tcg-card-image";
 import { TcgCardLightbox } from "./tcg-card-lightbox";
 
@@ -37,7 +37,7 @@ export function TcgCardZoom({
         )}
         title={`Enlarge ${card.name}`}
       >
-        <TcgCardHolo size="lg">
+        <HoloCard size="lg">
           <TcgCardImage
             image={card.image}
             alt={card.name}
@@ -48,7 +48,7 @@ export function TcgCardZoom({
             height={825}
             priority
           />
-        </TcgCardHolo>
+        </HoloCard>
         <span className="absolute bottom-2 right-2 z-10 flex size-7 items-center justify-center bg-background/85 text-muted-foreground backdrop-blur transition-colors group-hover:text-foreground">
           <Maximize2 className="size-3.5" />
         </span>

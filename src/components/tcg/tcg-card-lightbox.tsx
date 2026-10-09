@@ -2,6 +2,7 @@
 
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useEffect } from "react";
+import { HoloCard } from "@/components/holo-card";
 import Link from "@/components/link";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import type { TcgCardBrief, TcgLanguage } from "@/types/tcg";
@@ -10,7 +11,6 @@ import {
   formatLocalId,
   withTcgLanguage,
 } from "@/types/tcg";
-import { TcgCardHolo } from "./tcg-card-holo";
 import { TcgCardImage } from "./tcg-card-image";
 
 interface TcgCardLightboxProps {
@@ -79,7 +79,7 @@ export function TcgCardLightbox({
           <div className="space-y-2">
             {/* Sized to the card itself, not the box around it, so the light
                 and the edges land on the card and a finger can turn it. */}
-            <TcgCardHolo
+            <HoloCard
               key={card.id}
               size="lg"
               touch="grab"
@@ -95,7 +95,7 @@ export function TcgCardLightbox({
                 height={1238}
                 priority
               />
-            </TcgCardHolo>
+            </HoloCard>
 
             <div className="flex items-center gap-1 bg-background/90 px-1 py-1 backdrop-blur">
               {walkable && (
