@@ -10,6 +10,7 @@ import {
   formatLocalId,
   withTcgLanguage,
 } from "@/types/tcg";
+import { TcgCardHolo } from "./tcg-card-holo";
 import { TcgCardImage } from "./tcg-card-image";
 
 interface TcgCardLightboxProps {
@@ -76,18 +77,25 @@ export function TcgCardLightbox({
         <DialogTitle className="sr-only">{card?.name ?? "Card"}</DialogTitle>
         {card && (
           <div className="space-y-2">
-            <TcgCardImage
+            {/* Sized to the card itself, not the box around it, so the light
+                and the edges land on the card and a finger can turn it. */}
+            <TcgCardHolo
               key={card.id}
-              image={card.image}
-              alt={card.name}
-              setName={setName}
-              localId={card.localId}
-              quality="high"
-              width={900}
-              height={1238}
-              priority
-              className="max-h-[78dvh] w-full object-contain"
-            />
+              size="lg"
+              touch="grab"
+              className="mx-auto w-[min(100%,calc(78dvh*63/88))]"
+            >
+              <TcgCardImage
+                image={card.image}
+                alt={card.name}
+                setName={setName}
+                localId={card.localId}
+                quality="high"
+                width={900}
+                height={1238}
+                priority
+              />
+            </TcgCardHolo>
 
             <div className="flex items-center gap-1 bg-background/90 px-1 py-1 backdrop-blur">
               {walkable && (

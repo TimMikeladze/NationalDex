@@ -16,6 +16,7 @@ import {
   withTcgLanguage,
 } from "@/types/tcg";
 import { GameBadge } from "./game-badge";
+import { TcgCardHolo } from "./tcg-card-holo";
 import { TcgCardImage } from "./tcg-card-image";
 
 interface TcgCardTileProps {
@@ -50,14 +51,18 @@ export function TcgCardTile({
   const favorited = isFavoriteCard(card.id);
 
   return (
-    <div className={cn("group relative", className)}>
+    // A lifted card sits over its neighbours, not under the next one in the grid.
+    <div
+      className={cn("group relative has-[[data-holo-live]]:z-10", className)}
+    >
       <Link
         href={withTcgLanguage(`/cards/${card.id.toLowerCase()}`, language)}
         className="block space-y-1.5 outline-none"
       >
-        {/* Nothing is drawn over the artwork — a card's own frame is part of
-            what you are looking at. Hover and focus land on the plate instead. */}
-        <div className="relative bg-muted/30 ring-1 ring-transparent transition-[transform,box-shadow] duration-150 group-active:scale-[0.98] group-focus-visible:ring-2 group-focus-visible:ring-ring md:group-hover:ring-foreground/40">
+        {/* Nothing is drawn over the artwork at rest — a card's own frame is
+            part of what you are looking at. Under a hand it tilts and catches
+            the light instead. */}
+        <TcgCardHolo className="transition-transform duration-150 group-active:scale-[0.98]">
           <TcgCardImage
             image={card.image}
             alt={card.name}
@@ -67,7 +72,7 @@ export function TcgCardTile({
             setName={setIdFromCardId(card.id)}
             priority={priority}
           />
-        </div>
+        </TcgCardHolo>
 
         <div className="flex items-center gap-1.5 px-0.5">
           <p
