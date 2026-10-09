@@ -1,3 +1,4 @@
+export type { SwipeAction, SwipeThrow } from "@/components/swipe/swipe-card";
 export { BackToTop } from "./back-to-top";
 export { GameBadge } from "./game-badge";
 export { PokemonCardsSection } from "./pokemon-cards-section";
@@ -13,5 +14,4 @@ export {
   EnergyDot,
   RetreatCost,
 } from "./tcg-energy";
-export type { SwipeAction, SwipeThrow } from "./tcg-swipe-card";
 export { TcgSwipeDeck } from "./tcg-swipe-deck";
