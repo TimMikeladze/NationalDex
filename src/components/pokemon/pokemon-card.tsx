@@ -2,6 +2,7 @@
 
 import { Heart } from "lucide-react";
 import { useMemo } from "react";
+import { HoloCard } from "@/components/holo-card";
 import Link from "@/components/link";
 import { CompareIcon } from "@/components/navigation/app-icons";
 import { Card } from "@/components/ui/card";
@@ -438,83 +439,89 @@ function DefaultCard({
 }) {
   const href = `/pokemon/${toID(pokemon.name) || pokemon.id}`;
   return (
-    <Card
-      className={cn(
-        "group relative p-0 hover:bg-muted/50 transition-colors",
-        className,
-      )}
+    // The whole card tilts under a hand; the sprite floats a layer above it.
+    // Lifted, it sits over its neighbours rather than under the next one.
+    <HoloCard
+      shape="panel"
+      className={cn("relative has-[[data-holo-live]]:z-10", className)}
     >
-      <Link href={href} className="block p-3 md:p-4">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="text-xs text-muted-foreground tabular-nums">
-              #{pokemon.id.toString().padStart(3, "0")}
-            </span>
-            {meta ? (
-              <span className="text-[10px] text-muted-foreground tabular-nums truncate">
-                {meta}
+      <Card className="group relative p-0 hover:bg-muted/50 transition-colors">
+        <Link href={href} className="block p-3 md:p-4">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-xs text-muted-foreground tabular-nums">
+                #{pokemon.id.toString().padStart(3, "0")}
               </span>
-            ) : null}
-          </div>
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button
-              type="button"
-              onClick={onCompareClick}
-              className={cn(
-                "transition-colors",
-                isInComparison
-                  ? "text-blue-500"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-              title={
-                isInComparison ? "Remove from comparison" : "Add to comparison"
-              }
-            >
-              <CompareIcon
-                className={cn("size-3.5", isInComparison && "fill-current")}
-              />
-            </button>
-            {showFavorite && (
-              <button type="button" onClick={onFavoriteClick}>
-                <Heart
-                  className={cn("size-3.5", isFavorite && "fill-current")}
+              {meta ? (
+                <span className="text-[10px] text-muted-foreground tabular-nums truncate">
+                  {meta}
+                </span>
+              ) : null}
+            </div>
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                type="button"
+                onClick={onCompareClick}
+                className={cn(
+                  "transition-colors",
+                  isInComparison
+                    ? "text-blue-500"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+                title={
+                  isInComparison
+                    ? "Remove from comparison"
+                    : "Add to comparison"
+                }
+              >
+                <CompareIcon
+                  className={cn("size-3.5", isInComparison && "fill-current")}
                 />
               </button>
-            )}
+              {showFavorite && (
+                <button type="button" onClick={onFavoriteClick}>
+                  <Heart
+                    className={cn("size-3.5", isFavorite && "fill-current")}
+                  />
+                </button>
+              )}
+            </div>
           </div>
-        </div>
 
-        <div className="flex flex-col items-center py-2 md:py-3">
-          <PokemonImage
-            src={pokemon.sprite}
-            alt={pokemon.name}
-            pokemonId={pokemon.id}
-            width={96}
-            height={96}
-            className="size-16 md:size-20 lg:size-24"
-          />
-        </div>
-
-        <div className="space-y-1">
-          <h3 className="text-sm font-medium truncate">
-            {getBaseName(pokemon.name)}
-          </h3>
-          <div className="flex gap-1">
-            {pokemon.types?.map((type) => (
-              <TypeBadge key={type} type={type} size="sm" />
-            ))}
-            {(() => {
-              const variant = getVariantFromName(pokemon.name);
-              if (variant) {
-                return <VariantBadge variant={variant} size="sm" />;
-              }
-              const region = getRegionFromDexNumber(pokemon.id);
-              return region ? <RegionBadge region={region} size="sm" /> : null;
-            })()}
+          <div className="holo-pop flex flex-col items-center py-2 md:py-3">
+            <PokemonImage
+              src={pokemon.sprite}
+              alt={pokemon.name}
+              pokemonId={pokemon.id}
+              width={96}
+              height={96}
+              className="size-16 md:size-20 lg:size-24"
+            />
           </div>
-        </div>
-      </Link>
-    </Card>
+
+          <div className="space-y-1">
+            <h3 className="text-sm font-medium truncate">
+              {getBaseName(pokemon.name)}
+            </h3>
+            <div className="flex gap-1">
+              {pokemon.types?.map((type) => (
+                <TypeBadge key={type} type={type} size="sm" />
+              ))}
+              {(() => {
+                const variant = getVariantFromName(pokemon.name);
+                if (variant) {
+                  return <VariantBadge variant={variant} size="sm" />;
+                }
+                const region = getRegionFromDexNumber(pokemon.id);
+                return region ? (
+                  <RegionBadge region={region} size="sm" />
+                ) : null;
+              })()}
+            </div>
+          </div>
+        </Link>
+      </Card>
+    </HoloCard>
   );
 }
 
