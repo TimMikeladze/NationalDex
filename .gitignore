@@ -32,3 +32,7 @@ npm-debug.log*
 next-env.d.ts
 services
 .claude
+
+# local social content
+/videos/
+/docs/social-assets.md
